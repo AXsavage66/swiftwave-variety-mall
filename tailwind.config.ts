@@ -47,6 +47,8 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        "primary-glow": "hsl(var(--primary-glow))",
+        "accent-glow": "hsl(var(--accent-glow))",
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",
@@ -66,10 +68,6 @@ export default {
       fontFamily: {
         display: ['"Plus Jakarta Sans"', 'Inter', 'system-ui', 'sans-serif'],
         sans: ['Inter', 'system-ui', 'sans-serif'],
-      },
-      colors: {
-        "primary-glow": "hsl(var(--primary-glow))",
-        "accent-glow": "hsl(var(--accent-glow))",
       },
       keyframes: {
         "accordion-down": {
