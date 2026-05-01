@@ -63,6 +63,14 @@ export default {
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
       },
+      fontFamily: {
+        display: ['"Plus Jakarta Sans"', 'Inter', 'system-ui', 'sans-serif'],
+        sans: ['Inter', 'system-ui', 'sans-serif'],
+      },
+      colors: {
+        "primary-glow": "hsl(var(--primary-glow))",
+        "accent-glow": "hsl(var(--accent-glow))",
+      },
       keyframes: {
         "accordion-down": {
           from: {
