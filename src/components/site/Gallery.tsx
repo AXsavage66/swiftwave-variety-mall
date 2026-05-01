@@ -4,8 +4,16 @@ import pipework from "@/assets/gallery-pipework.jpg";
 import kitchen from "@/assets/gallery-kitchen.jpg";
 import van from "@/assets/gallery-van.jpg";
 import bathtub from "@/assets/gallery-bathtub.jpg";
+import engineerBoiler from "@/assets/gallery-engineer-boiler.jpg";
+import heatingWiring from "@/assets/gallery-heating-wiring.jpg";
+import manifold from "@/assets/gallery-manifold.jpg";
+import kitchenBoiler from "@/assets/gallery-kitchen-boiler.jpg";
 
 const items = [
+  { src: engineerBoiler, alt: "Smyth engineer servicing a wall-mounted boiler", label: "Boiler service" },
+  { src: heatingWiring, alt: "Wiring in heating system with copper pipework", label: "Wiring in heating system", wide: true },
+  { src: manifold, alt: "Engineer wiring a heating manifold", label: "Manifold install" },
+  { src: kitchenBoiler, alt: "New boiler fitted under kitchen worktop", label: "New boiler fitted under kitchen worktop" },
   { src: bathroom, alt: "Modern shower installation in Battersea", label: "Shower install" },
   { src: boiler, alt: "New boiler installation with copper pipework", label: "Boiler install", wide: true },
   { src: pipework, alt: "Plumber repairing copper pipework", label: "Pipe repair" },
@@ -28,7 +36,7 @@ const Gallery = () => (
           <figure key={i} className={`relative overflow-hidden rounded-2xl group shadow-card ${it.wide ? "md:col-span-2" : ""}`}>
             <img src={it.src} alt={it.alt} loading="lazy" width={1024} height={1024} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
             <div className="absolute inset-0 bg-gradient-to-t from-primary/80 via-primary/0 to-transparent" />
-            <figcaption className="absolute bottom-4 left-4 text-primary-foreground font-semibold tracking-wide text-sm">
+            <figcaption className="absolute bottom-4 left-4 right-4 text-primary-foreground font-semibold tracking-wide text-sm">
               {it.label}
             </figcaption>
           </figure>
