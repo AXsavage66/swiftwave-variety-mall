@@ -75,7 +75,7 @@ const Testimonials = () => (
         </div>
 
         <div className="flex items-center gap-4 rounded-2xl bg-card border border-border shadow-card p-4 pr-6">
-          <img src={logo} alt="Smyth Plumbing & Heating logo" width={120} height={68} className="h-14 w-auto object-contain" />
+          <img src={logo} alt="Apex Stratum Heating Ltd & Heating logo" width={120} height={68} className="h-14 w-auto object-contain" />
           <div className="border-l border-border pl-4">
             <div className="flex items-center gap-1">
               {[...Array(5)].map((_, i) => (

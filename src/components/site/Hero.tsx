@@ -54,7 +54,7 @@ const Hero = () => {
           </p>
           <div className="flex flex-wrap gap-3">
             <Button asChild variant="hero" size="xl">
-              <a href="tel:+447591115721"><Phone /> Call 07591 115721</a>
+              <a href="tel:+448001234567"><Phone /> Call 08001 234567</a>
             </Button>
             <Button asChild variant="outline" size="xl" className="bg-white/5 border-white/30 text-primary-foreground hover:bg-white/15 hover:text-primary-foreground">
               <a href="#services">View services</a>

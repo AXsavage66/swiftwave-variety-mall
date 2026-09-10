@@ -19,7 +19,7 @@ const items = [
   { src: pipework, alt: "Plumber repairing copper pipework", label: "Pipe repair" },
   { src: kitchen, alt: "Brushed brass kitchen faucet installation", label: "Kitchen tap" },
   { src: bathtub, alt: "Freestanding bathtub installation in London home", label: "Bathroom fit" },
-  { src: van, alt: "Smyth Plumbing service van in London", label: "On the road", wide: true },
+  { src: van, alt: "Apex Stratum Heating Ltd service van in London", label: "On the road", wide: true },
 ];
 
 const Gallery = () => (
