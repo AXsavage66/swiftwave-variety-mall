@@ -5,7 +5,7 @@ const Footer = () => (
         <span className="w-8 h-8 rounded-lg bg-gradient-accent grid place-items-center text-accent-foreground">A</span>
         Apex Stratum Heating Ltd & Heating
       </div>
-      <div>10 Shipley House, Albion Rd, London SW8 2AH · 08001 234567</div>
+      <div>Apex Stratum Heating Ltd Unit 4, Stratum Industrial Estate Manchester, M17 1AP · 08001 234567</div>
       <div>© {new Date().getFullYear()} Apex Stratum Heating Ltd & Heating. All rights reserved.</div>
     </div>
   </footer>

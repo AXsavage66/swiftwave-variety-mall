@@ -23,7 +23,7 @@ const FinalCTA = () => (
         </Button>
       </div>
       <p className="mt-8 inline-flex items-center gap-2 text-primary-foreground/70 text-sm">
-        <MapPin className="w-4 h-4 text-accent" /> 10 Shipley House, Albion Rd, London SW8 2AH
+        <MapPin className="w-4 h-4 text-accent" /> Apex Stratum Heating Ltd Unit 4, Stratum Industrial Estate Manchester, M17 1AP
       </p>
     </div>
   </section>
