@@ -1,11 +1,14 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 
 // --- STORE CONFIGURATION ---
-// Replace with Swiftwave's actual WhatsApp phone number (e.g. '2348012345678')
 const STORE_WHATSAPP_NUMBER = '2349066524315';
 const STORE_NAME = 'Swiftwave Variety Mall';
 const STORE_LOCATION = 'Shop 9 & 10 ABH Plaza, Bosso Road, Minna';
 const DELIVERY_TAG = 'Free Sunday Campus Delivery';
+
+// Paste your Google Sheet ID here:
+const GOOGLE_SHEET_ID = 'https://docs.google.com/spreadsheets/d/1XysYSGvgDR9t70VSrIwdXsN3GwzOjFmLUOfgB2s8Xbo/edit?gid=0#gid=0';
+const GOOGLE_SHEET_CSV_URL = `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEET_ID}/gviz/tq?tqx=out:csv`;
 
 interface Product {
   id: string;
@@ -17,9 +20,8 @@ interface Product {
   badge?: string;
 }
 
-// 7 representative items covering both Shop 9 and Shop 10
-const CATALOG_ITEMS: Product[] = [
-  // Shop 9: Premium Gadgets
+// Default offline fallback items
+const DEFAULT_ITEMS: Product[] = [
   {
     id: 'g1',
     name: 'itel Energy POWER GO PRO',
@@ -34,7 +36,7 @@ const CATALOG_ITEMS: Product[] = [
     name: 'Data Cable Set',
     category: 'gadgets',
     price: 3500,
-    description: 'Multiple adapters (USB-A, Micro-USB, and Lightning) to convert the cable for different devices.',
+    description: 'Multiple adapters (USB-A, Micro-USB, and Lightning) for different devices.',
     image: '/images/data-cable-set.jpg',
   },
   {
@@ -53,14 +55,12 @@ const CATALOG_ITEMS: Product[] = [
     description: 'Noise reduction, with pocket charging case.',
     image: '/images/clip-earphones.jpg',
   },
-
-  // Shop 10: Household & Daily Essentials
   {
     id: 'h1',
     name: 'Portable Fabric Wardrobe',
     category: 'Household & Daily Essentials',
     price: 28000,
-    description: 'Sturdy, corrosion resistant and multi-shelf storage.',
+    description: 'Durable steel pipe frame, dustproof cover, multi-shelf storage.',
     image: '/images/fabric-wardrobe.jpg',
     badge: 'Essential',
   },
@@ -83,7 +83,58 @@ const CATALOG_ITEMS: Product[] = [
   },
 ];
 
+// Lightweight zero-dependency CSV parser
+function parseGoogleSheetCSV(csvText: string): Product[] {
+  const lines = csvText.trim().split(/\r?\n/);
+  if (lines.length < 2) return [];
+
+  // Parse quoted CSV cells cleanly
+  const parseRow = (line: string): string[] => {
+    const result: string[] = [];
+    let current = '';
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+      if (char === '"') {
+        if (inQuotes && line[i + 1] === '"') {
+          current += '"';
+          i++;
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (char === ',' && !inQuotes) {
+        result.push(current.trim());
+        current = '';
+      } else {
+        current += char;
+      }
+    }
+    result.push(current.trim());
+    return result;
+  };
+
+  const products: Product[] = [];
+  // Skip header row (index 0)
+  for (let i = 1; i < lines.length; i++) {
+    const cols = parseRow(lines[i]);
+    if (cols.length >= 6 && cols[0] && cols[1]) {
+      products.push({
+        id: cols[0],
+        name: cols[1],
+        category: cols[2] as 'gadgets' | 'Household & Daily Essentials',
+        price: Number(cols[3].replace(/[^0-9.-]+/g, '')) || 0,
+        description: cols[4],
+        image: cols[5],
+        badge: cols[6] || undefined,
+      });
+    }
+  }
+  return products;
+}
+
 export default function App() {
+  const [products, setProducts] = useState<Product[]>(DEFAULT_ITEMS);
+  const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'all' | 'gadgets' | 'Household & Daily Essentials'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [cart, setCart] = useState<{ [productId: string]: number }>({});
@@ -95,15 +146,39 @@ export default function App() {
   const [orderNotes, setOrderNotes] = useState('');
   const [formError, setFormError] = useState('');
 
+  // Fetch live inventory from Google Sheet
+  useEffect(() => {
+    if (!GOOGLE_SHEET_ID || GOOGLE_SHEET_ID === 'YOUR_GOOGLE_SHEET_ID_HERE') return;
+
+    setIsLoading(true);
+    fetch(GOOGLE_SHEET_CSV_URL)
+      .then((res) => {
+        if (!res.ok) throw new Error('Network error');
+        return res.text();
+      })
+      .then((csv) => {
+        const parsed = parseGoogleSheetCSV(csv);
+        if (parsed.length > 0) {
+          setProducts(parsed);
+        }
+      })
+      .catch((err) => {
+        console.warn('Using local fallback items:', err);
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
+  }, []);
+
   const filteredProducts = useMemo(() => {
-    return CATALOG_ITEMS.filter((item) => {
+    return products.filter((item) => {
       const matchesCategory = activeTab === 'all' || item.category === activeTab;
       const matchesSearch =
         item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         item.description.toLowerCase().includes(searchQuery.toLowerCase());
       return matchesCategory && matchesSearch;
     });
-  }, [activeTab, searchQuery]);
+  }, [products, activeTab, searchQuery]);
 
   const addToCart = (productId: string) => {
     setCart((prev) => ({
@@ -135,7 +210,7 @@ export default function App() {
   const totalItemsCount = Object.values(cart).reduce((sum, qty) => sum + qty, 0);
 
   const cartTotalAmount = Object.entries(cart).reduce((sum, [id, qty]) => {
-    const item = CATALOG_ITEMS.find((p) => p.id === id);
+    const item = products.find((p) => p.id === id);
     return sum + (item ? item.price * qty : 0);
   }, 0);
 
@@ -151,7 +226,7 @@ export default function App() {
 
     const itemizedList = Object.entries(cart)
       .map(([id, qty]) => {
-        const item = CATALOG_ITEMS.find((p) => p.id === id);
+        const item = products.find((p) => p.id === id);
         if (!item) return null;
         return `• ${qty}x ${item.name} — ₦${(item.price * qty).toLocaleString()}`;
       })
@@ -219,7 +294,7 @@ export default function App() {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search power banks, cable, irons..."
+            placeholder="Search power banks, cables, irons..."
             className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-4 text-xs outline-none focus:border-slate-900"
           />
           <svg className="absolute left-3 top-3 h-3.5 w-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -255,7 +330,12 @@ export default function App() {
           </button>
         </div>
 
-        {/* Product Cards with Thumbnails */}
+        {/* Loading Indicator */}
+        {isLoading && (
+          <p className="text-center text-[11px] text-slate-400 py-1">Updating stock list...</p>
+        )}
+
+        {/* Product Cards */}
         <div className="grid gap-3">
           {filteredProducts.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-slate-300 py-10 text-center">
@@ -269,7 +349,7 @@ export default function App() {
                   key={product.id}
                   className="flex gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-xs transition hover:border-slate-300"
                 >
-                  {/* Thumbnail with SVG Fallback */}
+                  {/* Thumbnail */}
                   <div className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-xl bg-slate-100 border border-slate-100">
                     <img
                       src={product.image}
@@ -376,7 +456,7 @@ export default function App() {
             {/* Cart Items */}
             <div className="divide-y divide-slate-100 py-2">
               {Object.entries(cart).map(([id, qty]) => {
-                const item = CATALOG_ITEMS.find((p) => p.id === id);
+                const item = products.find((p) => p.id === id);
                 if (!item) return null;
                 return (
                   <div key={id} className="flex items-center justify-between py-2.5">
