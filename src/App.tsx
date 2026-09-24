@@ -6,9 +6,9 @@ const STORE_NAME = 'Swiftwave Variety Mall';
 const STORE_LOCATION = 'Shop 9 & 10 ABH Plaza, Bosso Road, Minna';
 const DELIVERY_TAG = 'Free Sunday Campus Delivery';
 
-// Paste your Google Sheet ID here:
-const GOOGLE_SHEET_ID = 'https://docs.google.com/spreadsheets/d/1XysYSGvgDR9t70VSrIwdXsN3GwzOjFmLUOfgB2s8Xbo/edit?gid=0#gid=0';
-const GOOGLE_SHEET_CSV_URL = `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEET_ID}/gviz/tq?tqx=out:csv`;
+// Live Google Sheet CSV Endpoint
+const PUBLISHED_CSV_URL =
+  'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ8dPEVi06B26I8COih7Iwbal1TYoWMgzzfhOw7hbgSDHjxztBFSm39SCGxjFh9FWSrJxmC9Ej8ceRW/pub?output=csv';
 
 interface Product {
   id: string;
@@ -88,7 +88,6 @@ function parseGoogleSheetCSV(csvText: string): Product[] {
   const lines = csvText.trim().split(/\r?\n/);
   if (lines.length < 2) return [];
 
-  // Parse quoted CSV cells cleanly
   const parseRow = (line: string): string[] => {
     const result: string[] = [];
     let current = '';
@@ -114,17 +113,20 @@ function parseGoogleSheetCSV(csvText: string): Product[] {
   };
 
   const products: Product[] = [];
-  // Skip header row (index 0)
   for (let i = 1; i < lines.length; i++) {
     const cols = parseRow(lines[i]);
-    if (cols.length >= 6 && cols[0] && cols[1]) {
+    if (cols.length >= 4 && cols[0] && cols[1]) {
+      const rawCategory = (cols[2] || '').toLowerCase();
+      const category: 'gadgets' | 'Household & Daily Essentials' =
+        rawCategory.includes('gadget') ? 'gadgets' : 'Household & Daily Essentials';
+
       products.push({
         id: cols[0],
         name: cols[1],
-        category: cols[2] as 'gadgets' | 'Household & Daily Essentials',
-        price: Number(cols[3].replace(/[^0-9.-]+/g, '')) || 0,
-        description: cols[4],
-        image: cols[5],
+        category,
+        price: Number((cols[3] || '0').replace(/[^0-9.-]+/g, '')) || 0,
+        description: cols[4] || '',
+        image: cols[5] || '',
         badge: cols[6] || undefined,
       });
     }
@@ -146,12 +148,10 @@ export default function App() {
   const [orderNotes, setOrderNotes] = useState('');
   const [formError, setFormError] = useState('');
 
-  // Fetch live inventory from Google Sheet
+  // Fetch live inventory from published Google Sheet
   useEffect(() => {
-    if (!GOOGLE_SHEET_ID || GOOGLE_SHEET_ID === 'YOUR_GOOGLE_SHEET_ID_HERE') return;
-
     setIsLoading(true);
-    fetch(GOOGLE_SHEET_CSV_URL)
+    fetch(`${PUBLISHED_CSV_URL}&_t=${Date.now()}`, { cache: 'no-store' })
       .then((res) => {
         if (!res.ok) throw new Error('Network error');
         return res.text();
