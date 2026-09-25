@@ -4,7 +4,6 @@ import { useState, useMemo, useEffect } from 'react';
 const STORE_WHATSAPP_NUMBER = '2349066524315';
 const STORE_NAME = 'Swiftwave Variety Mall';
 const STORE_LOCATION = 'Shop 9 & 10 ABH Plaza, Bosso Road, Minna';
-const STORE_MAPS_URL = 'https://www.google.com/maps/search/?api=1&query=ABH+Plaza,+Bosso+Road,+Minna';
 const PROMO_BANNER = '⚡ In-Store Pickup at ABH Plaza • Nationwide Delivery Available';
 
 // Live Google Sheet CSV Endpoint
@@ -302,17 +301,9 @@ export default function App() {
         <div className="mx-auto flex max-w-xl items-center justify-between">
           <div>
             <h1 className="text-base font-extrabold tracking-tight text-slate-900">{STORE_NAME}</h1>
-            {/* Direct Google Maps Link */}
-            <a
-              href={STORE_MAPS_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-700 hover:text-emerald-800 transition line-clamp-1"
-              title="Click to view shop location on Google Maps"
-            >
-              <span>📍 {STORE_LOCATION}</span>
-              <span className="font-bold underline text-[10px]">Open Map ↗</span>
-            </a>
+            <p className="text-[11px] font-medium text-slate-500 line-clamp-1">
+              📍 {STORE_LOCATION}
+            </p>
           </div>
           <button
             onClick={() => setIsDrawerOpen(true)}
@@ -402,7 +393,7 @@ export default function App() {
                       alt={product.name}
                       onError={(e) => {
                         e.currentTarget.src =
-                          'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="%23cbd5e1" stroke-width="1.5"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>';
+                          'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="%23cbd5e1" stroke-width="1.5"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/></svg>';
                       }}
                       className="h-full w-full object-cover transition duration-200 group-hover:scale-105"
                     />
