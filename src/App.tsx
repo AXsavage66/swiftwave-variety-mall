@@ -20,6 +20,26 @@ interface Product {
   badge?: string;
 }
 
+// Converts any standard Google Drive share link into a direct viewable image link
+function normalizeImageUrl(rawUrl: string): string {
+  if (!rawUrl || !rawUrl.trim()) return '';
+  const url = rawUrl.trim();
+
+  // Matches Google Drive links: /file/d/ID, id=ID, or /d/ID
+  const driveMatch =
+    url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) ||
+    url.match(/[?&]id=([a-zA-Z0-9_-]+)/) ||
+    url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+
+  if (driveMatch && driveMatch[1]) {
+    const fileId = driveMatch[1];
+    // High-resolution public thumbnail endpoint that displays in <img> tags without auth blocks
+    return `https://drive.google.com/thumbnail?id=${fileId}&sz=w800`;
+  }
+
+  return url;
+}
+
 // Default offline fallback items
 const DEFAULT_ITEMS: Product[] = [
   {
@@ -126,7 +146,7 @@ function parseGoogleSheetCSV(csvText: string): Product[] {
         category,
         price: Number((cols[3] || '0').replace(/[^0-9.-]+/g, '')) || 0,
         description: cols[4] || '',
-        image: cols[5] || '',
+        image: normalizeImageUrl(cols[5] || ''),
         badge: cols[6] || undefined,
       });
     }
