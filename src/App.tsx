@@ -4,7 +4,8 @@ import { useState, useMemo, useEffect } from 'react';
 const STORE_WHATSAPP_NUMBER = '2349066524315';
 const STORE_NAME = 'Swiftwave Variety Mall';
 const STORE_LOCATION = 'Shop 9 & 10 ABH Plaza, Bosso Road, Minna';
-const DELIVERY_TAG = 'Free Sunday Campus Delivery';
+const STORE_MAPS_URL = 'https://www.google.com/maps/search/?api=1&query=ABH+Plaza,+Bosso+Road,+Minna';
+const PROMO_BANNER = '⚡ In-Store Pickup at ABH Plaza • Nationwide Delivery Available';
 
 // Live Google Sheet CSV Endpoint
 const PUBLISHED_CSV_URL =
@@ -33,7 +34,6 @@ function normalizeImageUrl(rawUrl: string): string {
 
   if (driveMatch && driveMatch[1]) {
     const fileId = driveMatch[1];
-    // High-resolution public thumbnail endpoint that displays cleanly in <img> tags
     return `https://drive.google.com/thumbnail?id=${fileId}&sz=w800`;
   }
 
@@ -162,11 +162,12 @@ export default function App() {
   const [cart, setCart] = useState<{ [productId: string]: number }>({});
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
-  // Enlarged Image Preview Modal State
+  // Enlarged Image Modal
   const [enlargedProduct, setEnlargedProduct] = useState<Product | null>(null);
 
   // Customer form state
   const [customerName, setCustomerName] = useState('');
+  const [fulfillmentType, setFulfillmentType] = useState<'pickup' | 'delivery'>('pickup');
   const [deliveryLocation, setDeliveryLocation] = useState('');
   const [orderNotes, setOrderNotes] = useState('');
   const [formError, setFormError] = useState('');
@@ -240,8 +241,13 @@ export default function App() {
   const handleSendWhatsAppOrder = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!customerName.trim() || !deliveryLocation.trim()) {
-      setFormError('Please enter your name and hostel/delivery location.');
+    if (!customerName.trim()) {
+      setFormError('Please enter your full name.');
+      return;
+    }
+
+    if (fulfillmentType === 'delivery' && !deliveryLocation.trim()) {
+      setFormError('Please enter your delivery address / town.');
       return;
     }
 
@@ -256,10 +262,14 @@ export default function App() {
       .filter(Boolean)
       .join('\n');
 
+    const fulfillmentText =
+      fulfillmentType === 'pickup'
+        ? `🏢 *Fulfillment:* In-Store Pickup (${STORE_LOCATION})`
+        : `🚚 *Fulfillment:* Delivery to: ${deliveryLocation.trim()}`;
+
     const message = [
       `*NEW ORDER — ${STORE_NAME}*`,
-      `📍 *Location:* ${STORE_LOCATION}`,
-      `📦 *Dispatch:* ${DELIVERY_TAG}`,
+      fulfillmentText,
       `---------------------------------`,
       `*ORDERED ITEMS:*`,
       itemizedList,
@@ -268,11 +278,10 @@ export default function App() {
       `---------------------------------`,
       `👤 *CUSTOMER DETAILS:*`,
       `• *Name:* ${customerName.trim()}`,
-      `• *Hostel / Address:* ${deliveryLocation.trim()}`,
-      orderNotes.trim() ? `• *Note:* ${orderNotes.trim()}` : null,
+      orderNotes.trim() ? `• *Notes:* ${orderNotes.trim()}` : null,
       `• *Payment:* Bank Transfer on Confirmation`,
       `---------------------------------`,
-      `_Please confirm availability and share payment account details._`,
+      `_Please confirm item availability and send payment account details._`,
     ]
       .filter(Boolean)
       .join('\n');
@@ -285,7 +294,7 @@ export default function App() {
     <div className="min-h-screen bg-slate-50 text-slate-900 pb-32">
       {/* Top Banner */}
       <div className="bg-emerald-700 px-4 py-1.5 text-center text-xs font-semibold text-white">
-        ⚡ {DELIVERY_TAG} to All Campuses
+        {PROMO_BANNER}
       </div>
 
       {/* Main Header */}
@@ -293,7 +302,17 @@ export default function App() {
         <div className="mx-auto flex max-w-xl items-center justify-between">
           <div>
             <h1 className="text-base font-extrabold tracking-tight text-slate-900">{STORE_NAME}</h1>
-            <p className="text-[11px] font-medium text-slate-500 line-clamp-1">{STORE_LOCATION}</p>
+            {/* Direct Google Maps Link */}
+            <a
+              href={STORE_MAPS_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-700 hover:text-emerald-800 transition line-clamp-1"
+              title="Click to view shop location on Google Maps"
+            >
+              <span>📍 {STORE_LOCATION}</span>
+              <span className="font-bold underline text-[10px]">Open Map ↗</span>
+            </a>
           </div>
           <button
             onClick={() => setIsDrawerOpen(true)}
@@ -372,7 +391,7 @@ export default function App() {
                   key={product.id}
                   className="flex gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-xs transition hover:border-slate-300"
                 >
-                  {/* Thumbnail — Tapping opens the enlarged preview modal */}
+                  {/* Thumbnail — Tap to Enlarge */}
                   <div
                     onClick={() => setEnlargedProduct(product)}
                     className="group relative h-20 w-20 flex-shrink-0 cursor-pointer overflow-hidden rounded-xl border border-slate-100 bg-slate-100"
@@ -392,7 +411,6 @@ export default function App() {
                         {product.badge}
                       </span>
                     )}
-                    {/* Small visual tap cue */}
                     <div className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-black/40 text-[9px] text-white opacity-80">
                       🔍
                     </div>
@@ -477,7 +495,6 @@ export default function App() {
             className="relative flex max-h-[90vh] w-full max-w-sm flex-col overflow-hidden rounded-3xl bg-white p-4 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Close Button */}
             <button
               onClick={() => setEnlargedProduct(null)}
               className="absolute right-3 top-3 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-slate-100/90 text-sm font-bold text-slate-700 shadow-sm active:scale-90"
@@ -485,14 +502,13 @@ export default function App() {
               ✕
             </button>
 
-            {/* High-Res Image View */}
             <div className="relative aspect-square w-full overflow-hidden rounded-2xl bg-slate-100 flex items-center justify-center">
               <img
                 src={enlargedProduct.image}
                 alt={enlargedProduct.name}
                 onError={(e) => {
                   e.currentTarget.src =
-                    'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="%23cbd5e1" stroke-width="1.5"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>';
+                    'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="%23cbd5e1" stroke-width="1.5"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/></svg>';
                 }}
                 className="h-full w-full object-contain"
               />
@@ -503,7 +519,6 @@ export default function App() {
               )}
             </div>
 
-            {/* Details */}
             <div className="mt-3">
               <h3 className="text-sm font-extrabold text-slate-900 leading-snug">{enlargedProduct.name}</h3>
               <p className="mt-1 text-xs text-slate-500 leading-relaxed max-h-24 overflow-y-auto">
@@ -511,7 +526,6 @@ export default function App() {
               </p>
             </div>
 
-            {/* Price & Action */}
             <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3">
               <div>
                 <p className="text-[10px] font-medium text-slate-400">Price</p>
@@ -540,7 +554,7 @@ export default function App() {
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div>
                 <h3 className="text-sm font-extrabold text-slate-900">Review Your Order</h3>
-                <p className="text-[11px] text-slate-500">Fast dispatch for Sunday campus delivery</p>
+                <p className="text-[11px] text-slate-500">Fast fulfillment for Minna & nationwide orders</p>
               </div>
               <button
                 onClick={() => setIsDrawerOpen(false)}
@@ -602,17 +616,51 @@ export default function App() {
                 />
               </div>
 
+              {/* Fulfillment Type Toggle */}
               <div>
-                <label className="block text-[11px] font-bold text-slate-700">Location *</label>
-                <input
-                  type="text"
-                  required
-                  value={deliveryLocation}
-                  onChange={(e) => setDeliveryLocation(e.target.value)}
-                  placeholder="e.g. Gidan Kwano Campus / Bosso Campus"
-                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-xs outline-none focus:border-slate-900"
-                />
+                <label className="block text-[11px] font-bold text-slate-700 mb-1">How will you receive it? *</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setFulfillmentType('pickup')}
+                    className={`rounded-xl border p-2 text-left text-xs font-semibold transition ${
+                      fulfillmentType === 'pickup'
+                        ? 'border-emerald-600 bg-emerald-50 text-emerald-900'
+                        : 'border-slate-200 bg-white text-slate-700'
+                    }`}
+                  >
+                    🏢 In-Store Pickup
+                    <span className="block text-[10px] font-normal text-slate-500">Shop 9 & 10 ABH Plaza</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFulfillmentType('delivery')}
+                    className={`rounded-xl border p-2 text-left text-xs font-semibold transition ${
+                      fulfillmentType === 'delivery'
+                        ? 'border-emerald-600 bg-emerald-50 text-emerald-900'
+                        : 'border-slate-200 bg-white text-slate-700'
+                    }`}
+                  >
+                    🚚 Delivery / Waybill
+                    <span className="block text-[10px] font-normal text-slate-500">Minna or Nationwide</span>
+                  </button>
+                </div>
               </div>
+
+              {/* Address Field — Conditional */}
+              {fulfillmentType === 'delivery' && (
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700">Delivery Address / Destination *</label>
+                  <input
+                    type="text"
+                    required
+                    value={deliveryLocation}
+                    onChange={(e) => setDeliveryLocation(e.target.value)}
+                    placeholder="e.g. Bosso, Maitumbi, Abuja, or Kaduna"
+                    className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-xs outline-none focus:border-slate-900"
+                  />
+                </div>
+              )}
 
               <div>
                 <label className="block text-[11px] font-bold text-slate-700">Item Notes (Optional)</label>
@@ -620,7 +668,7 @@ export default function App() {
                   type="text"
                   value={orderNotes}
                   onChange={(e) => setOrderNotes(e.target.value)}
-                  placeholder="e.g. Black cable preferred"
+                  placeholder="e.g. Black color, or urgent dispatch"
                   className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-xs outline-none focus:border-slate-900"
                 />
               </div>
