@@ -33,7 +33,7 @@ function normalizeImageUrl(rawUrl: string): string {
 
   if (driveMatch && driveMatch[1]) {
     const fileId = driveMatch[1];
-    // High-resolution public thumbnail endpoint that displays in <img> tags without auth blocks
+    // High-resolution public thumbnail endpoint that displays cleanly in <img> tags
     return `https://drive.google.com/thumbnail?id=${fileId}&sz=w800`;
   }
 
@@ -161,6 +161,9 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [cart, setCart] = useState<{ [productId: string]: number }>({});
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+
+  // Enlarged Image Preview Modal State
+  const [enlargedProduct, setEnlargedProduct] = useState<Product | null>(null);
 
   // Customer form state
   const [customerName, setCustomerName] = useState('');
@@ -369,8 +372,12 @@ export default function App() {
                   key={product.id}
                   className="flex gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-xs transition hover:border-slate-300"
                 >
-                  {/* Thumbnail */}
-                  <div className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-xl bg-slate-100 border border-slate-100">
+                  {/* Thumbnail — Tapping opens the enlarged preview modal */}
+                  <div
+                    onClick={() => setEnlargedProduct(product)}
+                    className="group relative h-20 w-20 flex-shrink-0 cursor-pointer overflow-hidden rounded-xl border border-slate-100 bg-slate-100"
+                    title="Tap to enlarge"
+                  >
                     <img
                       src={product.image}
                       alt={product.name}
@@ -378,13 +385,17 @@ export default function App() {
                         e.currentTarget.src =
                           'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="%23cbd5e1" stroke-width="1.5"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>';
                       }}
-                      className="h-full w-full object-cover"
+                      className="h-full w-full object-cover transition duration-200 group-hover:scale-105"
                     />
                     {product.badge && (
                       <span className="absolute bottom-1 left-1 rounded bg-slate-900/80 px-1 py-0.5 text-[8px] font-bold text-white backdrop-blur-xs">
                         {product.badge}
                       </span>
                     )}
+                    {/* Small visual tap cue */}
+                    <div className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-black/40 text-[9px] text-white opacity-80">
+                      🔍
+                    </div>
                   </div>
 
                   {/* Info */}
@@ -452,6 +463,72 @@ export default function App() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7" />
               </svg>
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* ENLARGED IMAGE MODAL */}
+      {enlargedProduct && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-xs transition-opacity"
+          onClick={() => setEnlargedProduct(null)}
+        >
+          <div
+            className="relative flex max-h-[90vh] w-full max-w-sm flex-col overflow-hidden rounded-3xl bg-white p-4 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Close Button */}
+            <button
+              onClick={() => setEnlargedProduct(null)}
+              className="absolute right-3 top-3 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-slate-100/90 text-sm font-bold text-slate-700 shadow-sm active:scale-90"
+            >
+              ✕
+            </button>
+
+            {/* High-Res Image View */}
+            <div className="relative aspect-square w-full overflow-hidden rounded-2xl bg-slate-100 flex items-center justify-center">
+              <img
+                src={enlargedProduct.image}
+                alt={enlargedProduct.name}
+                onError={(e) => {
+                  e.currentTarget.src =
+                    'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="%23cbd5e1" stroke-width="1.5"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>';
+                }}
+                className="h-full w-full object-contain"
+              />
+              {enlargedProduct.badge && (
+                <span className="absolute bottom-2 left-2 rounded-lg bg-slate-900/80 px-2 py-1 text-[10px] font-bold text-white backdrop-blur-xs">
+                  {enlargedProduct.badge}
+                </span>
+              )}
+            </div>
+
+            {/* Details */}
+            <div className="mt-3">
+              <h3 className="text-sm font-extrabold text-slate-900 leading-snug">{enlargedProduct.name}</h3>
+              <p className="mt-1 text-xs text-slate-500 leading-relaxed max-h-24 overflow-y-auto">
+                {enlargedProduct.description}
+              </p>
+            </div>
+
+            {/* Price & Action */}
+            <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3">
+              <div>
+                <p className="text-[10px] font-medium text-slate-400">Price</p>
+                <span className="text-base font-extrabold text-slate-900">
+                  ₦{enlargedProduct.price.toLocaleString()}
+                </span>
+              </div>
+              <button
+                onClick={() => {
+                  addToCart(enlargedProduct.id);
+                  setEnlargedProduct(null);
+                }}
+                className="rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white shadow-md shadow-emerald-600/20 active:scale-95"
+              >
+                + Add to Order
+              </button>
+            </div>
           </div>
         </div>
       )}
