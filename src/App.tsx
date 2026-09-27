@@ -43,7 +43,7 @@ function normalizeImageUrl(rawUrl: string): string {
 }
 
 // Formats Google Drive, YouTube, or raw video URLs for embed playback
-function getEmbedVideoInfo(rawUrl?: string): { type: 'iframe' | 'video'; url: string } | null {
+function getEmbedVideoInfo(rawUrl?: string): { type: 'iframe' | 'video'; embedUrl: string; directUrl: string } | null {
   if (!rawUrl || !rawUrl.trim()) return null;
   const url = rawUrl.trim();
 
@@ -54,9 +54,11 @@ function getEmbedVideoInfo(rawUrl?: string): { type: 'iframe' | 'video'; url: st
     url.match(/\/d\/([a-zA-Z0-9_-]+)/);
 
   if (driveMatch && driveMatch[1]) {
+    const fileId = driveMatch[1];
     return {
       type: 'iframe',
-      url: `https://drive.google.com/file/d/${driveMatch[1]}/preview`,
+      embedUrl: `https://drive.google.com/file/d/${fileId}/preview`,
+      directUrl: `https://drive.google.com/file/d/${fileId}/view`,
     };
   }
 
@@ -67,7 +69,8 @@ function getEmbedVideoInfo(rawUrl?: string): { type: 'iframe' | 'video'; url: st
   if (ytMatch && ytMatch[1]) {
     return {
       type: 'iframe',
-      url: `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1&rel=0`,
+      embedUrl: `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1&rel=0`,
+      directUrl: url,
     };
   }
 
@@ -75,13 +78,15 @@ function getEmbedVideoInfo(rawUrl?: string): { type: 'iframe' | 'video'; url: st
   if (url.match(/\.(mp4|webm|ogg)(\?.*)?$/i)) {
     return {
       type: 'video',
-      url,
+      embedUrl: url,
+      directUrl: url,
     };
   }
 
   return {
     type: 'iframe',
-    url,
+    embedUrl: url,
+    directUrl: url,
   };
 }
 
@@ -185,13 +190,11 @@ function parseGoogleSheetCSV(csvText: string): Product[] {
       const category: 'gadgets' | 'Household & Daily Essentials' =
         rawCategory.includes('gadget') ? 'gadgets' : 'Household & Daily Essentials';
 
-      // Parse comma-separated images from Column F (Index 5)
       const rawImages = (cols[5] || '')
         .split(',')
         .map((u) => normalizeImageUrl(u.trim()))
         .filter((u) => u.length > 0);
 
-      // Parse optional video URL from Column H (Index 7)
       const rawVideo = (cols[7] || '').trim();
 
       products.push({
@@ -229,7 +232,6 @@ export default function App() {
   const [orderNotes, setOrderNotes] = useState('');
   const [formError, setFormError] = useState('');
 
-  // Fetch live inventory from published Google Sheet
   useEffect(() => {
     setIsLoading(true);
     fetch(`${PUBLISHED_CSV_URL}&_t=${Date.now()}`, { cache: 'no-store' })
@@ -401,7 +403,7 @@ export default function App() {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search power banks, cables, irons..."
+            placeholder="Search power banks, cables, laptops..."
             className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-4 text-xs outline-none focus:border-slate-900"
           />
           <svg className="absolute left-3 top-3 h-3.5 w-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -409,7 +411,7 @@ export default function App() {
           </svg>
         </div>
 
-        {/* Categories tied to Shop 9 and Shop 10 */}
+        {/* Categories */}
         <div className="mb-4 flex gap-1.5 rounded-xl bg-slate-200/80 p-1">
           <button
             onClick={() => setActiveTab('all')}
@@ -473,21 +475,18 @@ export default function App() {
                       className="h-full w-full object-cover transition duration-200 group-hover:scale-105"
                     />
 
-                    {/* Badge */}
                     {product.badge && (
                       <span className="absolute bottom-1 left-1 rounded bg-slate-900/80 px-1 py-0.5 text-[8px] font-bold text-white backdrop-blur-xs">
                         {product.badge}
                       </span>
                     )}
 
-                    {/* Multi-Photo Count Indicator */}
                     {product.images.length > 1 && (
                       <span className="absolute bottom-1 right-1 rounded bg-black/60 px-1 py-0.5 text-[8px] font-bold text-white backdrop-blur-xs">
                         1/{product.images.length}
                       </span>
                     )}
 
-                    {/* Video Tag Indicator */}
                     {product.videoUrl && (
                       <span className="absolute top-1 left-1 rounded bg-emerald-600/90 px-1 py-0.5 text-[8px] font-bold text-white shadow-xs">
                         🎬
@@ -513,7 +512,6 @@ export default function App() {
                         ₦{product.price.toLocaleString()}
                       </span>
 
-                      {/* Add/Quantity Buttons */}
                       {currentQty === 0 ? (
                         <button
                           onClick={() => addToCart(product.id)}
@@ -568,42 +566,53 @@ export default function App() {
         </div>
       )}
 
-      {/* ENLARGED MODAL (MULTI-PHOTO SWITCHER & OPT-IN VIDEO PLAYER) */}
+      {/* ENLARGED MODAL (RESPONSIVE VIDEO PLAYER & GALLERY) */}
       {enlargedProduct && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-xs transition-opacity"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-3 backdrop-blur-xs transition-opacity overflow-y-auto"
           onClick={handleCloseProductModal}
         >
           <div
-            className="relative flex max-h-[92vh] w-full max-w-sm flex-col overflow-hidden rounded-3xl bg-white p-4 shadow-2xl"
+            className={`relative flex max-h-[94vh] w-full ${
+              showVideo ? 'max-w-lg' : 'max-w-sm'
+            } flex-col overflow-y-auto rounded-3xl bg-white p-4 shadow-2xl transition-all duration-200`}
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Close Button */}
-            <button
-              onClick={handleCloseProductModal}
-              className="absolute right-3 top-3 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-slate-100/90 text-sm font-bold text-slate-700 shadow-sm active:scale-90"
-            >
-              ✕
-            </button>
+            {/* Top Bar with Title and Close Button */}
+            <div className="mb-2 flex items-center justify-between">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                {showVideo ? 'Video Demo' : 'Product Preview'}
+              </span>
+              <button
+                onClick={handleCloseProductModal}
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-sm font-bold text-slate-700 shadow-xs active:scale-90"
+              >
+                ✕
+              </button>
+            </div>
 
-            {/* Media Screen (Photo or Video) */}
-            <div className="relative aspect-square w-full overflow-hidden rounded-2xl bg-slate-100 flex items-center justify-center">
+            {/* Media Screen (Switches to aspect-video on Video Mode) */}
+            <div
+              className={`relative w-full overflow-hidden rounded-2xl bg-black flex items-center justify-center ${
+                showVideo ? 'aspect-video min-h-[220px]' : 'aspect-square bg-slate-100'
+              }`}
+            >
               {showVideo && activeVideoEmbed ? (
                 activeVideoEmbed.type === 'video' ? (
                   <video
                     controls
                     playsInline
                     autoPlay
-                    className="h-full w-full object-contain bg-black"
-                    src={activeVideoEmbed.url}
+                    className="h-full w-full object-contain"
+                    src={activeVideoEmbed.embedUrl}
                   />
                 ) : (
                   <iframe
-                    src={activeVideoEmbed.url}
+                    src={activeVideoEmbed.embedUrl}
                     title={`${enlargedProduct.name} video preview`}
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
                     allowFullScreen
-                    className="h-full w-full border-0 bg-black"
+                    className="h-full w-full border-0"
                   />
                 )
               ) : (
@@ -630,9 +639,8 @@ export default function App() {
               )}
             </div>
 
-            {/* Media Navigation Controls */}
-            <div className="mt-2.5 flex items-center justify-between gap-2">
-              {/* Thumbnail Strip (Multi-Image Switcher) */}
+            {/* Media Controls & Thumbnail Switcher */}
+            <div className="mt-3 flex items-center justify-between gap-2">
               <div className="flex items-center gap-1.5 overflow-x-auto py-0.5 max-w-[65%]">
                 {enlargedProduct.images.map((imgUrl, idx) => (
                   <button
@@ -653,31 +661,46 @@ export default function App() {
                 ))}
               </div>
 
-              {/* On-Demand Video Toggle */}
+              {/* Video Buttons */}
               {activeVideoEmbed && (
-                <button
-                  type="button"
-                  onClick={() => setShowVideo(!showVideo)}
-                  className={`inline-flex items-center gap-1 rounded-xl px-2.5 py-1.5 text-[11px] font-bold transition active:scale-95 ${
-                    showVideo
-                      ? 'bg-slate-900 text-white'
-                      : 'border border-emerald-600 bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
-                  }`}
-                >
-                  <span>{showVideo ? '🖼️ Photos' : '🎬 Video'}</span>
-                </button>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setShowVideo(!showVideo)}
+                    className={`inline-flex items-center gap-1 rounded-xl px-3 py-1.5 text-[11px] font-bold transition active:scale-95 ${
+                      showVideo
+                        ? 'bg-slate-900 text-white'
+                        : 'border border-emerald-600 bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
+                    }`}
+                  >
+                    <span>{showVideo ? '🖼️ Photos' : '🎬 Watch Video'}</span>
+                  </button>
+
+                  {/* Direct Native Fullscreen Launcher */}
+                  {showVideo && (
+                    <a
+                      href={activeVideoEmbed.directUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 transition text-xs font-bold"
+                      title="Open full player in Google Drive / external"
+                    >
+                      ↗
+                    </a>
+                  )}
+                </div>
               )}
             </div>
 
             {/* Details */}
             <div className="mt-3">
               <h3 className="text-sm font-extrabold text-slate-900 leading-snug">{enlargedProduct.name}</h3>
-              <p className="mt-1 text-xs text-slate-500 leading-relaxed max-h-20 overflow-y-auto">
+              <p className="mt-1 text-xs text-slate-600 leading-relaxed max-h-24 overflow-y-auto">
                 {enlargedProduct.description}
               </p>
             </div>
 
-            {/* Price & Add to Cart */}
+            {/* Price & Action */}
             <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3">
               <div>
                 <p className="text-[10px] font-medium text-slate-400">Price</p>
@@ -690,7 +713,7 @@ export default function App() {
                   addToCart(enlargedProduct.id);
                   handleCloseProductModal();
                 }}
-                className="rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white shadow-md shadow-emerald-600/20 active:scale-95"
+                className="rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-bold text-white shadow-md shadow-emerald-600/20 active:scale-95"
               >
                 + Add to Order
               </button>
