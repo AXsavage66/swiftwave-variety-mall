@@ -10,22 +10,25 @@ const PROMO_BANNER = '⚡ In-Store Pickup at ABH Plaza • Nationwide Delivery A
 const PUBLISHED_CSV_URL =
   'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ8dPEVi06B26I8COih7Iwbal1TYoWMgzzfhOw7hbgSDHjxztBFSm39SCGxjFh9FWSrJxmC9Ej8ceRW/pub?output=csv';
 
+const FALLBACK_IMAGE_SVG =
+  'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="%23cbd5e1" stroke-width="1.5"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>';
+
 interface Product {
   id: string;
   name: string;
   category: 'gadgets' | 'Household & Daily Essentials';
   price: number;
   description: string;
-  image: string;
+  images: string[];
   badge?: string;
+  videoUrl?: string;
 }
 
-// Converts any standard Google Drive share link into a direct viewable image link
+// Converts any standard Google Drive share link into a direct viewable image thumbnail
 function normalizeImageUrl(rawUrl: string): string {
   if (!rawUrl || !rawUrl.trim()) return '';
   const url = rawUrl.trim();
 
-  // Matches Google Drive links: /file/d/ID, id=ID, or /d/ID
   const driveMatch =
     url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) ||
     url.match(/[?&]id=([a-zA-Z0-9_-]+)/) ||
@@ -39,6 +42,49 @@ function normalizeImageUrl(rawUrl: string): string {
   return url;
 }
 
+// Formats Google Drive, YouTube, or raw video URLs for embed playback
+function getEmbedVideoInfo(rawUrl?: string): { type: 'iframe' | 'video'; url: string } | null {
+  if (!rawUrl || !rawUrl.trim()) return null;
+  const url = rawUrl.trim();
+
+  // Google Drive Video
+  const driveMatch =
+    url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) ||
+    url.match(/[?&]id=([a-zA-Z0-9_-]+)/) ||
+    url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+
+  if (driveMatch && driveMatch[1]) {
+    return {
+      type: 'iframe',
+      url: `https://drive.google.com/file/d/${driveMatch[1]}/preview`,
+    };
+  }
+
+  // YouTube / YouTube Shorts
+  const ytMatch =
+    url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|shorts\/|embed\/))([a-zA-Z0-9_-]{11})/);
+
+  if (ytMatch && ytMatch[1]) {
+    return {
+      type: 'iframe',
+      url: `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1&rel=0`,
+    };
+  }
+
+  // Direct MP4 / WebM / OGG files
+  if (url.match(/\.(mp4|webm|ogg)(\?.*)?$/i)) {
+    return {
+      type: 'video',
+      url,
+    };
+  }
+
+  return {
+    type: 'iframe',
+    url,
+  };
+}
+
 // Default offline fallback items
 const DEFAULT_ITEMS: Product[] = [
   {
@@ -47,7 +93,7 @@ const DEFAULT_ITEMS: Product[] = [
     category: 'gadgets',
     price: 115000,
     description: 'Supports dual fast charging up to 100W via Solar panels and USB-C.',
-    image: '/images/itel-power-go.jpg',
+    images: ['/images/itel-power-go.jpg'],
     badge: 'Popular',
   },
   {
@@ -56,7 +102,7 @@ const DEFAULT_ITEMS: Product[] = [
     category: 'gadgets',
     price: 3500,
     description: 'Multiple adapters (USB-A, Micro-USB, and Lightning) for different devices.',
-    image: '/images/data-cable-set.jpg',
+    images: ['/images/data-cable-set.jpg'],
   },
   {
     id: 'g3',
@@ -64,7 +110,7 @@ const DEFAULT_ITEMS: Product[] = [
     category: 'gadgets',
     price: 4000,
     description: 'Supports ultra-fast power delivery up to 240W.',
-    image: '/images/stand-charging-cable.jpg',
+    images: ['/images/stand-charging-cable.jpg'],
   },
   {
     id: 'g4',
@@ -72,7 +118,7 @@ const DEFAULT_ITEMS: Product[] = [
     category: 'gadgets',
     price: 13000,
     description: 'Noise reduction, with pocket charging case.',
-    image: '/images/clip-earphones.jpg',
+    images: ['/images/clip-earphones.jpg'],
   },
   {
     id: 'h1',
@@ -80,7 +126,7 @@ const DEFAULT_ITEMS: Product[] = [
     category: 'Household & Daily Essentials',
     price: 28000,
     description: 'Durable steel pipe frame, dustproof cover, multi-shelf storage.',
-    image: '/images/fabric-wardrobe.jpg',
+    images: ['/images/fabric-wardrobe.jpg'],
     badge: 'Essential',
   },
   {
@@ -89,7 +135,7 @@ const DEFAULT_ITEMS: Product[] = [
     category: 'Household & Daily Essentials',
     price: 1500,
     description: 'Double-layer self-draining design.',
-    image: '/images/fish-soap-holder.jpg',
+    images: ['/images/fish-soap-holder.jpg'],
     badge: 'Bestseller',
   },
   {
@@ -98,7 +144,7 @@ const DEFAULT_ITEMS: Product[] = [
     category: 'Household & Daily Essentials',
     price: 5500,
     description: 'Used as a chopping board, washing tub and storage basket.',
-    image: '/images/cutting-board.jpg',
+    images: ['/images/cutting-board.jpg'],
   },
 ];
 
@@ -139,14 +185,24 @@ function parseGoogleSheetCSV(csvText: string): Product[] {
       const category: 'gadgets' | 'Household & Daily Essentials' =
         rawCategory.includes('gadget') ? 'gadgets' : 'Household & Daily Essentials';
 
+      // Parse comma-separated images from Column F (Index 5)
+      const rawImages = (cols[5] || '')
+        .split(',')
+        .map((u) => normalizeImageUrl(u.trim()))
+        .filter((u) => u.length > 0);
+
+      // Parse optional video URL from Column H (Index 7)
+      const rawVideo = (cols[7] || '').trim();
+
       products.push({
         id: cols[0],
         name: cols[1],
         category,
         price: Number((cols[3] || '0').replace(/[^0-9.-]+/g, '')) || 0,
         description: cols[4] || '',
-        image: normalizeImageUrl(cols[5] || ''),
+        images: rawImages.length > 0 ? rawImages : [FALLBACK_IMAGE_SVG],
         badge: cols[6] || undefined,
+        videoUrl: rawVideo.length > 0 ? rawVideo : undefined,
       });
     }
   }
@@ -161,8 +217,10 @@ export default function App() {
   const [cart, setCart] = useState<{ [productId: string]: number }>({});
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
-  // Enlarged Image Modal
+  // Enlarged Modal Media States
   const [enlargedProduct, setEnlargedProduct] = useState<Product | null>(null);
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [showVideo, setShowVideo] = useState(false);
 
   // Customer form state
   const [customerName, setCustomerName] = useState('');
@@ -237,6 +295,18 @@ export default function App() {
     return sum + (item ? item.price * qty : 0);
   }, 0);
 
+  const handleOpenProductModal = (product: Product) => {
+    setEnlargedProduct(product);
+    setActiveImageIndex(0);
+    setShowVideo(false);
+  };
+
+  const handleCloseProductModal = () => {
+    setEnlargedProduct(null);
+    setActiveImageIndex(0);
+    setShowVideo(false);
+  };
+
   const handleSendWhatsAppOrder = (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -288,6 +358,10 @@ export default function App() {
     const whatsappUrl = `https://wa.me/${STORE_WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, '_blank');
   };
+
+  const activeVideoEmbed = enlargedProduct?.videoUrl
+    ? getEmbedVideoInfo(enlargedProduct.videoUrl)
+    : null;
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 pb-32">
@@ -377,31 +451,49 @@ export default function App() {
           ) : (
             filteredProducts.map((product) => {
               const currentQty = cart[product.id] || 0;
+              const coverImage = product.images[0] || FALLBACK_IMAGE_SVG;
+
               return (
                 <div
                   key={product.id}
                   className="flex gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-xs transition hover:border-slate-300"
                 >
-                  {/* Thumbnail — Tap to Enlarge */}
+                  {/* Thumbnail Container */}
                   <div
-                    onClick={() => setEnlargedProduct(product)}
+                    onClick={() => handleOpenProductModal(product)}
                     className="group relative h-20 w-20 flex-shrink-0 cursor-pointer overflow-hidden rounded-xl border border-slate-100 bg-slate-100"
-                    title="Tap to enlarge"
+                    title="Tap to view gallery & video"
                   >
                     <img
-                      src={product.image}
+                      src={coverImage}
                       alt={product.name}
                       onError={(e) => {
-                        e.currentTarget.src =
-                          'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="%23cbd5e1" stroke-width="1.5"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/></svg>';
+                        e.currentTarget.src = FALLBACK_IMAGE_SVG;
                       }}
                       className="h-full w-full object-cover transition duration-200 group-hover:scale-105"
                     />
+
+                    {/* Badge */}
                     {product.badge && (
                       <span className="absolute bottom-1 left-1 rounded bg-slate-900/80 px-1 py-0.5 text-[8px] font-bold text-white backdrop-blur-xs">
                         {product.badge}
                       </span>
                     )}
+
+                    {/* Multi-Photo Count Indicator */}
+                    {product.images.length > 1 && (
+                      <span className="absolute bottom-1 right-1 rounded bg-black/60 px-1 py-0.5 text-[8px] font-bold text-white backdrop-blur-xs">
+                        1/{product.images.length}
+                      </span>
+                    )}
+
+                    {/* Video Tag Indicator */}
+                    {product.videoUrl && (
+                      <span className="absolute top-1 left-1 rounded bg-emerald-600/90 px-1 py-0.5 text-[8px] font-bold text-white shadow-xs">
+                        🎬
+                      </span>
+                    )}
+
                     <div className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-black/40 text-[9px] text-white opacity-80">
                       🔍
                     </div>
@@ -476,48 +568,117 @@ export default function App() {
         </div>
       )}
 
-      {/* ENLARGED IMAGE MODAL */}
+      {/* ENLARGED MODAL (MULTI-PHOTO SWITCHER & OPT-IN VIDEO PLAYER) */}
       {enlargedProduct && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-xs transition-opacity"
-          onClick={() => setEnlargedProduct(null)}
+          onClick={handleCloseProductModal}
         >
           <div
-            className="relative flex max-h-[90vh] w-full max-w-sm flex-col overflow-hidden rounded-3xl bg-white p-4 shadow-2xl"
+            className="relative flex max-h-[92vh] w-full max-w-sm flex-col overflow-hidden rounded-3xl bg-white p-4 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
+            {/* Close Button */}
             <button
-              onClick={() => setEnlargedProduct(null)}
+              onClick={handleCloseProductModal}
               className="absolute right-3 top-3 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-slate-100/90 text-sm font-bold text-slate-700 shadow-sm active:scale-90"
             >
               ✕
             </button>
 
+            {/* Media Screen (Photo or Video) */}
             <div className="relative aspect-square w-full overflow-hidden rounded-2xl bg-slate-100 flex items-center justify-center">
-              <img
-                src={enlargedProduct.image}
-                alt={enlargedProduct.name}
-                onError={(e) => {
-                  e.currentTarget.src =
-                    'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="%23cbd5e1" stroke-width="1.5"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/></svg>';
-                }}
-                className="h-full w-full object-contain"
-              />
-              {enlargedProduct.badge && (
-                <span className="absolute bottom-2 left-2 rounded-lg bg-slate-900/80 px-2 py-1 text-[10px] font-bold text-white backdrop-blur-xs">
-                  {enlargedProduct.badge}
-                </span>
+              {showVideo && activeVideoEmbed ? (
+                activeVideoEmbed.type === 'video' ? (
+                  <video
+                    controls
+                    playsInline
+                    autoPlay
+                    className="h-full w-full object-contain bg-black"
+                    src={activeVideoEmbed.url}
+                  />
+                ) : (
+                  <iframe
+                    src={activeVideoEmbed.url}
+                    title={`${enlargedProduct.name} video preview`}
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                    className="h-full w-full border-0 bg-black"
+                  />
+                )
+              ) : (
+                <>
+                  <img
+                    src={enlargedProduct.images[activeImageIndex] || enlargedProduct.images[0] || FALLBACK_IMAGE_SVG}
+                    alt={enlargedProduct.name}
+                    onError={(e) => {
+                      e.currentTarget.src = FALLBACK_IMAGE_SVG;
+                    }}
+                    className="h-full w-full object-contain"
+                  />
+                  {enlargedProduct.badge && (
+                    <span className="absolute bottom-2 left-2 rounded-lg bg-slate-900/80 px-2 py-1 text-[10px] font-bold text-white backdrop-blur-xs">
+                      {enlargedProduct.badge}
+                    </span>
+                  )}
+                  {enlargedProduct.images.length > 1 && (
+                    <span className="absolute top-2 left-2 rounded-md bg-black/60 px-2 py-0.5 text-[10px] font-bold text-white backdrop-blur-xs">
+                      {activeImageIndex + 1} / {enlargedProduct.images.length}
+                    </span>
+                  )}
+                </>
               )}
             </div>
 
+            {/* Media Navigation Controls */}
+            <div className="mt-2.5 flex items-center justify-between gap-2">
+              {/* Thumbnail Strip (Multi-Image Switcher) */}
+              <div className="flex items-center gap-1.5 overflow-x-auto py-0.5 max-w-[65%]">
+                {enlargedProduct.images.map((imgUrl, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => {
+                      setActiveImageIndex(idx);
+                      setShowVideo(false);
+                    }}
+                    className={`relative h-10 w-10 flex-shrink-0 overflow-hidden rounded-lg border-2 transition ${
+                      activeImageIndex === idx && !showVideo
+                        ? 'border-emerald-600 ring-2 ring-emerald-600/30 scale-105'
+                        : 'border-slate-200 opacity-60 hover:opacity-100'
+                    }`}
+                  >
+                    <img src={imgUrl} alt="" className="h-full w-full object-cover" />
+                  </button>
+                ))}
+              </div>
+
+              {/* On-Demand Video Toggle */}
+              {activeVideoEmbed && (
+                <button
+                  type="button"
+                  onClick={() => setShowVideo(!showVideo)}
+                  className={`inline-flex items-center gap-1 rounded-xl px-2.5 py-1.5 text-[11px] font-bold transition active:scale-95 ${
+                    showVideo
+                      ? 'bg-slate-900 text-white'
+                      : 'border border-emerald-600 bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
+                  }`}
+                >
+                  <span>{showVideo ? '🖼️ Photos' : '🎬 Video'}</span>
+                </button>
+              )}
+            </div>
+
+            {/* Details */}
             <div className="mt-3">
               <h3 className="text-sm font-extrabold text-slate-900 leading-snug">{enlargedProduct.name}</h3>
-              <p className="mt-1 text-xs text-slate-500 leading-relaxed max-h-24 overflow-y-auto">
+              <p className="mt-1 text-xs text-slate-500 leading-relaxed max-h-20 overflow-y-auto">
                 {enlargedProduct.description}
               </p>
             </div>
 
-            <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3">
+            {/* Price & Add to Cart */}
+            <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3">
               <div>
                 <p className="text-[10px] font-medium text-slate-400">Price</p>
                 <span className="text-base font-extrabold text-slate-900">
@@ -527,7 +688,7 @@ export default function App() {
               <button
                 onClick={() => {
                   addToCart(enlargedProduct.id);
-                  setEnlargedProduct(null);
+                  handleCloseProductModal();
                 }}
                 className="rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white shadow-md shadow-emerald-600/20 active:scale-95"
               >
