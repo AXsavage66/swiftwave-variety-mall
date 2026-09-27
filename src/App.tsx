@@ -566,144 +566,146 @@ export default function App() {
         </div>
       )}
 
-      {/* ENLARGED MODAL (RESPONSIVE VIDEO PLAYER & GALLERY) */}
+      {/* ENLARGED MODAL (FIXED STICKY FOOTER & FULL HEIGHT VIDEO PLAYER) */}
       {enlargedProduct && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-3 backdrop-blur-xs transition-opacity overflow-y-auto"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-3 backdrop-blur-xs transition-opacity"
           onClick={handleCloseProductModal}
         >
           <div
-            className={`relative flex max-h-[94vh] w-full ${
+            className={`relative flex max-h-[92vh] w-full ${
               showVideo ? 'max-w-lg' : 'max-w-sm'
-            } flex-col overflow-y-auto rounded-3xl bg-white p-4 shadow-2xl transition-all duration-200`}
+            } flex-col overflow-hidden rounded-3xl bg-white shadow-2xl transition-all duration-200`}
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Top Bar with Title and Close Button */}
-            <div className="mb-2 flex items-center justify-between">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                {showVideo ? 'Video Demo' : 'Product Preview'}
+            {/* Top Bar */}
+            <div className="flex flex-shrink-0 items-center justify-between border-b border-slate-100 px-4 py-3">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                {showVideo ? '🎬 Video Demo' : '🖼️ Product Inspection'}
               </span>
               <button
                 onClick={handleCloseProductModal}
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-sm font-bold text-slate-700 shadow-xs active:scale-90"
+                className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-700 shadow-xs active:scale-90"
               >
                 ✕
               </button>
             </div>
 
-            {/* Media Screen (Switches to aspect-video on Video Mode) */}
-            <div
-              className={`relative w-full overflow-hidden rounded-2xl bg-black flex items-center justify-center ${
-                showVideo ? 'aspect-video min-h-[220px]' : 'aspect-square bg-slate-100'
-              }`}
-            >
-              {showVideo && activeVideoEmbed ? (
-                activeVideoEmbed.type === 'video' ? (
-                  <video
-                    controls
-                    playsInline
-                    autoPlay
-                    className="h-full w-full object-contain"
-                    src={activeVideoEmbed.embedUrl}
-                  />
+            {/* Scrollable Modal Content */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-3">
+              {/* Media Screen */}
+              <div
+                className={`relative w-full overflow-hidden rounded-2xl bg-black flex items-center justify-center ${
+                  showVideo ? 'h-60 sm:h-72' : 'aspect-square bg-slate-100'
+                }`}
+              >
+                {showVideo && activeVideoEmbed ? (
+                  activeVideoEmbed.type === 'video' ? (
+                    <video
+                      controls
+                      playsInline
+                      autoPlay
+                      className="h-full w-full object-contain"
+                      src={activeVideoEmbed.embedUrl}
+                    />
+                  ) : (
+                    <iframe
+                      src={activeVideoEmbed.embedUrl}
+                      title={`${enlargedProduct.name} video preview`}
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+                      allowFullScreen
+                      className="h-full w-full border-0"
+                    />
+                  )
                 ) : (
-                  <iframe
-                    src={activeVideoEmbed.embedUrl}
-                    title={`${enlargedProduct.name} video preview`}
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
-                    allowFullScreen
-                    className="h-full w-full border-0"
-                  />
-                )
-              ) : (
-                <>
-                  <img
-                    src={enlargedProduct.images[activeImageIndex] || enlargedProduct.images[0] || FALLBACK_IMAGE_SVG}
-                    alt={enlargedProduct.name}
-                    onError={(e) => {
-                      e.currentTarget.src = FALLBACK_IMAGE_SVG;
-                    }}
-                    className="h-full w-full object-contain"
-                  />
-                  {enlargedProduct.badge && (
-                    <span className="absolute bottom-2 left-2 rounded-lg bg-slate-900/80 px-2 py-1 text-[10px] font-bold text-white backdrop-blur-xs">
-                      {enlargedProduct.badge}
-                    </span>
-                  )}
-                  {enlargedProduct.images.length > 1 && (
-                    <span className="absolute top-2 left-2 rounded-md bg-black/60 px-2 py-0.5 text-[10px] font-bold text-white backdrop-blur-xs">
-                      {activeImageIndex + 1} / {enlargedProduct.images.length}
-                    </span>
-                  )}
-                </>
-              )}
-            </div>
-
-            {/* Media Controls & Thumbnail Switcher */}
-            <div className="mt-3 flex items-center justify-between gap-2">
-              <div className="flex items-center gap-1.5 overflow-x-auto py-0.5 max-w-[65%]">
-                {enlargedProduct.images.map((imgUrl, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => {
-                      setActiveImageIndex(idx);
-                      setShowVideo(false);
-                    }}
-                    className={`relative h-10 w-10 flex-shrink-0 overflow-hidden rounded-lg border-2 transition ${
-                      activeImageIndex === idx && !showVideo
-                        ? 'border-emerald-600 ring-2 ring-emerald-600/30 scale-105'
-                        : 'border-slate-200 opacity-60 hover:opacity-100'
-                    }`}
-                  >
-                    <img src={imgUrl} alt="" className="h-full w-full object-cover" />
-                  </button>
-                ))}
+                  <>
+                    <img
+                      src={enlargedProduct.images[activeImageIndex] || enlargedProduct.images[0] || FALLBACK_IMAGE_SVG}
+                      alt={enlargedProduct.name}
+                      onError={(e) => {
+                        e.currentTarget.src = FALLBACK_IMAGE_SVG;
+                      }}
+                      className="h-full w-full object-contain"
+                    />
+                    {enlargedProduct.badge && (
+                      <span className="absolute bottom-2 left-2 rounded-lg bg-slate-900/80 px-2 py-1 text-[10px] font-bold text-white backdrop-blur-xs">
+                        {enlargedProduct.badge}
+                      </span>
+                    )}
+                    {enlargedProduct.images.length > 1 && (
+                      <span className="absolute top-2 left-2 rounded-md bg-black/60 px-2 py-0.5 text-[10px] font-bold text-white backdrop-blur-xs">
+                        {activeImageIndex + 1} / {enlargedProduct.images.length}
+                      </span>
+                    )}
+                  </>
+                )}
               </div>
 
-              {/* Video Buttons */}
-              {activeVideoEmbed && (
-                <div className="flex items-center gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => setShowVideo(!showVideo)}
-                    className={`inline-flex items-center gap-1 rounded-xl px-3 py-1.5 text-[11px] font-bold transition active:scale-95 ${
-                      showVideo
-                        ? 'bg-slate-900 text-white'
-                        : 'border border-emerald-600 bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
-                    }`}
-                  >
-                    <span>{showVideo ? '🖼️ Photos' : '🎬 Watch Video'}</span>
-                  </button>
-
-                  {/* Direct Native Fullscreen Launcher */}
-                  {showVideo && (
-                    <a
-                      href={activeVideoEmbed.directUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 transition text-xs font-bold"
-                      title="Open full player in Google Drive / external"
+              {/* Media Controls Strip */}
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5 overflow-x-auto py-0.5 max-w-[60%]">
+                  {enlargedProduct.images.map((imgUrl, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => {
+                        setActiveImageIndex(idx);
+                        setShowVideo(false);
+                      }}
+                      className={`relative h-10 w-10 flex-shrink-0 overflow-hidden rounded-lg border-2 transition ${
+                        activeImageIndex === idx && !showVideo
+                          ? 'border-emerald-600 ring-2 ring-emerald-600/30 scale-105'
+                          : 'border-slate-200 opacity-60 hover:opacity-100'
+                      }`}
                     >
-                      ↗
-                    </a>
-                  )}
+                      <img src={imgUrl} alt="" className="h-full w-full object-cover" />
+                    </button>
+                  ))}
                 </div>
-              )}
-            </div>
 
-            {/* Details */}
-            <div className="mt-3">
-              <h3 className="text-sm font-extrabold text-slate-900 leading-snug">{enlargedProduct.name}</h3>
-              <p className="mt-1 text-xs text-slate-600 leading-relaxed max-h-24 overflow-y-auto">
-                {enlargedProduct.description}
-              </p>
-            </div>
+                {/* Video / Photo Toggles */}
+                {activeVideoEmbed && (
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setShowVideo(!showVideo)}
+                      className={`inline-flex items-center gap-1 rounded-xl px-3 py-1.5 text-[11px] font-bold transition active:scale-95 ${
+                        showVideo
+                          ? 'bg-slate-900 text-white'
+                          : 'border border-emerald-600 bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
+                      }`}
+                    >
+                      <span>{showVideo ? '🖼️ Photos' : '🎬 Watch Video'}</span>
+                    </button>
 
-            {/* Price & Action */}
-            <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3">
+                    {showVideo && (
+                      <a
+                        href={activeVideoEmbed.directUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 rounded-xl bg-slate-100 px-2.5 py-1.5 text-[10px] font-bold text-slate-700 hover:bg-slate-200 transition"
+                        title="Open in Google Drive for full HD playback"
+                      >
+                        <span>↗ Open HD</span>
+                      </a>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Product Details */}
               <div>
-                <p className="text-[10px] font-medium text-slate-400">Price</p>
+                <h3 className="text-sm font-extrabold text-slate-900 leading-snug">{enlargedProduct.name}</h3>
+                <p className="mt-1 text-xs text-slate-600 leading-relaxed">
+                  {enlargedProduct.description}
+                </p>
+              </div>
+            </div>
+
+            {/* Permanent Sticky Action Footer (NEVER CUT OFF) */}
+            <div className="flex flex-shrink-0 items-center justify-between border-t border-slate-100 bg-white px-4 py-3">
+              <div>
+                <p className="text-[10px] font-medium text-slate-400">Total Price</p>
                 <span className="text-base font-extrabold text-slate-900">
                   ₦{enlargedProduct.price.toLocaleString()}
                 </span>
