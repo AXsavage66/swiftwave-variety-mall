@@ -13,6 +13,8 @@ const PUBLISHED_CSV_URL =
 const FALLBACK_IMAGE_SVG =
   'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="%23cbd5e1" stroke-width="1.5"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>';
 
+type TabType = 'all' | 'new' | 'gadgets' | 'Household & Daily Essentials';
+
 interface Product {
   id: string;
   name: string;
@@ -90,8 +92,17 @@ function getEmbedVideoInfo(rawUrl?: string): { type: 'iframe' | 'video'; embedUr
   };
 }
 
-// Default offline fallback items
+// Default fallback items (ordered newest first)
 const DEFAULT_ITEMS: Product[] = [
+  {
+    id: 'g5',
+    name: 'Apple MacBook Pro 13" (2015)',
+    category: 'gadgets',
+    price: 195000,
+    description: 'Intel Core i5 • 8GB RAM • 128GB SSD • 13-inch Retina Display • Backlit Keyboard • Includes Charger',
+    images: ['/images/stand-charging-cable.jpg'],
+    badge: 'New Arrival',
+  },
   {
     id: 'g1',
     name: 'itel Energy POWER GO PRO',
@@ -209,13 +220,15 @@ function parseGoogleSheetCSV(csvText: string): Product[] {
       });
     }
   }
-  return products;
+
+  // AUTOMATIC REVERSE: The newest rows added to the sheet show first at the top
+  return products.reverse();
 }
 
 export default function App() {
   const [products, setProducts] = useState<Product[]>(DEFAULT_ITEMS);
   const [isLoading, setIsLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<'all' | 'gadgets' | 'Household & Daily Essentials'>('all');
+  const [activeTab, setActiveTab] = useState<TabType>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [cart, setCart] = useState<{ [productId: string]: number }>({});
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -254,11 +267,19 @@ export default function App() {
   }, []);
 
   const filteredProducts = useMemo(() => {
-    return products.filter((item) => {
-      const matchesCategory = activeTab === 'all' || item.category === activeTab;
+    return products.filter((item, index) => {
+      // Category filter: handles 'all', 'new' (top 8 or tagged 'New'), or specific store department
+      const matchesCategory =
+        activeTab === 'all'
+          ? true
+          : activeTab === 'new'
+          ? index < 8 || (item.badge && item.badge.toLowerCase().includes('new'))
+          : item.category === activeTab;
+
       const matchesSearch =
         item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         item.description.toLowerCase().includes(searchQuery.toLowerCase());
+
       return matchesCategory && matchesSearch;
     });
   }, [products, activeTab, searchQuery]);
@@ -318,7 +339,7 @@ export default function App() {
     }
 
     if (fulfillmentType === 'delivery' && !deliveryLocation.trim()) {
-      setFormError('Please enter your delivery address / town.');
+      setFormError('Please enter your delivery address / destination.');
       return;
     }
 
@@ -411,19 +432,27 @@ export default function App() {
           </svg>
         </div>
 
-        {/* Categories */}
-        <div className="mb-4 flex gap-1.5 rounded-xl bg-slate-200/80 p-1">
+        {/* Scrollable Category Tabs Bar */}
+        <div className="mb-4 flex gap-1.5 overflow-x-auto rounded-xl bg-slate-200/80 p-1 no-scrollbar">
           <button
             onClick={() => setActiveTab('all')}
-            className={`flex-1 rounded-lg py-2 text-center text-[11px] font-bold transition ${
+            className={`flex-shrink-0 flex-1 min-w-[70px] rounded-lg py-2 text-center text-[11px] font-bold transition ${
               activeTab === 'all' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
             }`}
           >
             All Stock
           </button>
           <button
+            onClick={() => setActiveTab('new')}
+            className={`flex-shrink-0 flex-1 min-w-[76px] rounded-lg py-2 text-center text-[11px] font-bold transition ${
+              activeTab === 'new' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            ✨ New In
+          </button>
+          <button
             onClick={() => setActiveTab('gadgets')}
-            className={`flex-1 rounded-lg py-2 text-center text-[11px] font-bold transition ${
+            className={`flex-shrink-0 flex-1 min-w-[110px] rounded-lg py-2 text-center text-[11px] font-bold transition ${
               activeTab === 'gadgets' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
             }`}
           >
@@ -431,7 +460,7 @@ export default function App() {
           </button>
           <button
             onClick={() => setActiveTab('Household & Daily Essentials')}
-            className={`flex-1 rounded-lg py-2 text-center text-[11px] font-bold transition ${
+            className={`flex-shrink-0 flex-1 min-w-[118px] rounded-lg py-2 text-center text-[11px] font-bold transition ${
               activeTab === 'Household & Daily Essentials' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
             }`}
           >
@@ -523,343 +552,4 @@ export default function App() {
                         <div className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 p-0.5">
                           <button
                             onClick={() => removeFromCart(product.id)}
-                            className="flex h-6 w-6 items-center justify-center rounded bg-white text-xs font-bold shadow-xs active:scale-90"
-                          >
-                            -
-                          </button>
-                          <span className="w-3 text-center text-xs font-bold text-slate-900">{currentQty}</span>
-                          <button
-                            onClick={() => addToCart(product.id)}
-                            className="flex h-6 w-6 items-center justify-center rounded bg-slate-900 text-xs font-bold text-white shadow-xs active:scale-90"
-                          >
-                            +
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              );
-            })
-          )}
-        </div>
-      </main>
-
-      {/* Floating Bottom Cart Bar */}
-      {totalItemsCount > 0 && !isDrawerOpen && (
-        <div className="fixed bottom-4 left-0 right-0 z-30 px-4">
-          <div className="mx-auto flex max-w-xl items-center justify-between rounded-2xl bg-slate-950 p-3.5 text-white shadow-xl">
-            <div>
-              <p className="text-[11px] text-slate-400">{totalItemsCount} item{totalItemsCount > 1 ? 's' : ''} in cart</p>
-              <p className="text-sm font-extrabold text-white">₦{cartTotalAmount.toLocaleString()}</p>
-            </div>
-            <button
-              onClick={() => setIsDrawerOpen(true)}
-              className="flex items-center gap-1.5 rounded-xl bg-emerald-500 px-4 py-2 text-xs font-bold text-white transition hover:bg-emerald-600 active:scale-95"
-            >
-              <span>View Order</span>
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7" />
-              </svg>
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* ENLARGED MODAL (FIXED STICKY FOOTER & FULL HEIGHT VIDEO PLAYER) */}
-      {enlargedProduct && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-3 backdrop-blur-xs transition-opacity"
-          onClick={handleCloseProductModal}
-        >
-          <div
-            className={`relative flex max-h-[92vh] w-full ${
-              showVideo ? 'max-w-lg' : 'max-w-sm'
-            } flex-col overflow-hidden rounded-3xl bg-white shadow-2xl transition-all duration-200`}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Top Bar */}
-            <div className="flex flex-shrink-0 items-center justify-between border-b border-slate-100 px-4 py-3">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                {showVideo ? '🎬 Video Demo' : '🖼️ Product Inspection'}
-              </span>
-              <button
-                onClick={handleCloseProductModal}
-                className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-700 shadow-xs active:scale-90"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* Scrollable Modal Content */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-3">
-              {/* Media Screen */}
-              <div
-                className={`relative w-full overflow-hidden rounded-2xl bg-black flex items-center justify-center ${
-                  showVideo ? 'h-60 sm:h-72' : 'aspect-square bg-slate-100'
-                }`}
-              >
-                {showVideo && activeVideoEmbed ? (
-                  activeVideoEmbed.type === 'video' ? (
-                    <video
-                      controls
-                      playsInline
-                      autoPlay
-                      className="h-full w-full object-contain"
-                      src={activeVideoEmbed.embedUrl}
-                    />
-                  ) : (
-                    <iframe
-                      src={activeVideoEmbed.embedUrl}
-                      title={`${enlargedProduct.name} video preview`}
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
-                      allowFullScreen
-                      className="h-full w-full border-0"
-                    />
-                  )
-                ) : (
-                  <>
-                    <img
-                      src={enlargedProduct.images[activeImageIndex] || enlargedProduct.images[0] || FALLBACK_IMAGE_SVG}
-                      alt={enlargedProduct.name}
-                      onError={(e) => {
-                        e.currentTarget.src = FALLBACK_IMAGE_SVG;
-                      }}
-                      className="h-full w-full object-contain"
-                    />
-                    {enlargedProduct.badge && (
-                      <span className="absolute bottom-2 left-2 rounded-lg bg-slate-900/80 px-2 py-1 text-[10px] font-bold text-white backdrop-blur-xs">
-                        {enlargedProduct.badge}
-                      </span>
-                    )}
-                    {enlargedProduct.images.length > 1 && (
-                      <span className="absolute top-2 left-2 rounded-md bg-black/60 px-2 py-0.5 text-[10px] font-bold text-white backdrop-blur-xs">
-                        {activeImageIndex + 1} / {enlargedProduct.images.length}
-                      </span>
-                    )}
-                  </>
-                )}
-              </div>
-
-              {/* Media Controls Strip */}
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-1.5 overflow-x-auto py-0.5 max-w-[60%]">
-                  {enlargedProduct.images.map((imgUrl, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => {
-                        setActiveImageIndex(idx);
-                        setShowVideo(false);
-                      }}
-                      className={`relative h-10 w-10 flex-shrink-0 overflow-hidden rounded-lg border-2 transition ${
-                        activeImageIndex === idx && !showVideo
-                          ? 'border-emerald-600 ring-2 ring-emerald-600/30 scale-105'
-                          : 'border-slate-200 opacity-60 hover:opacity-100'
-                      }`}
-                    >
-                      <img src={imgUrl} alt="" className="h-full w-full object-cover" />
-                    </button>
-                  ))}
-                </div>
-
-                {/* Video / Photo Toggles */}
-                {activeVideoEmbed && (
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => setShowVideo(!showVideo)}
-                      className={`inline-flex items-center gap-1 rounded-xl px-3 py-1.5 text-[11px] font-bold transition active:scale-95 ${
-                        showVideo
-                          ? 'bg-slate-900 text-white'
-                          : 'border border-emerald-600 bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
-                      }`}
-                    >
-                      <span>{showVideo ? '🖼️ Photos' : '🎬 Watch Video'}</span>
-                    </button>
-
-                    {showVideo && (
-                      <a
-                        href={activeVideoEmbed.directUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 rounded-xl bg-slate-100 px-2.5 py-1.5 text-[10px] font-bold text-slate-700 hover:bg-slate-200 transition"
-                        title="Open in Google Drive for full HD playback"
-                      >
-                        <span>↗ Open HD</span>
-                      </a>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Product Details */}
-              <div>
-                <h3 className="text-sm font-extrabold text-slate-900 leading-snug">{enlargedProduct.name}</h3>
-                <p className="mt-1 text-xs text-slate-600 leading-relaxed">
-                  {enlargedProduct.description}
-                </p>
-              </div>
-            </div>
-
-            {/* Permanent Sticky Action Footer (NEVER CUT OFF) */}
-            <div className="flex flex-shrink-0 items-center justify-between border-t border-slate-100 bg-white px-4 py-3">
-              <div>
-                <p className="text-[10px] font-medium text-slate-400">Total Price</p>
-                <span className="text-base font-extrabold text-slate-900">
-                  ₦{enlargedProduct.price.toLocaleString()}
-                </span>
-              </div>
-              <button
-                onClick={() => {
-                  addToCart(enlargedProduct.id);
-                  handleCloseProductModal();
-                }}
-                className="rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-bold text-white shadow-md shadow-emerald-600/20 active:scale-95"
-              >
-                + Add to Order
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Cart Drawer & Order Form */}
-      {isDrawerOpen && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-xs">
-          <div className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-t-3xl bg-white p-5 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div>
-                <h3 className="text-sm font-extrabold text-slate-900">Review Your Order</h3>
-                <p className="text-[11px] text-slate-500">Fast fulfillment for Minna & nationwide orders</p>
-              </div>
-              <button
-                onClick={() => setIsDrawerOpen(false)}
-                className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-xs text-slate-600"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* Cart Items */}
-            <div className="divide-y divide-slate-100 py-2">
-              {Object.entries(cart).map(([id, qty]) => {
-                const item = products.find((p) => p.id === id);
-                if (!item) return null;
-                return (
-                  <div key={id} className="flex items-center justify-between py-2.5">
-                    <div className="pr-2">
-                      <p className="text-xs font-bold text-slate-900">{item.name}</p>
-                      <p className="text-[11px] text-slate-500">
-                        ₦{item.price.toLocaleString()} × {qty}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold text-slate-900">
-                        ₦{(item.price * qty).toLocaleString()}
-                      </span>
-                      <button
-                        onClick={() => deleteFromCart(id)}
-                        className="text-slate-400 hover:text-red-500 ml-1 text-xs"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="flex items-center justify-between border-t border-b border-slate-100 py-2.5">
-              <span className="text-xs font-bold text-slate-600">Total Due</span>
-              <span className="text-base font-extrabold text-slate-950">₦{cartTotalAmount.toLocaleString()}</span>
-            </div>
-
-            {/* Checkout Form */}
-            <form onSubmit={handleSendWhatsAppOrder} className="mt-3 space-y-2.5">
-              {formError && (
-                <p className="rounded-lg bg-red-50 p-2 text-[11px] font-semibold text-red-600">{formError}</p>
-              )}
-
-              <div>
-                <label className="block text-[11px] font-bold text-slate-700">Full Name *</label>
-                <input
-                  type="text"
-                  required
-                  value={customerName}
-                  onChange={(e) => setCustomerName(e.target.value)}
-                  placeholder="e.g. Ibrahim Giwa"
-                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-xs outline-none focus:border-slate-900"
-                />
-              </div>
-
-              {/* Fulfillment Type Toggle */}
-              <div>
-                <label className="block text-[11px] font-bold text-slate-700 mb-1">How will you receive it? *</label>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setFulfillmentType('pickup')}
-                    className={`rounded-xl border p-2 text-left text-xs font-semibold transition ${
-                      fulfillmentType === 'pickup'
-                        ? 'border-emerald-600 bg-emerald-50 text-emerald-900'
-                        : 'border-slate-200 bg-white text-slate-700'
-                    }`}
-                  >
-                    🏢 In-Store Pickup
-                    <span className="block text-[10px] font-normal text-slate-500">Shop 9 & 10 ABH Plaza</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setFulfillmentType('delivery')}
-                    className={`rounded-xl border p-2 text-left text-xs font-semibold transition ${
-                      fulfillmentType === 'delivery'
-                        ? 'border-emerald-600 bg-emerald-50 text-emerald-900'
-                        : 'border-slate-200 bg-white text-slate-700'
-                    }`}
-                  >
-                    🚚 Delivery / Waybill
-                    <span className="block text-[10px] font-normal text-slate-500">Minna or Nationwide</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Address Field — Conditional */}
-              {fulfillmentType === 'delivery' && (
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-700">Delivery Address / Destination *</label>
-                  <input
-                    type="text"
-                    required
-                    value={deliveryLocation}
-                    onChange={(e) => setDeliveryLocation(e.target.value)}
-                    placeholder="e.g. Bosso, Maitumbi, Abuja, or Kaduna"
-                    className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-xs outline-none focus:border-slate-900"
-                  />
-                </div>
-              )}
-
-              <div>
-                <label className="block text-[11px] font-bold text-slate-700">Item Notes (Optional)</label>
-                <input
-                  type="text"
-                  value={orderNotes}
-                  onChange={(e) => setOrderNotes(e.target.value)}
-                  placeholder="e.g. Black color, or urgent dispatch"
-                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-xs outline-none focus:border-slate-900"
-                />
-              </div>
-
-              <button
-                type="submit"
-                className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 py-3 text-xs font-bold text-white shadow-md shadow-emerald-600/20 active:scale-98"
-              >
-                <span>Send Order to WhatsApp</span>
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
+                            className="flex h-6 w-6 items-center justif
