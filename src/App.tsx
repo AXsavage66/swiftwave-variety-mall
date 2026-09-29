@@ -266,19 +266,23 @@ export default function App() {
       });
   }, []);
 
+  // Global Search: Searches whole inventory when typing, restores category filter when clear
   const filteredProducts = useMemo(() => {
+    const trimmedQuery = searchQuery.trim().toLowerCase();
+    const isSearching = trimmedQuery.length > 0;
+
     return products.filter((item, index) => {
-      // Category filter: handles 'all', 'new' (top 8 or tagged 'New'), or specific store department
+      const matchesSearch =
+        !isSearching ||
+        item.name.toLowerCase().includes(trimmedQuery) ||
+        item.description.toLowerCase().includes(trimmedQuery);
+
       const matchesCategory =
-        activeTab === 'all'
+        isSearching || activeTab === 'all'
           ? true
           : activeTab === 'new'
           ? index < 8 || (item.badge && item.badge.toLowerCase().includes('new'))
           : item.category === activeTab;
-
-      const matchesSearch =
-        item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.description.toLowerCase().includes(searchQuery.toLowerCase());
 
       return matchesCategory && matchesSearch;
     });
@@ -610,7 +614,7 @@ export default function App() {
             {/* Top Bar */}
             <div className="flex flex-shrink-0 items-center justify-between border-b border-slate-100 px-4 py-3">
               <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                {showVideo ? '🎬 Video Demo' : '🖼️ Product Inspection'}
+                {showVideo ? '🎬 Video Demo' : '🖼️️ Product Inspection'}
               </span>
               <button
                 onClick={handleCloseProductModal}
