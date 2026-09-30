@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 
 // ==========================================
-// 1. GOOGLE DRIVE IMAGE CDN RESOLVER
+// 1. HELPERS & NORMALIZERS
 // ==========================================
 export function formatDriveUrl(url: string): string {
   if (!url) return "https://images.unsplash.com/photo-1526738549149-8e07eca6c147?auto=format&fit=crop&w=600&q=80";
@@ -39,7 +39,36 @@ export function formatDriveUrl(url: string): string {
   return url.trim();
 }
 
-// Robust CSV row parser handling quotes and commas inside text
+// Automatically snaps typos and synonyms to official brand categories
+export function normalizeCategory(raw: string): string {
+  if (!raw) return 'Gadgets';
+  const s = raw.toLowerCase().trim();
+
+  if (s.includes('phone') || s.includes('appliance') || s.includes('accessori') || s.includes('earphone') || s.includes('case')) {
+    return 'Phone Accessories';
+  }
+  if (s.includes('gadget') || s.includes('power bank') || s.includes('tech') || s.includes('electronic')) {
+    return 'Gadgets';
+  }
+  if (s.includes('school') || s.includes('stationer') || s.includes('book') || s.includes('bag') || s.includes('pen')) {
+    return 'School Supplies';
+  }
+  if (s.includes('home') || s.includes('essential') || s.includes('kitchen') || s.includes('room')) {
+    return 'Home Essentials';
+  }
+  if (s.includes('beaut') || s.includes('cosmetic') || s.includes('skin') || s.includes('care')) {
+    return 'Beauty Products';
+  }
+  if (s.includes('toy') || s.includes('child') || s.includes('kid')) {
+    return "Children's Toys";
+  }
+  if (s.includes('creator') || s.includes('tool') || s.includes('ring light') || s.includes('stream') || s.includes('stand')) {
+    return 'Creator Tools';
+  }
+
+  return raw.trim();
+}
+
 function parseCSVLine(text: string): string[] {
   const result: string[] = [];
   let cur = '';
@@ -84,7 +113,6 @@ export interface CartItem {
   quantity: number;
 }
 
-// Category pillars including restored "New In"
 const CATEGORIES = [
   'All',
   'New In',
@@ -126,7 +154,7 @@ export default function App() {
   // Store Credentials
   const WHATSAPP_PHONE = "2349066524315";
   const BANK_NAME = "Moniepoint MFB";
-  const ACCOUNT_NUMBER = "9468092000"; // Replace with client's actual bank account number
+  const ACCOUNT_NUMBER = "9468092000"; 
   const ACCOUNT_NAME = "Swiftwave Variety Mall Limited";
 
   // Dynamic Google Sheet Sync
@@ -137,12 +165,10 @@ export default function App() {
         const rawLines = csvText.split('\n').filter(line => line.trim().length > 0);
         const parsed: Product[] = [];
         
-        // Start from row index 1 to skip table headers
         for (let i = 1; i < rawLines.length; i++) {
           const row = parseCSVLine(rawLines[i]);
           if (!row[0] || !row[1]) continue;
 
-          // Strip surrounding quotes if present
           const clean = (val: string) => (val || '').replace(/^["']|["']$/g, '').trim();
 
           const rawImages = clean(row[5])
@@ -152,7 +178,7 @@ export default function App() {
           parsed.push({
             id: clean(row[0]) || `SW-${String(i).padStart(3, '0')}`,
             name: clean(row[1]),
-            category: clean(row[2]) || 'Gadgets',
+            category: normalizeCategory(clean(row[2])),
             price: Number(clean(row[3]).replace(/[^0-9.-]+/g, '')) || 0,
             description: clean(row[4]),
             images: rawImages.length > 0 ? rawImages : [""],
@@ -240,7 +266,7 @@ export default function App() {
     setTimeout(() => setCopiedBank(false), 2000);
   };
 
-  // WhatsApp Order Submission with Payment Status
+  // WhatsApp Submission
   const handleFinalOrder = () => {
     if (!customerName.trim() || !customerPhone.trim()) {
       alert("Please provide your full name and phone number.");
@@ -452,7 +478,11 @@ Account: ${ACCOUNT_NAME}
               <Search className="w-6 h-6" />
             </div>
             <h3 className="text-base font-bold text-slate-900">No products found</h3>
-            <p className="text-xs text-slate-500 mt-1">Try adjusting your search query or switching categories.</p>
+            <p className="text-xs text-slate-500 mt-1">
+              {selectedCategory !== 'All' 
+                ? `No items found in "${selectedCategory}". Products will appear here when assigned this category in your spreadsheet.`
+                : "No products matched your search."}
+            </p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
