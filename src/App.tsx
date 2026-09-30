@@ -53,7 +53,7 @@ export interface Product {
   video?: string;
 }
 
-// 7 Official Brand Pillars
+// 7 Official Brand Pillars[cite: 1]
 const CATEGORIES = [
   'All',
   'Gadgets',
@@ -110,6 +110,7 @@ export default function App() {
   const [activeModalProduct, setActiveModalProduct] = useState<Product | null>(null);
   const [activeImageIndex, setActiveImageIndex] = useState<number>(0);
   const [showAboutModal, setShowAboutModal] = useState<boolean>(false);
+  const [showCertLightbox, setShowCertLightbox] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(Boolean(GOOGLE_SHEET_CSV_URL));
 
   // Store WhatsApp contact line
@@ -130,7 +131,7 @@ export default function App() {
           const row = rows[i];
           if (!row[0] || !row[1]) continue;
 
-          // Supports comma or semicolon separated image URLs in column F
+          // Supports semicolon or comma separated images in column F
           const rawImages = row[5] 
             ? row[5].split(';').map((u) => u.trim()).filter(Boolean)
             : [];
@@ -177,12 +178,12 @@ Is this available for pickup/delivery at ABH Plaza?`;
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans flex flex-col antialiased">
       
-      {/* Top Corporate Legal Badge Bar */}
+      {/* Top Corporate Legal Badge Bar[cite: 2] */}
       <div className="bg-slate-950 text-slate-300 text-xs py-2 px-4 border-b border-slate-800">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-2">
           <div className="flex items-center gap-2">
             <span className="inline-block w-2 h-2 rounded-full bg-emerald-400"></span>
-            <span className="font-semibold text-white tracking-wide">SWIFTWAVE VARIETY MALL LIMITED</span>
+            <span className="font-semibold text-white tracking-wide">SWIFTWAVE VARIETY MALL LIMITED[cite: 2]</span>
             <span className="hidden md:inline text-slate-600">|</span>
             <span className="hidden md:inline font-mono text-slate-400">RC: 9468092[cite: 2]</span>
             <span className="hidden lg:inline text-slate-600">|</span>
@@ -259,7 +260,7 @@ Is this available for pickup/delivery at ABH Plaza?`;
             />
           </div>
 
-          {/* Category Filter Pills */}
+          {/* Category Filter Pills[cite: 1] */}
           <nav className="flex items-center gap-2 overflow-x-auto no-scrollbar pt-3.5 pb-1">
             {CATEGORIES.map((cat) => {
               const active = selectedCategory === cat;
@@ -284,7 +285,7 @@ Is this available for pickup/delivery at ABH Plaza?`;
       {/* Main Catalog View */}
       <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
         
-        {/* Hero Banner */}
+        {/* Hero Banner[cite: 1] */}
         <section className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-blue-700 via-indigo-700 to-slate-950 text-white p-6 sm:p-10 mb-8 shadow-xl">
           <div className="relative z-10 max-w-2xl">
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-white/10 text-blue-200 backdrop-blur-md mb-3 border border-white/15">
@@ -565,36 +566,111 @@ Is this available for pickup/delivery at ABH Plaza?`;
           <div className="bg-white rounded-3xl max-w-lg w-full p-6 relative border border-slate-200 shadow-2xl">
             <button
               onClick={() => setShowAboutModal(false)}
-              className="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center"
+              className="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-colors"
             >
               <X className="w-4 h-4" />
             </button>
-            <div className="flex items-center gap-2 mb-4">
+            
+            <div className="flex items-center gap-2 mb-3">
               <ShieldCheck className="w-6 h-6 text-blue-600" />
               <h3 className="text-lg font-bold text-slate-900">About Swiftwave Variety Mall[cite: 1]</h3>
             </div>
+            
             <p className="text-xs text-slate-600 leading-relaxed mb-4">
               Swiftwave is your modern everyday marketplace built for the way you actually live[cite: 1]. Bringing together gadgets, home essentials, school supplies, phone accessories, beauty products, children's toys, and creator tools under one roof[cite: 1].
             </p>
+
+            {/* Mission Section[cite: 1] */}
             <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 mb-3">
               <span className="text-[11px] font-bold text-slate-900 uppercase tracking-wider block">Our Mission[cite: 1]</span>
               <p className="text-xs text-slate-600 mt-1">
                 To create stylish, affordable, and practical accessories that help students and everyday users stay organized and express their identity[cite: 1].
               </p>
             </div>
-            <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 mb-4">
-              <span className="text-[11px] font-bold text-slate-900 uppercase tracking-wider block">Corporate Registration[cite: 2]</span>
-              <p className="text-xs font-mono text-slate-600 mt-1">
-                Incorporated as SWIFTWAVE VARIETY MALL LIMITED[cite: 2]<br />
-                RC: 9468092 | TIN: 2622689087269[cite: 2]
+
+            {/* Legal Registration with Certificate Verification Button[cite: 2] */}
+            <div className="p-3.5 bg-blue-50/60 rounded-xl border border-blue-100 mb-4">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold text-blue-950 uppercase tracking-wider">
+                  Corporate Registration[cite: 2]
+                </span>
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-full">
+                  <CheckCircle2 className="w-3 h-3" /> CAC Verified[cite: 2]
+                </span>
+              </div>
+              
+              <p className="text-xs font-mono text-slate-700 mt-1.5 leading-relaxed">
+                <span className="font-semibold text-slate-900">SWIFTWAVE VARIETY MALL LIMITED</span>[cite: 2]<br />
+                RC: <span className="text-blue-700 font-bold">9468092</span> | TIN: 2622689087269[cite: 2]
               </p>
+
+              {/* View Certificate Button[cite: 2] */}
+              <button
+                onClick={() => setShowCertLightbox(true)}
+                className="mt-3 w-full bg-white hover:bg-blue-600 hover:text-white text-blue-700 border border-blue-200 hover:border-transparent font-bold text-xs py-2 px-3 rounded-lg transition-all flex items-center justify-center gap-1.5 shadow-sm shadow-blue-500/5"
+              >
+                <ShieldCheck className="w-3.5 h-3.5" />
+                <span>View Certificate of Incorporation[cite: 2]</span>
+                <ExternalLink className="w-3 h-3 ml-0.5" />
+              </button>
             </div>
+
             <button
               onClick={() => setShowAboutModal(false)}
               className="w-full bg-slate-900 text-white font-bold text-xs py-2.5 rounded-xl hover:bg-slate-800 transition-colors"
             >
               Back to Catalog
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Official CAC Certificate Lightbox Modal[cite: 2] */}
+      {showCertLightbox && (
+        <div 
+          className="fixed inset-0 z-[60] bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4"
+          onClick={() => setShowCertLightbox(false)}
+        >
+          <div 
+            className="bg-white rounded-2xl max-w-xl w-full p-4 relative shadow-2xl border border-slate-200 overflow-hidden max-h-[92vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="w-5 h-5 text-emerald-600" />
+                <div>
+                  <h4 className="text-xs font-bold text-slate-900 leading-none">Federal Republic of Nigeria[cite: 2]</h4>
+                  <p className="text-[10px] text-slate-500 font-mono mt-0.5">RC: 9468092 | Incorporated April 7, 2026[cite: 2]</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowCertLightbox(false)}
+                className="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Certificate Display Stage */}
+            <div className="flex-1 overflow-y-auto my-3 bg-slate-50 rounded-xl p-2 flex items-center justify-center">
+              <img
+                src="/cac-certificate.jpg"
+                alt="Swiftwave Variety Mall Limited CAC Certificate of Incorporation"
+                className="w-full max-h-[70vh] object-contain rounded-lg shadow-sm"
+              />
+            </div>
+
+            <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+              <span>Issued under Companies and Allied Matters Act 2020[cite: 2]</span>
+              <a
+                href="/cac-certificate.jpg"
+                target="_blank"
+                rel="noreferrer"
+                className="text-blue-600 hover:underline font-bold inline-flex items-center gap-1"
+              >
+                Open Original <ExternalLink className="w-3 h-3" />
+              </a>
+            </div>
           </div>
         </div>
       )}
