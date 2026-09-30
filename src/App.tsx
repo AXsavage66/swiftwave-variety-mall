@@ -3,7 +3,6 @@ import {
   Search, 
   ShoppingBag, 
   ExternalLink, 
-  Phone, 
   ShieldCheck, 
   Sparkles, 
   Video, 
@@ -12,24 +11,26 @@ import {
   ChevronRight, 
   ChevronLeft,
   MapPin,
-  Info
+  Info,
+  Plus,
+  Minus,
+  Trash2,
+  Truck,
+  Building2,
+  Copy
 } from 'lucide-react';
 
 // ==========================================
-// 1. IMAGE FORMATTING UTILITY
+// 1. GOOGLE DRIVE IMAGE CDN RESOLVER
 // ==========================================
 export function formatDriveUrl(url: string): string {
   if (!url) return "https://images.unsplash.com/photo-1526738549149-8e07eca6c147?auto=format&fit=crop&w=600&q=80";
   
-  // Handles standard Google Drive share links
   const match = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
   if (match && match[1]) {
-    const fileId = match[1];
-    // Google's direct CDN thumbnail endpoint (supports high resolution)
-    return `https://lh3.googleusercontent.com/d/${fileId}=w800`;
+    return `https://lh3.googleusercontent.com/d/${match[1]}=w800`;
   }
   
-  // Handles direct drive ID strings or open id query links
   const idMatch = url.match(/id=([a-zA-Z0-9_-]+)/);
   if (idMatch && idMatch[1]) {
     return `https://lh3.googleusercontent.com/d/${idMatch[1]}=w800`;
@@ -39,7 +40,7 @@ export function formatDriveUrl(url: string): string {
 }
 
 // ==========================================
-// 2. TYPES & DATA CONTRACTS
+// 2. TYPES
 // ==========================================
 export interface Product {
   id: string;
@@ -53,7 +54,11 @@ export interface Product {
   video?: string;
 }
 
-// 7 Official Brand Pillars[cite: 1]
+export interface CartItem {
+  product: Product;
+  quantity: number;
+}
+
 const CATEGORIES = [
   'All',
   'Gadgets',
@@ -65,12 +70,12 @@ const CATEGORIES = [
   'Creator Tools'
 ] as const;
 
-// Paste your published Google Sheet CSV URL here:
-// File -> Share -> Publish to web -> Format: Comma-separated values (.csv)
+// ⚠️ PASTE YOUR GOOGLE SHEET CSV EXPORT LINK HERE:
+// In Google Sheets: File -> Share -> Publish to web -> Format: CSV (.csv) -> Publish -> Copy link
 const GOOGLE_SHEET_CSV_URL = ""; 
 
-// Fallback catalog
-const INITIAL_PRODUCTS: Product[] = [
+// Fallback items while the CSV URL is being linked
+const FALLBACK_PRODUCTS: Product[] = [
   {
     id: "SW-001",
     name: "itel Energy POWER GO PRO 100W",
@@ -78,33 +83,13 @@ const INITIAL_PRODUCTS: Product[] = [
     price: 115000,
     description: "Heavy-duty 100W ultra-fast portable power bank with solar input and dual Type-C PD support.",
     images: ["https://images.unsplash.com/photo-1609592424364-db0cb5b09040?auto=format&fit=crop&w=800&q=80"],
-    badge: "Bestseller",
-    in_stock: true
-  },
-  {
-    id: "SW-002",
-    name: "Clip-on Wireless ANC Earphones",
-    category: "Phone Accessories",
-    price: 13000,
-    description: "Open-ear ergonomic fit with active ENC noise reduction and extended battery performance.",
-    images: ["https://images.unsplash.com/photo-1590658268037-6bf12165a8df?auto=format&fit=crop&w=800&q=80"],
     badge: "Popular",
-    in_stock: true
-  },
-  {
-    id: "SW-003",
-    name: "RGB Studio Creator Ring Light + 2.1m Stand",
-    category: "Creator Tools",
-    price: 24500,
-    description: "Multi-color temperature controls with 3 phone mounts and remote shutter for live streaming.",
-    images: ["https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=800&q=80"],
-    badge: "New",
     in_stock: true
   }
 ];
 
 export default function App() {
-  const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS);
+  const [products, setProducts] = useState<Product[]>(FALLBACK_PRODUCTS);
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [activeModalProduct, setActiveModalProduct] = useState<Product | null>(null);
@@ -113,8 +98,24 @@ export default function App() {
   const [showCertLightbox, setShowCertLightbox] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(Boolean(GOOGLE_SHEET_CSV_URL));
 
-  // Store WhatsApp contact line
-  const WHATSAPP_PHONE = "2349066524315"; 
+  // Cart & Checkout State
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [isCartOpen, setIsCartOpen] = useState<boolean>(false);
+  const [isCheckoutOpen, setIsCheckoutOpen] = useState<boolean>(false);
+  const [copiedBank, setCopiedBank] = useState<boolean>(false);
+
+  // Form Fields
+  const [customerName, setCustomerName] = useState<string>('');
+  const [customerPhone, setCustomerPhone] = useState<string>('');
+  const [deliveryMethod, setDeliveryMethod] = useState<'pickup' | 'minna' | 'nationwide'>('pickup');
+  const [deliveryAddress, setDeliveryAddress] = useState<string>('');
+  const [orderNotes, setOrderNotes] = useState<string>('');
+
+  // Store Business Details
+  const WHATSAPP_PHONE = "2349066524315";
+  const BANK_NAME = "Moniepoint MFB";
+  const ACCOUNT_NUMBER = "9468092000"; // Replace with merchant's official business account
+  const ACCOUNT_NAME = "Swiftwave Variety Mall Limited";
 
   // Dynamic Google Sheet Sync
   useEffect(() => {
@@ -126,12 +127,10 @@ export default function App() {
         const rows = csvText.split('\n').map((row) => row.split(','));
         const parsed: Product[] = [];
         
-        // Skip header row
         for (let i = 1; i < rows.length; i++) {
           const row = rows[i];
           if (!row[0] || !row[1]) continue;
 
-          // Supports semicolon or comma separated images in column F
           const rawImages = row[5] 
             ? row[5].split(';').map((u) => u.trim()).filter(Boolean)
             : [];
@@ -155,6 +154,7 @@ export default function App() {
       .finally(() => setLoading(false));
   }, []);
 
+  // Filter Catalog
   const filteredProducts = useMemo(() => {
     return products.filter((p) => {
       const matchesCategory = selectedCategory === 'All' || p.category.toLowerCase() === selectedCategory.toLowerCase();
@@ -165,29 +165,118 @@ export default function App() {
     });
   }, [products, selectedCategory, searchQuery]);
 
-  const initiateWhatsAppOrder = (product: Product) => {
-    const message = `Hello Swiftwave Mall! I would like to order:
-- Product: ${product.name}
-- Item ID: ${product.id}
-- Price: ₦${product.price.toLocaleString()}
+  // Cart Operations
+  const addToCart = (product: Product) => {
+    setCart((prev) => {
+      const existing = prev.find((item) => item.product.id === product.id);
+      if (existing) {
+        return prev.map((item) => 
+          item.product.id === product.id 
+            ? { ...item, quantity: item.quantity + 1 } 
+            : item
+        );
+      }
+      return [...prev, { product, quantity: 1 }];
+    });
+    setIsCartOpen(true);
+  };
 
-Is this available for pickup/delivery at ABH Plaza?`;
+  const updateQuantity = (productId: string, delta: number) => {
+    setCart((prev) => 
+      prev
+        .map((item) => {
+          if (item.product.id === productId) {
+            const newQty = item.quantity + delta;
+            return newQty > 0 ? { ...item, quantity: newQty } : null;
+          }
+          return item;
+        })
+        .filter(Boolean) as CartItem[]
+    );
+  };
+
+  const removeFromCart = (productId: string) => {
+    setCart((prev) => prev.filter((item) => item.product.id !== productId));
+  };
+
+  const cartSubtotal = useMemo(() => {
+    return cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
+  }, [cart]);
+
+  const deliveryFee = useMemo(() => {
+    if (deliveryMethod === 'pickup') return 0;
+    if (deliveryMethod === 'minna') return 1500;
+    return 4500; // Nationwide logistics
+  }, [deliveryMethod]);
+
+  const orderTotal = cartSubtotal + deliveryFee;
+  const totalCartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+
+  const copyAccountNumber = () => {
+    navigator.clipboard.writeText(ACCOUNT_NUMBER);
+    setCopiedBank(true);
+    setTimeout(() => setCopiedBank(false), 2000);
+  };
+
+  // Submit Order via WhatsApp with Payment Receipt Status
+  const handleFinalOrder = () => {
+    if (!customerName.trim() || !customerPhone.trim()) {
+      alert("Please provide your full name and phone number.");
+      return;
+    }
+
+    if (deliveryMethod !== 'pickup' && !deliveryAddress.trim()) {
+      alert("Please enter your delivery destination.");
+      return;
+    }
+
+    const itemsSummary = cart.map((item, idx) => 
+      `${idx + 1}. ${item.product.name} (ID: ${item.product.id}) x${item.quantity} = ₦${(item.product.price * item.quantity).toLocaleString()}`
+    ).join('\n');
+
+    const deliveryTitle = 
+      deliveryMethod === 'pickup' 
+        ? "Store Pickup @ ABH Plaza, Minna (FREE)"
+        : deliveryMethod === 'minna'
+          ? "Local Dispatch within Minna (₦1,500)"
+          : "Nationwide Logistics Dispatch (₦4,500)";
+
+    const message = `🛍️ *PAID ORDER CONFIRMATION - SWIFTWAVE MALL*
+----------------------------------------
+*Customer Name:* ${customerName.trim()}
+*Contact Phone:* ${customerPhone.trim()}
+
+*Fulfillment:* ${deliveryTitle}
+${deliveryMethod !== 'pickup' ? `*Delivery Address:* ${deliveryAddress.trim()}\n` : ''}${orderNotes.trim() ? `*Special Notes:* ${orderNotes.trim()}\n` : ''}
+*ITEMS ORDERED:*
+${itemsSummary}
+----------------------------------------
+*Subtotal:* ₦${cartSubtotal.toLocaleString()}
+*Delivery Fee:* ₦${deliveryFee.toLocaleString()}
+*TOTAL PAID:* ₦${orderTotal.toLocaleString()}
+----------------------------------------
+*Payment Details:*
+Paid into ${BANK_NAME} (${ACCOUNT_NUMBER})
+Account: ${ACCOUNT_NAME}
+
+*(I have attached my bank transaction receipt screenshot below)*`;
+
     window.open(`https://wa.me/${WHATSAPP_PHONE}?text=${encodeURIComponent(message)}`, '_blank');
   };
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans flex flex-col antialiased">
       
-      {/* Top Corporate Legal Badge Bar[cite: 2] */}
+      {/* Top Corporate Legal Badge Bar */}
       <div className="bg-slate-950 text-slate-300 text-xs py-2 px-4 border-b border-slate-800">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-2">
           <div className="flex items-center gap-2">
             <span className="inline-block w-2 h-2 rounded-full bg-emerald-400"></span>
-            <span className="font-semibold text-white tracking-wide">SWIFTWAVE VARIETY MALL LIMITED[cite: 2]</span>
+            <span className="font-semibold text-white tracking-wide">SWIFTWAVE VARIETY MALL LIMITED</span>
             <span className="hidden md:inline text-slate-600">|</span>
-            <span className="hidden md:inline font-mono text-slate-400">RC: 9468092[cite: 2]</span>
+            <span className="hidden md:inline font-mono text-slate-400">RC: 9468092</span>
             <span className="hidden lg:inline text-slate-600">|</span>
-            <span className="hidden lg:inline font-mono text-slate-400">TIN: 2622689087269[cite: 2]</span>
+            <span className="hidden lg:inline font-mono text-slate-400">TIN: 2622689087269</span>
           </div>
           <div className="flex items-center gap-4 text-slate-400">
             <span className="flex items-center gap-1">
@@ -211,9 +300,20 @@ Is this available for pickup/delivery at ABH Plaza?`;
             
             {/* Brand Logo & Name */}
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-blue-500/20">
+              <img 
+                src="/logo.png" 
+                alt="Swiftwave Variety Mall" 
+                className="w-10 h-10 object-contain rounded-xl"
+                onError={(e) => {
+                  // Fallback if logo.png is not yet uploaded
+                  (e.currentTarget as HTMLElement).style.display = 'none';
+                  (e.currentTarget.nextElementSibling as HTMLElement).style.display = 'flex';
+                }}
+              />
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 hidden items-center justify-center text-white shadow-md shadow-blue-500/20">
                 <ShoppingBag className="w-5 h-5" />
               </div>
+
               <div>
                 <h1 className="text-xl font-black tracking-tight text-slate-900 leading-none">
                   SWIFT<span className="text-blue-600">WAVE</span>
@@ -224,28 +324,31 @@ Is this available for pickup/delivery at ABH Plaza?`;
               </div>
             </div>
 
-            {/* Desktop Search Input */}
+            {/* Desktop Search */}
             <div className="flex-1 max-w-md relative hidden sm:block">
               <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
-                placeholder="Search gadgets, accessories, power banks..."
+                placeholder="Search products, gadgets, essentials..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full bg-slate-100 hover:bg-slate-200/70 focus:bg-white text-sm rounded-full pl-10 pr-4 py-2 border border-transparent focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all outline-none"
               />
             </div>
 
-            {/* Contact Store Button */}
-            <a
-              href={`https://wa.me/${WHATSAPP_PHONE}`}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-semibold px-4 py-2.5 rounded-full transition-all shadow-md shadow-emerald-600/20 active:scale-95"
+            {/* Cart Drawer Button */}
+            <button
+              onClick={() => setIsCartOpen(true)}
+              className="relative inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-semibold px-4 py-2.5 rounded-full transition-all shadow-md shadow-blue-600/20 active:scale-95"
             >
-              <Phone className="w-4 h-4" />
-              <span>Contact Store</span>
-            </a>
+              <ShoppingBag className="w-4 h-4" />
+              <span>Cart</span>
+              {totalCartCount > 0 && (
+                <span className="bg-emerald-500 text-white text-[11px] font-extrabold w-5 h-5 rounded-full flex items-center justify-center -ml-1">
+                  {totalCartCount}
+                </span>
+              )}
+            </button>
           </div>
 
           {/* Mobile Search Bar */}
@@ -253,14 +356,14 @@ Is this available for pickup/delivery at ABH Plaza?`;
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
-              placeholder="Search items or codes (e.g. SW-001)..."
+              placeholder="Search products..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full bg-slate-100 text-sm rounded-xl pl-9 pr-3 py-2 border border-transparent focus:border-blue-500 focus:bg-white transition-all outline-none"
             />
           </div>
 
-          {/* Category Filter Pills[cite: 1] */}
+          {/* Category Filter Pills */}
           <nav className="flex items-center gap-2 overflow-x-auto no-scrollbar pt-3.5 pb-1">
             {CATEGORIES.map((cat) => {
               const active = selectedCategory === cat;
@@ -285,7 +388,7 @@ Is this available for pickup/delivery at ABH Plaza?`;
       {/* Main Catalog View */}
       <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
         
-        {/* Hero Banner[cite: 1] */}
+        {/* Hero Banner */}
         <section className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-blue-700 via-indigo-700 to-slate-950 text-white p-6 sm:p-10 mb-8 shadow-xl">
           <div className="relative z-10 max-w-2xl">
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-white/10 text-blue-200 backdrop-blur-md mb-3 border border-white/15">
@@ -293,16 +396,15 @@ Is this available for pickup/delivery at ABH Plaza?`;
               Verified Retail Storefront
             </span>
             <h2 className="text-2xl sm:text-4xl font-extrabold tracking-tight leading-tight">
-              Everyday Essentials Built for the Way You Actually Live[cite: 1].
+              Everyday Essentials Built for the Way You Actually Live.
             </h2>
             <p className="mt-2 text-sm sm:text-base text-blue-100 font-normal leading-relaxed">
-              Order verified products directly from Shop 9 & 10, ABH Plaza, Minna with fast local pickup or direct dispatch.
+              Order verified products directly from Shop 9 & 10, ABH Plaza, Minna with store pickup or swift dispatch.
             </p>
           </div>
-          <div className="absolute right-0 top-0 bottom-0 w-1/3 bg-radial from-blue-400/20 to-transparent pointer-events-none"></div>
         </section>
 
-        {/* Catalog Header Meta */}
+        {/* Catalog Meta */}
         <div className="flex items-center justify-between mb-4">
           <p className="text-xs uppercase tracking-wider font-bold text-slate-500">
             Showing <span className="text-slate-900">{filteredProducts.length}</span> Products
@@ -321,7 +423,7 @@ Is this available for pickup/delivery at ABH Plaza?`;
         {loading ? (
           <div className="py-24 text-center">
             <div className="inline-block w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-            <p className="mt-3 text-sm text-slate-500 font-medium">Syncing live store inventory...</p>
+            <p className="mt-3 text-sm text-slate-500 font-medium">Syncing inventory...</p>
           </div>
         ) : filteredProducts.length === 0 ? (
           <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center max-w-md mx-auto my-12">
@@ -355,7 +457,6 @@ Is this available for pickup/delivery at ABH Plaza?`;
                       loading="lazy"
                     />
 
-                    {/* Stock Status Badge */}
                     {!product.in_stock && (
                       <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-[2px] flex items-center justify-center">
                         <span className="bg-rose-600 text-white font-bold text-xs uppercase px-3 py-1 rounded-full">
@@ -364,14 +465,12 @@ Is this available for pickup/delivery at ABH Plaza?`;
                       </div>
                     )}
 
-                    {/* Product Highlight Badge */}
                     {product.badge && (
                       <span className="absolute top-2.5 left-2.5 bg-blue-600 text-white text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full shadow-md">
                         {product.badge}
                       </span>
                     )}
 
-                    {/* Video Availability Indicator */}
                     {product.video && (
                       <span className="absolute bottom-2.5 right-2.5 bg-slate-900/80 backdrop-blur-md text-white p-1.5 rounded-full shadow-md">
                         <Video className="w-3.5 h-3.5" />
@@ -404,23 +503,23 @@ Is this available for pickup/delivery at ABH Plaza?`;
 
                     <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
                       <div>
-                        <span className="text-[10px] text-slate-400 block font-medium">Retail Price</span>
+                        <span className="text-[10px] text-slate-400 block font-medium">Price</span>
                         <span className="text-base font-black text-slate-900">
                           ₦{product.price.toLocaleString()}
                         </span>
                       </div>
 
                       <button
-                        onClick={() => initiateWhatsAppOrder(product)}
+                        onClick={() => addToCart(product)}
                         disabled={!product.in_stock}
                         className={`inline-flex items-center gap-1.5 text-xs font-bold px-3.5 py-2 rounded-xl transition-all ${
                           product.in_stock
-                            ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm shadow-emerald-600/30 active:scale-95'
+                            ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-sm shadow-blue-600/30 active:scale-95'
                             : 'bg-slate-200 text-slate-400 cursor-not-allowed'
                         }`}
                       >
-                        <ShoppingBag className="w-3.5 h-3.5" />
-                        <span>Order</span>
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Add</span>
                       </button>
                     </div>
                   </div>
@@ -431,12 +530,11 @@ Is this available for pickup/delivery at ABH Plaza?`;
         )}
       </main>
 
-      {/* Multi-Image & Video Detail Modal */}
+      {/* Product Detail Modal */}
       {activeModalProduct && (
         <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-2xl w-full overflow-hidden shadow-2xl relative border border-slate-200 flex flex-col max-h-[90vh]">
             
-            {/* Modal Navigation Bar */}
             <div className="p-4 border-b border-slate-100 flex items-center justify-between">
               <div>
                 <span className="text-xs font-mono font-bold text-blue-600">{activeModalProduct.id}</span>
@@ -451,7 +549,6 @@ Is this available for pickup/delivery at ABH Plaza?`;
             </div>
 
             <div className="p-6 overflow-y-auto flex-1">
-              {/* Main Photo Viewer Stage */}
               <div className="relative aspect-video rounded-2xl bg-slate-100 overflow-hidden mb-4">
                 <img
                   src={formatDriveUrl(activeModalProduct.images[activeImageIndex] || activeModalProduct.images[0])}
@@ -483,7 +580,6 @@ Is this available for pickup/delivery at ABH Plaza?`;
                 )}
               </div>
 
-              {/* Angle Thumbnails */}
               {activeModalProduct.images.length > 1 && (
                 <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
                   {activeModalProduct.images.map((img, idx) => (
@@ -500,7 +596,6 @@ Is this available for pickup/delivery at ABH Plaza?`;
                 </div>
               )}
 
-              {/* Title & Price Header */}
               <div className="flex items-start justify-between gap-4">
                 <h2 className="text-lg font-bold text-slate-900 leading-snug">{activeModalProduct.name}</h2>
                 <div className="text-right shrink-0">
@@ -510,7 +605,6 @@ Is this available for pickup/delivery at ABH Plaza?`;
                 </div>
               </div>
 
-              {/* Specifications Block */}
               <div className="mt-4">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Specifications & Details</h4>
                 <p className="text-sm text-slate-600 mt-1.5 leading-relaxed whitespace-pre-line">
@@ -518,7 +612,6 @@ Is this available for pickup/delivery at ABH Plaza?`;
                 </p>
               </div>
 
-              {/* Video Demo Link */}
               {activeModalProduct.video && (
                 <div className="mt-4 p-3 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-between">
                   <div className="flex items-center gap-2 text-xs font-semibold text-blue-900">
@@ -537,30 +630,300 @@ Is this available for pickup/delivery at ABH Plaza?`;
               )}
             </div>
 
-            {/* Modal Bottom Bar */}
             <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
               <div className="flex items-center gap-1.5 text-xs text-slate-500">
                 <CheckCircle2 className="w-4 h-4 text-emerald-500" />
                 <span>Verified Stock @ ABH Plaza</span>
               </div>
               <button
-                onClick={() => initiateWhatsAppOrder(activeModalProduct)}
+                onClick={() => {
+                  addToCart(activeModalProduct);
+                  setActiveModalProduct(null);
+                }}
                 disabled={!activeModalProduct.in_stock}
                 className={`inline-flex items-center gap-2 text-sm font-bold px-6 py-2.5 rounded-xl shadow-md transition-all ${
                   activeModalProduct.in_stock
-                    ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/30'
+                    ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-600/30'
                     : 'bg-slate-300 text-slate-500 cursor-not-allowed'
                 }`}
               >
-                <ShoppingBag className="w-4 h-4" />
-                <span>Order via WhatsApp</span>
+                <Plus className="w-4 h-4" />
+                <span>Add to Cart</span>
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Corporate Brand Identity Modal[cite: 1, 2] */}
+      {/* Cart Drawer */}
+      {isCartOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex justify-end">
+          <div className="bg-white w-full max-w-md h-full shadow-2xl flex flex-col justify-between">
+            
+            {/* Cart Header */}
+            <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <ShoppingBag className="w-5 h-5 text-blue-600" />
+                <h3 className="font-bold text-slate-900">Your Shopping Cart</h3>
+                <span className="text-xs bg-slate-100 text-slate-600 font-bold px-2 py-0.5 rounded-full">
+                  {totalCartCount}
+                </span>
+              </div>
+              <button 
+                onClick={() => setIsCartOpen(false)}
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Cart Item List */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-3">
+              {cart.length === 0 ? (
+                <div className="text-center py-20 text-slate-400">
+                  <ShoppingBag className="w-12 h-12 mx-auto stroke-[1.5] mb-2 opacity-50" />
+                  <p className="text-sm font-medium">Your cart is empty</p>
+                  <button
+                    onClick={() => setIsCartOpen(false)}
+                    className="mt-4 text-xs font-bold text-blue-600 hover:underline"
+                  >
+                    Start shopping
+                  </button>
+                </div>
+              ) : (
+                cart.map(({ product, quantity }) => (
+                  <div key={product.id} className="flex gap-3 p-3 bg-slate-50 rounded-2xl border border-slate-100 items-center">
+                    <img 
+                      src={formatDriveUrl(product.images[0])} 
+                      alt="" 
+                      className="w-14 h-14 object-cover rounded-xl bg-white border border-slate-200" 
+                    />
+                    <div className="flex-1 min-w-0">
+                      <h4 className="text-xs font-bold text-slate-900 truncate">{product.name}</h4>
+                      <p className="text-xs font-mono font-semibold text-blue-600 mt-0.5">
+                        ₦{(product.price * quantity).toLocaleString()}
+                      </p>
+                      
+                      {/* Quantity Controls */}
+                      <div className="flex items-center gap-2 mt-2">
+                        <button
+                          onClick={() => updateQuantity(product.id, -1)}
+                          className="w-6 h-6 rounded-md bg-white border border-slate-200 text-slate-600 flex items-center justify-center hover:bg-slate-100"
+                        >
+                          <Minus className="w-3 h-3" />
+                        </button>
+                        <span className="text-xs font-bold font-mono px-1">{quantity}</span>
+                        <button
+                          onClick={() => updateQuantity(product.id, 1)}
+                          className="w-6 h-6 rounded-md bg-white border border-slate-200 text-slate-600 flex items-center justify-center hover:bg-slate-100"
+                        >
+                          <Plus className="w-3 h-3" />
+                        </button>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => removeFromCart(product.id)}
+                      className="text-slate-400 hover:text-rose-600 p-2"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Cart Footer */}
+            {cart.length > 0 && (
+              <div className="p-4 border-t border-slate-100 bg-slate-50 space-y-3">
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-slate-500 font-medium">Subtotal</span>
+                  <span className="font-black text-slate-900 text-base">₦{cartSubtotal.toLocaleString()}</span>
+                </div>
+                <button
+                  onClick={() => {
+                    setIsCartOpen(false);
+                    setIsCheckoutOpen(true);
+                  }}
+                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm py-3 rounded-2xl shadow-lg shadow-emerald-600/30 transition-all flex items-center justify-center gap-2"
+                >
+                  <span>Proceed to Payment</span>
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Checkout & Direct Bank Payment Modal */}
+      {isCheckoutOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-lg w-full max-h-[90vh] overflow-y-auto p-6 relative border border-slate-200 shadow-2xl">
+            <button
+              onClick={() => setIsCheckoutOpen(false)}
+              className="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <h3 className="text-lg font-bold text-slate-900 mb-1">Checkout & Payment</h3>
+            <p className="text-xs text-slate-500 mb-4">Complete your transfer and submit your order details for dispatch confirmation.</p>
+
+            {/* Step 1: Customer Contact Info */}
+            <div className="space-y-3 mb-5">
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1">Full Name</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Ibrahim Mukhtar"
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                  className="w-full text-xs p-2.5 rounded-xl border border-slate-200 focus:border-blue-500 outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1">Phone Number (WhatsApp Active)</label>
+                <input
+                  type="tel"
+                  placeholder="e.g. 08012345678"
+                  value={customerPhone}
+                  onChange={(e) => setCustomerPhone(e.target.value)}
+                  className="w-full text-xs p-2.5 rounded-xl border border-slate-200 focus:border-blue-500 outline-none"
+                />
+              </div>
+
+              {/* Delivery Choice */}
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1.5">Fulfillment Method</label>
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setDeliveryMethod('pickup')}
+                    className={`p-2.5 rounded-xl border text-center transition-all ${
+                      deliveryMethod === 'pickup'
+                        ? 'border-blue-600 bg-blue-50 text-blue-900 font-bold'
+                        : 'border-slate-200 text-slate-600'
+                    }`}
+                  >
+                    <Building2 className="w-4 h-4 mx-auto mb-1 text-blue-600" />
+                    <span className="text-[11px] block">Shop Pickup</span>
+                    <span className="text-[10px] text-emerald-600 font-bold">Free</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setDeliveryMethod('minna')}
+                    className={`p-2.5 rounded-xl border text-center transition-all ${
+                      deliveryMethod === 'minna'
+                        ? 'border-blue-600 bg-blue-50 text-blue-900 font-bold'
+                        : 'border-slate-200 text-slate-600'
+                    }`}
+                  >
+                    <Truck className="w-4 h-4 mx-auto mb-1 text-blue-600" />
+                    <span className="text-[11px] block">Minna Delivery</span>
+                    <span className="text-[10px] font-bold text-slate-600">₦1,500</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setDeliveryMethod('nationwide')}
+                    className={`p-2.5 rounded-xl border text-center transition-all ${
+                      deliveryMethod === 'nationwide'
+                        ? 'border-blue-600 bg-blue-50 text-blue-900 font-bold'
+                        : 'border-slate-200 text-slate-600'
+                    }`}
+                  >
+                    <Truck className="w-4 h-4 mx-auto mb-1 text-blue-600" />
+                    <span className="text-[11px] block">Nationwide</span>
+                    <span className="text-[10px] font-bold text-slate-600">₦4,500</span>
+                  </button>
+                </div>
+              </div>
+
+              {deliveryMethod !== 'pickup' && (
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">Delivery Address & Landmark</label>
+                  <input
+                    type="text"
+                    placeholder="Hostel, Street address, or Campus Area"
+                    value={deliveryAddress}
+                    onChange={(e) => setDeliveryAddress(e.target.value)}
+                    className="w-full text-xs p-2.5 rounded-xl border border-slate-200 focus:border-blue-500 outline-none"
+                  />
+                </div>
+              )}
+
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1">Order Notes (Optional)</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Call when dispatch arrives, preferred color"
+                  value={orderNotes}
+                  onChange={(e) => setOrderNotes(e.target.value)}
+                  className="w-full text-xs p-2.5 rounded-xl border border-slate-200 focus:border-blue-500 outline-none"
+                />
+              </div>
+            </div>
+
+            {/* Step 2: Direct Bank Transfer Details */}
+            <div className="bg-slate-900 text-white rounded-2xl p-4 mb-5 space-y-2">
+              <span className="text-[10px] font-bold tracking-wider text-emerald-400 uppercase block">
+                Direct Bank Transfer Details
+              </span>
+              
+              <div className="flex justify-between items-center pt-1 border-t border-slate-800">
+                <span className="text-xs text-slate-400">Bank Name</span>
+                <span className="text-xs font-bold">{BANK_NAME}</span>
+              </div>
+
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-slate-400">Account Number</span>
+                <button
+                  type="button"
+                  onClick={copyAccountNumber}
+                  className="inline-flex items-center gap-1.5 font-mono text-sm font-bold text-emerald-400 hover:underline"
+                >
+                  <span>{ACCOUNT_NUMBER}</span>
+                  <Copy className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-slate-400">Account Name</span>
+                <span className="text-xs font-semibold">{ACCOUNT_NAME}</span>
+              </div>
+
+              <div className="flex justify-between items-center pt-2 border-t border-slate-800 text-sm">
+                <span className="font-bold text-slate-300">Amount Due</span>
+                <span className="font-black text-emerald-400 text-base">₦{orderTotal.toLocaleString()}</span>
+              </div>
+            </div>
+
+            {copiedBank && (
+              <p className="text-center text-xs text-emerald-600 font-bold mb-3 animate-fade-in">
+                Account number copied to clipboard!
+              </p>
+            )}
+
+            {/* Confirm & WhatsApp Action */}
+            <button
+              type="button"
+              onClick={handleFinalOrder}
+              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm py-3 rounded-2xl shadow-lg shadow-emerald-600/30 transition-all flex items-center justify-center gap-2"
+            >
+              <span>I Have Transferred • Submit via WhatsApp</span>
+              <ExternalLink className="w-4 h-4" />
+            </button>
+            <p className="text-[11px] text-slate-400 text-center mt-2 leading-relaxed">
+              Your formatted invoice will open directly in WhatsApp to verify your payment receipt with the store manager.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Brand Identity & Trust Modal */}
       {showAboutModal && (
         <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-lg w-full p-6 relative border border-slate-200 shadow-2xl">
@@ -573,44 +936,41 @@ Is this available for pickup/delivery at ABH Plaza?`;
             
             <div className="flex items-center gap-2 mb-3">
               <ShieldCheck className="w-6 h-6 text-blue-600" />
-              <h3 className="text-lg font-bold text-slate-900">About Swiftwave Variety Mall[cite: 1]</h3>
+              <h3 className="text-lg font-bold text-slate-900">About Swiftwave Variety Mall</h3>
             </div>
             
             <p className="text-xs text-slate-600 leading-relaxed mb-4">
-              Swiftwave is your modern everyday marketplace built for the way you actually live[cite: 1]. Bringing together gadgets, home essentials, school supplies, phone accessories, beauty products, children's toys, and creator tools under one roof[cite: 1].
+              Swiftwave is your modern everyday marketplace built for the way you actually live. Bringing together gadgets, home essentials, school supplies, phone accessories, beauty products, children's toys, and creator tools under one roof.
             </p>
 
-            {/* Mission Section[cite: 1] */}
             <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 mb-3">
-              <span className="text-[11px] font-bold text-slate-900 uppercase tracking-wider block">Our Mission[cite: 1]</span>
+              <span className="text-[11px] font-bold text-slate-900 uppercase tracking-wider block">Our Mission</span>
               <p className="text-xs text-slate-600 mt-1">
-                To create stylish, affordable, and practical accessories that help students and everyday users stay organized and express their identity[cite: 1].
+                To create stylish, affordable, and practical accessories that help students and everyday users stay organized and express their identity.
               </p>
             </div>
 
-            {/* Legal Registration with Certificate Verification Button[cite: 2] */}
             <div className="p-3.5 bg-blue-50/60 rounded-xl border border-blue-100 mb-4">
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-bold text-blue-950 uppercase tracking-wider">
-                  Corporate Registration[cite: 2]
+                  Corporate Registration
                 </span>
                 <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-full">
-                  <CheckCircle2 className="w-3 h-3" /> CAC Verified[cite: 2]
+                  <CheckCircle2 className="w-3 h-3" /> CAC Verified
                 </span>
               </div>
               
               <p className="text-xs font-mono text-slate-700 mt-1.5 leading-relaxed">
-                <span className="font-semibold text-slate-900">SWIFTWAVE VARIETY MALL LIMITED</span>[cite: 2]<br />
-                RC: <span className="text-blue-700 font-bold">9468092</span> | TIN: 2622689087269[cite: 2]
+                <span className="font-semibold text-slate-900">SWIFTWAVE VARIETY MALL LIMITED</span><br />
+                RC: <span className="text-blue-700 font-bold">9468092</span> | TIN: 2622689087269
               </p>
 
-              {/* View Certificate Button[cite: 2] */}
               <button
                 onClick={() => setShowCertLightbox(true)}
                 className="mt-3 w-full bg-white hover:bg-blue-600 hover:text-white text-blue-700 border border-blue-200 hover:border-transparent font-bold text-xs py-2 px-3 rounded-lg transition-all flex items-center justify-center gap-1.5 shadow-sm shadow-blue-500/5"
               >
                 <ShieldCheck className="w-3.5 h-3.5" />
-                <span>View Certificate of Incorporation[cite: 2]</span>
+                <span>View Certificate of Incorporation</span>
                 <ExternalLink className="w-3 h-3 ml-0.5" />
               </button>
             </div>
@@ -625,7 +985,7 @@ Is this available for pickup/delivery at ABH Plaza?`;
         </div>
       )}
 
-      {/* Official CAC Certificate Lightbox Modal[cite: 2] */}
+      {/* Official CAC Certificate Lightbox Modal */}
       {showCertLightbox && (
         <div 
           className="fixed inset-0 z-[60] bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4"
@@ -639,8 +999,8 @@ Is this available for pickup/delivery at ABH Plaza?`;
               <div className="flex items-center gap-2">
                 <ShieldCheck className="w-5 h-5 text-emerald-600" />
                 <div>
-                  <h4 className="text-xs font-bold text-slate-900 leading-none">Federal Republic of Nigeria[cite: 2]</h4>
-                  <p className="text-[10px] text-slate-500 font-mono mt-0.5">RC: 9468092 | Incorporated April 7, 2026[cite: 2]</p>
+                  <h4 className="text-xs font-bold text-slate-900 leading-none">Federal Republic of Nigeria</h4>
+                  <p className="text-[10px] text-slate-500 font-mono mt-0.5">RC: 9468092 | Incorporated April 7, 2026</p>
                 </div>
               </div>
               <button
@@ -651,17 +1011,16 @@ Is this available for pickup/delivery at ABH Plaza?`;
               </button>
             </div>
 
-            {/* Certificate Display Stage */}
             <div className="flex-1 overflow-y-auto my-3 bg-slate-50 rounded-xl p-2 flex items-center justify-center">
               <img
                 src="/cac-certificate.jpg"
-                alt="Swiftwave Variety Mall Limited CAC Certificate of Incorporation"
+                alt="Swiftwave Variety Mall Limited CAC Certificate"
                 className="w-full max-h-[70vh] object-contain rounded-lg shadow-sm"
               />
             </div>
 
             <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
-              <span>Issued under Companies and Allied Matters Act 2020[cite: 2]</span>
+              <span>Issued under Companies and Allied Matters Act 2020</span>
               <a
                 href="/cac-certificate.jpg"
                 target="_blank"
@@ -675,19 +1034,24 @@ Is this available for pickup/delivery at ABH Plaza?`;
         </div>
       )}
 
-      {/* Trust-Anchored Footer[cite: 1, 2] */}
+      {/* Trust-Anchored Footer */}
       <footer className="bg-slate-950 text-slate-400 text-xs border-t border-slate-800 pt-10 pb-8 mt-auto">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pb-8 border-b border-slate-800">
             <div>
               <div className="flex items-center gap-2 mb-3">
-                <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold">
-                  S
-                </div>
+                <img 
+                  src="/logo.png" 
+                  alt="" 
+                  className="w-7 h-7 object-contain rounded-lg"
+                  onError={(e) => {
+                    (e.currentTarget as HTMLElement).style.display = 'none';
+                  }}
+                />
                 <span className="text-sm font-black tracking-tight text-white">SWIFTWAVE</span>
               </div>
               <p className="text-slate-400 leading-relaxed text-xs max-w-sm">
-                Friendly, fast, and affordable. The one-stop shop that keeps everyday life moving[cite: 1].
+                Friendly, fast, and affordable. The one-stop shop that keeps everyday life moving.
               </p>
             </div>
 
@@ -701,20 +1065,20 @@ Is this available for pickup/delivery at ABH Plaza?`;
             </div>
 
             <div>
-              <h4 className="text-white font-bold text-xs uppercase tracking-wider mb-3">Corporate Credentials[cite: 2]</h4>
+              <h4 className="text-white font-bold text-xs uppercase tracking-wider mb-3">Corporate Credentials</h4>
               <p className="text-slate-400 leading-relaxed font-mono">
-                Entity: Swiftwave Variety Mall Limited[cite: 2]<br />
-                Registration No: 9468092[cite: 2]<br />
-                Tax ID: 2622689087269[cite: 2]
+                Entity: Swiftwave Variety Mall Limited<br />
+                Registration No: 9468092<br />
+                Tax ID: 2622689087269
               </p>
             </div>
           </div>
 
           <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-slate-500">
-            <p>© {new Date().getFullYear()} Swiftwave Variety Mall Limited. All rights reserved[cite: 2].</p>
+            <p>© {new Date().getFullYear()} Swiftwave Variety Mall Limited. All rights reserved.</p>
             <div className="flex items-center gap-2 text-slate-400">
               <ShieldCheck className="w-4 h-4 text-emerald-400" />
-              <span>Certified CAC Registered Commercial Vendor[cite: 2]</span>
+              <span>Certified CAC Registered Commercial Vendor</span>
             </div>
           </div>
         </div>
