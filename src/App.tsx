@@ -1,898 +1,648 @@
-import { useState, useMemo, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { 
+  Search, 
+  ShoppingBag, 
+  ExternalLink, 
+  Phone, 
+  ShieldCheck, 
+  Sparkles, 
+  Video, 
+  X, 
+  CheckCircle2, 
+  ChevronRight, 
+  ChevronLeft,
+  MapPin,
+  Info
+} from 'lucide-react';
 
-// --- STORE CONFIGURATION ---
-const STORE_WHATSAPP_NUMBER = '2349066524315';
-const STORE_NAME = 'Swiftwave Variety Mall';
-const STORE_LOCATION = 'Shop 9 & 10 ABH Plaza, Bosso Road, Minna';
-const PROMO_BANNER = '⚡ In-Store Pickup at ABH Plaza • Nationwide Delivery Available';
+// ==========================================
+// 1. IMAGE FORMATTING UTILITY
+// ==========================================
+export function formatDriveUrl(url: string): string {
+  if (!url) return "https://images.unsplash.com/photo-1526738549149-8e07eca6c147?auto=format&fit=crop&w=600&q=80";
+  
+  // Handles standard Google Drive share links
+  const match = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+  if (match && match[1]) {
+    const fileId = match[1];
+    // Google's direct CDN thumbnail endpoint (supports high resolution)
+    return `https://lh3.googleusercontent.com/d/${fileId}=w800`;
+  }
+  
+  // Handles direct drive ID strings or open id query links
+  const idMatch = url.match(/id=([a-zA-Z0-9_-]+)/);
+  if (idMatch && idMatch[1]) {
+    return `https://lh3.googleusercontent.com/d/${idMatch[1]}=w800`;
+  }
+  
+  return url.trim();
+}
 
-// Live Google Sheet CSV Endpoint
-const PUBLISHED_CSV_URL =
-  'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ8dPEVi06B26I8COih7Iwbal1TYoWMgzzfhOw7hbgSDHjxztBFSm39SCGxjFh9FWSrJxmC9Ej8ceRW/pub?output=csv';
-
-const FALLBACK_IMAGE_SVG =
-  'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="%23cbd5e1" stroke-width="1.5"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>';
-
-type TabType = 'all' | 'new' | 'gadgets' | 'Household & Daily Essentials';
-
-interface Product {
+// ==========================================
+// 2. TYPES & DATA CONTRACTS
+// ==========================================
+export interface Product {
   id: string;
   name: string;
-  category: 'gadgets' | 'Household & Daily Essentials';
+  category: string;
   price: number;
   description: string;
   images: string[];
   badge?: string;
-  videoUrl?: string;
+  in_stock: boolean;
+  video?: string;
 }
 
-// Converts any standard Google Drive share link into a direct viewable image thumbnail
-function normalizeImageUrl(rawUrl: string): string {
-  if (!rawUrl || !rawUrl.trim()) return '';
-  const url = rawUrl.trim();
+// 7 Official Brand Pillars
+const CATEGORIES = [
+  'All',
+  'Gadgets',
+  'Phone Accessories',
+  'School Supplies',
+  'Home Essentials',
+  'Beauty Products',
+  "Children's Toys",
+  'Creator Tools'
+] as const;
 
-  const driveMatch =
-    url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) ||
-    url.match(/[?&]id=([a-zA-Z0-9_-]+)/) ||
-    url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+// Paste your published Google Sheet CSV URL here:
+// File -> Share -> Publish to web -> Format: Comma-separated values (.csv)
+const GOOGLE_SHEET_CSV_URL = ""; 
 
-  if (driveMatch && driveMatch[1]) {
-    const fileId = driveMatch[1];
-    return `https://drive.google.com/thumbnail?id=${fileId}&sz=w800`;
-  }
-
-  return url;
-}
-
-// Formats Google Drive, YouTube, or raw video URLs for embed playback
-function getEmbedVideoInfo(rawUrl?: string): { type: 'iframe' | 'video'; embedUrl: string; directUrl: string } | null {
-  if (!rawUrl || !rawUrl.trim()) return null;
-  const url = rawUrl.trim();
-
-  // Google Drive Video
-  const driveMatch =
-    url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) ||
-    url.match(/[?&]id=([a-zA-Z0-9_-]+)/) ||
-    url.match(/\/d\/([a-zA-Z0-9_-]+)/);
-
-  if (driveMatch && driveMatch[1]) {
-    const fileId = driveMatch[1];
-    return {
-      type: 'iframe',
-      embedUrl: `https://drive.google.com/file/d/${fileId}/preview`,
-      directUrl: `https://drive.google.com/file/d/${fileId}/view`,
-    };
-  }
-
-  // YouTube / YouTube Shorts
-  const ytMatch =
-    url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|shorts\/|embed\/))([a-zA-Z0-9_-]{11})/);
-
-  if (ytMatch && ytMatch[1]) {
-    return {
-      type: 'iframe',
-      embedUrl: `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1&rel=0`,
-      directUrl: url,
-    };
-  }
-
-  // Direct MP4 / WebM / OGG files
-  if (url.match(/\.(mp4|webm|ogg)(\?.*)?$/i)) {
-    return {
-      type: 'video',
-      embedUrl: url,
-      directUrl: url,
-    };
-  }
-
-  return {
-    type: 'iframe',
-    embedUrl: url,
-    directUrl: url,
-  };
-}
-
-// Default fallback items (ordered newest first)
-const DEFAULT_ITEMS: Product[] = [
+// Fallback catalog
+const INITIAL_PRODUCTS: Product[] = [
   {
-    id: 'g5',
-    name: 'Apple MacBook Pro 13" (2015)',
-    category: 'gadgets',
-    price: 195000,
-    description: 'Intel Core i5 • 8GB RAM • 128GB SSD • 13-inch Retina Display • Backlit Keyboard • Includes Charger',
-    images: ['/images/stand-charging-cable.jpg'],
-    badge: 'New Arrival',
-  },
-  {
-    id: 'g1',
-    name: 'itel Energy POWER GO PRO',
-    category: 'gadgets',
+    id: "SW-001",
+    name: "itel Energy POWER GO PRO 100W",
+    category: "Gadgets",
     price: 115000,
-    description: 'Supports dual fast charging up to 100W via Solar panels and USB-C.',
-    images: ['/images/itel-power-go.jpg'],
-    badge: 'Popular',
+    description: "Heavy-duty 100W ultra-fast portable power bank with solar input and dual Type-C PD support.",
+    images: ["https://images.unsplash.com/photo-1609592424364-db0cb5b09040?auto=format&fit=crop&w=800&q=80"],
+    badge: "Bestseller",
+    in_stock: true
   },
   {
-    id: 'g2',
-    name: 'Data Cable Set',
-    category: 'gadgets',
-    price: 3500,
-    description: 'Multiple adapters (USB-A, Micro-USB, and Lightning) for different devices.',
-    images: ['/images/data-cable-set.jpg'],
-  },
-  {
-    id: 'g3',
-    name: 'Multipurpose Foldable Stand Charging Cable',
-    category: 'gadgets',
-    price: 4000,
-    description: 'Supports ultra-fast power delivery up to 240W.',
-    images: ['/images/stand-charging-cable.jpg'],
-  },
-  {
-    id: 'g4',
-    name: 'TWS Clip-On Sports Earphones',
-    category: 'gadgets',
+    id: "SW-002",
+    name: "Clip-on Wireless ANC Earphones",
+    category: "Phone Accessories",
     price: 13000,
-    description: 'Noise reduction, with pocket charging case.',
-    images: ['/images/clip-earphones.jpg'],
+    description: "Open-ear ergonomic fit with active ENC noise reduction and extended battery performance.",
+    images: ["https://images.unsplash.com/photo-1590658268037-6bf12165a8df?auto=format&fit=crop&w=800&q=80"],
+    badge: "Popular",
+    in_stock: true
   },
   {
-    id: 'h1',
-    name: 'Portable Fabric Wardrobe',
-    category: 'Household & Daily Essentials',
-    price: 28000,
-    description: 'Durable steel pipe frame, dustproof cover, multi-shelf storage.',
-    images: ['/images/fabric-wardrobe.jpg'],
-    badge: 'Essential',
-  },
-  {
-    id: 'h2',
-    name: 'Fish Soap Holder',
-    category: 'Household & Daily Essentials',
-    price: 1500,
-    description: 'Double-layer self-draining design.',
-    images: ['/images/fish-soap-holder.jpg'],
-    badge: 'Bestseller',
-  },
-  {
-    id: 'h3',
-    name: '3-in-1 collapsible cutting board',
-    category: 'Household & Daily Essentials',
-    price: 5500,
-    description: 'Used as a chopping board, washing tub and storage basket.',
-    images: ['/images/cutting-board.jpg'],
-  },
+    id: "SW-003",
+    name: "RGB Studio Creator Ring Light + 2.1m Stand",
+    category: "Creator Tools",
+    price: 24500,
+    description: "Multi-color temperature controls with 3 phone mounts and remote shutter for live streaming.",
+    images: ["https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=800&q=80"],
+    badge: "New",
+    in_stock: true
+  }
 ];
 
-// Lightweight zero-dependency CSV parser
-function parseGoogleSheetCSV(csvText: string): Product[] {
-  const lines = csvText.trim().split(/\r?\n/);
-  if (lines.length < 2) return [];
-
-  const parseRow = (line: string): string[] => {
-    const result: string[] = [];
-    let current = '';
-    let inQuotes = false;
-    for (let i = 0; i < line.length; i++) {
-      const char = line[i];
-      if (char === '"') {
-        if (inQuotes && line[i + 1] === '"') {
-          current += '"';
-          i++;
-        } else {
-          inQuotes = !inQuotes;
-        }
-      } else if (char === ',' && !inQuotes) {
-        result.push(current.trim());
-        current = '';
-      } else {
-        current += char;
-      }
-    }
-    result.push(current.trim());
-    return result;
-  };
-
-  const products: Product[] = [];
-  for (let i = 1; i < lines.length; i++) {
-    const cols = parseRow(lines[i]);
-    if (cols.length >= 4 && cols[0] && cols[1]) {
-      const rawCategory = (cols[2] || '').toLowerCase();
-      const category: 'gadgets' | 'Household & Daily Essentials' =
-        rawCategory.includes('gadget') ? 'gadgets' : 'Household & Daily Essentials';
-
-      const rawImages = (cols[5] || '')
-        .split(',')
-        .map((u) => normalizeImageUrl(u.trim()))
-        .filter((u) => u.length > 0);
-
-      const rawVideo = (cols[7] || '').trim();
-
-      products.push({
-        id: cols[0],
-        name: cols[1],
-        category,
-        price: Number((cols[3] || '0').replace(/[^0-9.-]+/g, '')) || 0,
-        description: cols[4] || '',
-        images: rawImages.length > 0 ? rawImages : [FALLBACK_IMAGE_SVG],
-        badge: cols[6] || undefined,
-        videoUrl: rawVideo.length > 0 ? rawVideo : undefined,
-      });
-    }
-  }
-
-  // AUTOMATIC REVERSE: The newest rows added to the sheet show first at the top
-  return products.reverse();
-}
-
 export default function App() {
-  const [products, setProducts] = useState<Product[]>(DEFAULT_ITEMS);
-  const [isLoading, setIsLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<TabType>('all');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [cart, setCart] = useState<{ [productId: string]: number }>({});
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS);
+  const [selectedCategory, setSelectedCategory] = useState<string>('All');
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [activeModalProduct, setActiveModalProduct] = useState<Product | null>(null);
+  const [activeImageIndex, setActiveImageIndex] = useState<number>(0);
+  const [showAboutModal, setShowAboutModal] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(Boolean(GOOGLE_SHEET_CSV_URL));
 
-  // Enlarged Modal Media States
-  const [enlargedProduct, setEnlargedProduct] = useState<Product | null>(null);
-  const [activeImageIndex, setActiveImageIndex] = useState(0);
-  const [showVideo, setShowVideo] = useState(false);
+  // Store WhatsApp contact line
+  const WHATSAPP_PHONE = "2349066524315"; 
 
-  // Customer form state
-  const [customerName, setCustomerName] = useState('');
-  const [fulfillmentType, setFulfillmentType] = useState<'pickup' | 'delivery'>('pickup');
-  const [deliveryLocation, setDeliveryLocation] = useState('');
-  const [orderNotes, setOrderNotes] = useState('');
-  const [formError, setFormError] = useState('');
-
+  // Dynamic Google Sheet Sync
   useEffect(() => {
-    setIsLoading(true);
-    fetch(`${PUBLISHED_CSV_URL}&_t=${Date.now()}`, { cache: 'no-store' })
-      .then((res) => {
-        if (!res.ok) throw new Error('Network error');
-        return res.text();
-      })
-      .then((csv) => {
-        const parsed = parseGoogleSheetCSV(csv);
-        if (parsed.length > 0) {
-          setProducts(parsed);
+    if (!GOOGLE_SHEET_CSV_URL) return;
+
+    fetch(GOOGLE_SHEET_CSV_URL)
+      .then((res) => res.text())
+      .then((csvText) => {
+        const rows = csvText.split('\n').map((row) => row.split(','));
+        const parsed: Product[] = [];
+        
+        // Skip header row
+        for (let i = 1; i < rows.length; i++) {
+          const row = rows[i];
+          if (!row[0] || !row[1]) continue;
+
+          // Supports comma or semicolon separated image URLs in column F
+          const rawImages = row[5] 
+            ? row[5].split(';').map((u) => u.trim()).filter(Boolean)
+            : [];
+          
+          parsed.push({
+            id: row[0]?.trim() || `SW-${String(i).padStart(3, '0')}`,
+            name: row[1]?.trim() || '',
+            category: row[2]?.trim() || 'Gadgets',
+            price: Number(row[3]?.replace(/[^0-9.-]+/g, '')) || 0,
+            description: row[4]?.trim() || '',
+            images: rawImages.length > 0 ? rawImages : [""],
+            badge: row[6]?.trim() || undefined,
+            in_stock: row[7]?.toLowerCase().includes('true') || row[7]?.toLowerCase() === 'yes',
+            video: row[8]?.trim() || undefined,
+          });
         }
+
+        if (parsed.length > 0) setProducts(parsed);
       })
-      .catch((err) => {
-        console.warn('Using local fallback items:', err);
-      })
-      .finally(() => {
-        setIsLoading(false);
-      });
+      .catch((err) => console.error("Error loading inventory sheet:", err))
+      .finally(() => setLoading(false));
   }, []);
 
-  // Global Search: Searches whole inventory when typing, restores category filter when clear
   const filteredProducts = useMemo(() => {
-    const trimmedQuery = searchQuery.trim().toLowerCase();
-    const isSearching = trimmedQuery.length > 0;
-
-    return products.filter((item, index) => {
-      const matchesSearch =
-        !isSearching ||
-        item.name.toLowerCase().includes(trimmedQuery) ||
-        item.description.toLowerCase().includes(trimmedQuery);
-
-      const matchesCategory =
-        isSearching || activeTab === 'all'
-          ? true
-          : activeTab === 'new'
-          ? index < 8 || (item.badge && item.badge.toLowerCase().includes('new'))
-          : item.category === activeTab;
-
+    return products.filter((p) => {
+      const matchesCategory = selectedCategory === 'All' || p.category.toLowerCase() === selectedCategory.toLowerCase();
+      const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                            p.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                            p.id.toLowerCase().includes(searchQuery.toLowerCase());
       return matchesCategory && matchesSearch;
     });
-  }, [products, activeTab, searchQuery]);
+  }, [products, selectedCategory, searchQuery]);
 
-  const addToCart = (productId: string) => {
-    setCart((prev) => ({
-      ...prev,
-      [productId]: (prev[productId] || 0) + 1,
-    }));
+  const initiateWhatsAppOrder = (product: Product) => {
+    const message = `Hello Swiftwave Mall! I would like to order:
+- Product: ${product.name}
+- Item ID: ${product.id}
+- Price: ₦${product.price.toLocaleString()}
+
+Is this available for pickup/delivery at ABH Plaza?`;
+    window.open(`https://wa.me/${WHATSAPP_PHONE}?text=${encodeURIComponent(message)}`, '_blank');
   };
-
-  const removeFromCart = (productId: string) => {
-    setCart((prev) => {
-      const updated = { ...prev };
-      if (updated[productId] > 1) {
-        updated[productId] -= 1;
-      } else {
-        delete updated[productId];
-      }
-      return updated;
-    });
-  };
-
-  const deleteFromCart = (productId: string) => {
-    setCart((prev) => {
-      const updated = { ...prev };
-      delete updated[productId];
-      return updated;
-    });
-  };
-
-  const totalItemsCount = Object.values(cart).reduce((sum, qty) => sum + qty, 0);
-
-  const cartTotalAmount = Object.entries(cart).reduce((sum, [id, qty]) => {
-    const item = products.find((p) => p.id === id);
-    return sum + (item ? item.price * qty : 0);
-  }, 0);
-
-  const handleOpenProductModal = (product: Product) => {
-    setEnlargedProduct(product);
-    setActiveImageIndex(0);
-    setShowVideo(false);
-  };
-
-  const handleCloseProductModal = () => {
-    setEnlargedProduct(null);
-    setActiveImageIndex(0);
-    setShowVideo(false);
-  };
-
-  const handleSendWhatsAppOrder = (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!customerName.trim()) {
-      setFormError('Please enter your full name.');
-      return;
-    }
-
-    if (fulfillmentType === 'delivery' && !deliveryLocation.trim()) {
-      setFormError('Please enter your delivery address / destination.');
-      return;
-    }
-
-    setFormError('');
-
-    const itemizedList = Object.entries(cart)
-      .map(([id, qty]) => {
-        const item = products.find((p) => p.id === id);
-        if (!item) return null;
-        return `• ${qty}x ${item.name} — ₦${(item.price * qty).toLocaleString()}`;
-      })
-      .filter(Boolean)
-      .join('\n');
-
-    const fulfillmentText =
-      fulfillmentType === 'pickup'
-        ? `🏢 *Fulfillment:* In-Store Pickup (${STORE_LOCATION})`
-        : `🚚 *Fulfillment:* Delivery to: ${deliveryLocation.trim()}`;
-
-    const message = [
-      `*NEW ORDER — ${STORE_NAME}*`,
-      fulfillmentText,
-      `---------------------------------`,
-      `*ORDERED ITEMS:*`,
-      itemizedList,
-      `---------------------------------`,
-      `💰 *TOTAL DUE:* ₦${cartTotalAmount.toLocaleString()}`,
-      `---------------------------------`,
-      `👤 *CUSTOMER DETAILS:*`,
-      `• *Name:* ${customerName.trim()}`,
-      orderNotes.trim() ? `• *Notes:* ${orderNotes.trim()}` : null,
-      `• *Payment:* Bank Transfer on Confirmation`,
-      `---------------------------------`,
-      `_Please confirm item availability and send payment account details._`,
-    ]
-      .filter(Boolean)
-      .join('\n');
-
-    const whatsappUrl = `https://wa.me/${STORE_WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
-    window.open(whatsappUrl, '_blank');
-  };
-
-  const activeVideoEmbed = enlargedProduct?.videoUrl
-    ? getEmbedVideoInfo(enlargedProduct.videoUrl)
-    : null;
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 pb-32">
-      {/* Top Banner */}
-      <div className="bg-emerald-700 px-4 py-1.5 text-center text-xs font-semibold text-white">
-        {PROMO_BANNER}
+    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans flex flex-col antialiased">
+      
+      {/* Top Corporate Legal Badge Bar */}
+      <div className="bg-slate-950 text-slate-300 text-xs py-2 px-4 border-b border-slate-800">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-2">
+          <div className="flex items-center gap-2">
+            <span className="inline-block w-2 h-2 rounded-full bg-emerald-400"></span>
+            <span className="font-semibold text-white tracking-wide">SWIFTWAVE VARIETY MALL LIMITED</span>
+            <span className="hidden md:inline text-slate-600">|</span>
+            <span className="hidden md:inline font-mono text-slate-400">RC: 9468092[cite: 2]</span>
+            <span className="hidden lg:inline text-slate-600">|</span>
+            <span className="hidden lg:inline font-mono text-slate-400">TIN: 2622689087269[cite: 2]</span>
+          </div>
+          <div className="flex items-center gap-4 text-slate-400">
+            <span className="flex items-center gap-1">
+              <MapPin className="w-3.5 h-3.5 text-blue-400" />
+              Shop 9 & 10, ABH Plaza, Minna
+            </span>
+            <button 
+              onClick={() => setShowAboutModal(true)} 
+              className="hover:text-blue-400 underline underline-offset-2 flex items-center gap-1 text-xs transition-colors"
+            >
+              <Info className="w-3 h-3" /> About Brand
+            </button>
+          </div>
+        </div>
       </div>
 
-      {/* Main Header */}
-      <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 px-4 py-3 backdrop-blur-md">
-        <div className="mx-auto flex max-w-xl items-center justify-between">
-          <div>
-            <h1 className="text-base font-extrabold tracking-tight text-slate-900">{STORE_NAME}</h1>
-            <p className="text-[11px] font-medium text-slate-500 line-clamp-1">
-              📍 {STORE_LOCATION}
-            </p>
+      {/* Main Navbar */}
+      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5">
+          <div className="flex items-center justify-between gap-4">
+            
+            {/* Brand Logo & Name */}
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-blue-500/20">
+                <ShoppingBag className="w-5 h-5" />
+              </div>
+              <div>
+                <h1 className="text-xl font-black tracking-tight text-slate-900 leading-none">
+                  SWIFT<span className="text-blue-600">WAVE</span>
+                </h1>
+                <p className="text-[10px] uppercase font-bold tracking-widest text-slate-400 mt-1">
+                  Variety Mall
+                </p>
+              </div>
+            </div>
+
+            {/* Desktop Search Input */}
+            <div className="flex-1 max-w-md relative hidden sm:block">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="Search gadgets, accessories, power banks..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-slate-100 hover:bg-slate-200/70 focus:bg-white text-sm rounded-full pl-10 pr-4 py-2 border border-transparent focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all outline-none"
+              />
+            </div>
+
+            {/* Contact Store Button */}
+            <a
+              href={`https://wa.me/${WHATSAPP_PHONE}`}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-semibold px-4 py-2.5 rounded-full transition-all shadow-md shadow-emerald-600/20 active:scale-95"
+            >
+              <Phone className="w-4 h-4" />
+              <span>Contact Store</span>
+            </a>
           </div>
-          <button
-            onClick={() => setIsDrawerOpen(true)}
-            className="relative flex items-center gap-1.5 rounded-xl bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white transition active:scale-95"
-          >
-            <span>Cart</span>
-            {totalItemsCount > 0 && (
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500 text-[10px] font-bold text-white">
-                {totalItemsCount}
-              </span>
-            )}
-          </button>
+
+          {/* Mobile Search Bar */}
+          <div className="mt-3 sm:hidden relative">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              placeholder="Search items or codes (e.g. SW-001)..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-slate-100 text-sm rounded-xl pl-9 pr-3 py-2 border border-transparent focus:border-blue-500 focus:bg-white transition-all outline-none"
+            />
+          </div>
+
+          {/* Category Filter Pills */}
+          <nav className="flex items-center gap-2 overflow-x-auto no-scrollbar pt-3.5 pb-1">
+            {CATEGORIES.map((cat) => {
+              const active = selectedCategory === cat;
+              return (
+                <button
+                  key={cat}
+                  onClick={() => setSelectedCategory(cat)}
+                  className={`text-xs font-semibold px-4 py-2 rounded-full whitespace-nowrap transition-all duration-200 ${
+                    active
+                      ? 'bg-blue-600 text-white shadow-sm shadow-blue-600/30'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200/80 hover:text-slate-900'
+                  }`}
+                >
+                  {cat}
+                </button>
+              );
+            })}
+          </nav>
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="mx-auto max-w-xl px-4 pt-4">
-        {/* Search */}
-        <div className="relative mb-3">
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search power banks, cables, laptops..."
-            className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-4 text-xs outline-none focus:border-slate-900"
-          />
-          <svg className="absolute left-3 top-3 h-3.5 w-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
+      {/* Main Catalog View */}
+      <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
+        
+        {/* Hero Banner */}
+        <section className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-blue-700 via-indigo-700 to-slate-950 text-white p-6 sm:p-10 mb-8 shadow-xl">
+          <div className="relative z-10 max-w-2xl">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-white/10 text-blue-200 backdrop-blur-md mb-3 border border-white/15">
+              <Sparkles className="w-3.5 h-3.5 text-blue-300" />
+              Verified Retail Storefront
+            </span>
+            <h2 className="text-2xl sm:text-4xl font-extrabold tracking-tight leading-tight">
+              Everyday Essentials Built for the Way You Actually Live[cite: 1].
+            </h2>
+            <p className="mt-2 text-sm sm:text-base text-blue-100 font-normal leading-relaxed">
+              Order verified products directly from Shop 9 & 10, ABH Plaza, Minna with fast local pickup or direct dispatch.
+            </p>
+          </div>
+          <div className="absolute right-0 top-0 bottom-0 w-1/3 bg-radial from-blue-400/20 to-transparent pointer-events-none"></div>
+        </section>
+
+        {/* Catalog Header Meta */}
+        <div className="flex items-center justify-between mb-4">
+          <p className="text-xs uppercase tracking-wider font-bold text-slate-500">
+            Showing <span className="text-slate-900">{filteredProducts.length}</span> Products
+          </p>
+          {selectedCategory !== 'All' && (
+            <button 
+              onClick={() => setSelectedCategory('All')} 
+              className="text-xs font-semibold text-blue-600 hover:underline"
+            >
+              Clear filter
+            </button>
+          )}
         </div>
 
-        {/* Scrollable Category Tabs Bar */}
-        <div className="mb-4 flex gap-1.5 overflow-x-auto rounded-xl bg-slate-200/80 p-1 no-scrollbar">
-          <button
-            onClick={() => setActiveTab('all')}
-            className={`flex-shrink-0 flex-1 min-w-[70px] rounded-lg py-2 text-center text-[11px] font-bold transition ${
-              activeTab === 'all' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            All Stock
-          </button>
-          <button
-            onClick={() => setActiveTab('new')}
-            className={`flex-shrink-0 flex-1 min-w-[76px] rounded-lg py-2 text-center text-[11px] font-bold transition ${
-              activeTab === 'new' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            ✨ New In
-          </button>
-          <button
-            onClick={() => setActiveTab('gadgets')}
-            className={`flex-shrink-0 flex-1 min-w-[110px] rounded-lg py-2 text-center text-[11px] font-bold transition ${
-              activeTab === 'gadgets' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            📱 Shop 9: Gadgets
-          </button>
-          <button
-            onClick={() => setActiveTab('Household & Daily Essentials')}
-            className={`flex-shrink-0 flex-1 min-w-[118px] rounded-lg py-2 text-center text-[11px] font-bold transition ${
-              activeTab === 'Household & Daily Essentials' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            🏠 Shop 10: Essentials
-          </button>
-        </div>
-
-        {/* Loading Indicator */}
-        {isLoading && (
-          <p className="text-center text-[11px] text-slate-400 py-1">Updating stock list...</p>
-        )}
-
-        {/* Product Cards */}
-        <div className="grid gap-3">
-          {filteredProducts.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-slate-300 py-10 text-center">
-              <p className="text-xs font-medium text-slate-500">No items match your search.</p>
+        {/* Product Cards Grid */}
+        {loading ? (
+          <div className="py-24 text-center">
+            <div className="inline-block w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+            <p className="mt-3 text-sm text-slate-500 font-medium">Syncing live store inventory...</p>
+          </div>
+        ) : filteredProducts.length === 0 ? (
+          <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center max-w-md mx-auto my-12">
+            <div className="w-12 h-12 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-3">
+              <Search className="w-6 h-6" />
             </div>
-          ) : (
-            filteredProducts.map((product) => {
-              const currentQty = cart[product.id] || 0;
-              const coverImage = product.images[0] || FALLBACK_IMAGE_SVG;
-
+            <h3 className="text-base font-bold text-slate-900">No products found</h3>
+            <p className="text-xs text-slate-500 mt-1">Try adjusting your search query or switching categories.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+            {filteredProducts.map((product) => {
+              const displayImage = formatDriveUrl(product.images[0]);
               return (
                 <div
                   key={product.id}
-                  className="flex gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-xs transition hover:border-slate-300"
+                  className="group bg-white rounded-2xl border border-slate-200 hover:border-blue-400/70 hover:shadow-xl hover:shadow-slate-200/50 transition-all duration-300 flex flex-col overflow-hidden"
                 >
-                  {/* Thumbnail Container */}
-                  <div
-                    onClick={() => handleOpenProductModal(product)}
-                    className="group relative h-20 w-20 flex-shrink-0 cursor-pointer overflow-hidden rounded-xl border border-slate-100 bg-slate-100"
-                    title="Tap to view gallery & video"
+                  {/* Product Card Image Container */}
+                  <div 
+                    className="relative aspect-square w-full bg-slate-100 overflow-hidden cursor-pointer"
+                    onClick={() => {
+                      setActiveModalProduct(product);
+                      setActiveImageIndex(0);
+                    }}
                   >
                     <img
-                      src={coverImage}
+                      src={displayImage}
                       alt={product.name}
-                      onError={(e) => {
-                        e.currentTarget.src = FALLBACK_IMAGE_SVG;
-                      }}
-                      className="h-full w-full object-cover transition duration-200 group-hover:scale-105"
+                      className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
+                      loading="lazy"
                     />
 
+                    {/* Stock Status Badge */}
+                    {!product.in_stock && (
+                      <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-[2px] flex items-center justify-center">
+                        <span className="bg-rose-600 text-white font-bold text-xs uppercase px-3 py-1 rounded-full">
+                          Sold Out
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Product Highlight Badge */}
                     {product.badge && (
-                      <span className="absolute bottom-1 left-1 rounded bg-slate-900/80 px-1 py-0.5 text-[8px] font-bold text-white backdrop-blur-xs">
+                      <span className="absolute top-2.5 left-2.5 bg-blue-600 text-white text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full shadow-md">
                         {product.badge}
                       </span>
                     )}
 
-                    {product.images.length > 1 && (
-                      <span className="absolute bottom-1 right-1 rounded bg-black/60 px-1 py-0.5 text-[8px] font-bold text-white backdrop-blur-xs">
-                        1/{product.images.length}
+                    {/* Video Availability Indicator */}
+                    {product.video && (
+                      <span className="absolute bottom-2.5 right-2.5 bg-slate-900/80 backdrop-blur-md text-white p-1.5 rounded-full shadow-md">
+                        <Video className="w-3.5 h-3.5" />
                       </span>
                     )}
-
-                    {product.videoUrl && (
-                      <span className="absolute top-1 left-1 rounded bg-emerald-600/90 px-1 py-0.5 text-[8px] font-bold text-white shadow-xs">
-                        🎬
-                      </span>
-                    )}
-
-                    <div className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-black/40 text-[9px] text-white opacity-80">
-                      🔍
-                    </div>
                   </div>
 
-                  {/* Info */}
-                  <div className="flex flex-1 flex-col justify-between">
+                  {/* Card Meta Content */}
+                  <div className="p-4 flex-1 flex flex-col justify-between">
                     <div>
-                      <h2 className="text-xs font-bold text-slate-900 line-clamp-1">{product.name}</h2>
-                      <p className="mt-0.5 text-[11px] text-slate-500 line-clamp-2 leading-relaxed">
+                      <div className="flex items-center justify-between text-[11px] font-semibold text-slate-400 mb-1">
+                        <span>{product.category}</span>
+                        <span className="font-mono text-slate-500">{product.id}</span>
+                      </div>
+
+                      <h3 
+                        onClick={() => {
+                          setActiveModalProduct(product);
+                          setActiveImageIndex(0);
+                        }}
+                        className="text-sm font-bold text-slate-900 line-clamp-2 hover:text-blue-600 cursor-pointer transition-colors"
+                      >
+                        {product.name}
+                      </h3>
+
+                      <p className="text-xs text-slate-500 line-clamp-2 mt-1.5 leading-relaxed">
                         {product.description}
                       </p>
                     </div>
 
-                    <div className="mt-2 flex items-center justify-between">
-                      <span className="text-xs font-extrabold text-slate-900">
-                        ₦{product.price.toLocaleString()}
-                      </span>
+                    <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+                      <div>
+                        <span className="text-[10px] text-slate-400 block font-medium">Retail Price</span>
+                        <span className="text-base font-black text-slate-900">
+                          ₦{product.price.toLocaleString()}
+                        </span>
+                      </div>
 
-                      {currentQty === 0 ? (
-                        <button
-                          onClick={() => addToCart(product.id)}
-                          className="rounded-lg bg-slate-900 px-3 py-1.5 text-[11px] font-bold text-white transition active:scale-95"
-                        >
-                          + Add
-                        </button>
-                      ) : (
-                        <div className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 p-0.5">
-                          <button
-                            onClick={() => removeFromCart(product.id)}
-                            className="flex h-6 w-6 items-center justify-center rounded bg-white text-xs font-bold shadow-xs active:scale-90"
-                          >
-                            -
-                          </button>
-                          <span className="w-3 text-center text-xs font-bold text-slate-900">{currentQty}</span>
-                          <button
-                            onClick={() => addToCart(product.id)}
-                            className="flex h-6 w-6 items-center justify-center rounded bg-slate-900 text-xs font-bold text-white shadow-xs active:scale-90"
-                          >
-                            +
-                          </button>
-                        </div>
-                      )}
+                      <button
+                        onClick={() => initiateWhatsAppOrder(product)}
+                        disabled={!product.in_stock}
+                        className={`inline-flex items-center gap-1.5 text-xs font-bold px-3.5 py-2 rounded-xl transition-all ${
+                          product.in_stock
+                            ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm shadow-emerald-600/30 active:scale-95'
+                            : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                        }`}
+                      >
+                        <ShoppingBag className="w-3.5 h-3.5" />
+                        <span>Order</span>
+                      </button>
                     </div>
                   </div>
                 </div>
               );
-            })
-          )}
-        </div>
+            })}
+          </div>
+        )}
       </main>
 
-      {/* Floating Bottom Cart Bar */}
-      {totalItemsCount > 0 && !isDrawerOpen && (
-        <div className="fixed bottom-4 left-0 right-0 z-30 px-4">
-          <div className="mx-auto flex max-w-xl items-center justify-between rounded-2xl bg-slate-950 p-3.5 text-white shadow-xl">
-            <div>
-              <p className="text-[11px] text-slate-400">{totalItemsCount} item{totalItemsCount > 1 ? 's' : ''} in cart</p>
-              <p className="text-sm font-extrabold text-white">₦{cartTotalAmount.toLocaleString()}</p>
+      {/* Multi-Image & Video Detail Modal */}
+      {activeModalProduct && (
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-2xl w-full overflow-hidden shadow-2xl relative border border-slate-200 flex flex-col max-h-[90vh]">
+            
+            {/* Modal Navigation Bar */}
+            <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+              <div>
+                <span className="text-xs font-mono font-bold text-blue-600">{activeModalProduct.id}</span>
+                <span className="text-xs text-slate-400 ml-2">• {activeModalProduct.category}</span>
+              </div>
+              <button
+                onClick={() => setActiveModalProduct(null)}
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto flex-1">
+              {/* Main Photo Viewer Stage */}
+              <div className="relative aspect-video rounded-2xl bg-slate-100 overflow-hidden mb-4">
+                <img
+                  src={formatDriveUrl(activeModalProduct.images[activeImageIndex] || activeModalProduct.images[0])}
+                  alt={activeModalProduct.name}
+                  className="w-full h-full object-contain"
+                />
+
+                {activeModalProduct.images.length > 1 && (
+                  <div className="absolute inset-0 flex items-center justify-between px-3 pointer-events-none">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setActiveImageIndex((prev) => (prev === 0 ? activeModalProduct.images.length - 1 : prev - 1));
+                      }}
+                      className="pointer-events-auto w-8 h-8 rounded-full bg-slate-950/70 hover:bg-slate-950 text-white flex items-center justify-center transition-all"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setActiveImageIndex((prev) => (prev === activeModalProduct.images.length - 1 ? 0 : prev + 1));
+                      }}
+                      className="pointer-events-auto w-8 h-8 rounded-full bg-slate-950/70 hover:bg-slate-950 text-white flex items-center justify-center transition-all"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Angle Thumbnails */}
+              {activeModalProduct.images.length > 1 && (
+                <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
+                  {activeModalProduct.images.map((img, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setActiveImageIndex(idx)}
+                      className={`w-14 h-14 rounded-lg overflow-hidden border-2 transition-all shrink-0 ${
+                        activeImageIndex === idx ? 'border-blue-600 scale-95' : 'border-slate-200 opacity-60'
+                      }`}
+                    >
+                      <img src={formatDriveUrl(img)} alt="" className="w-full h-full object-cover" />
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Title & Price Header */}
+              <div className="flex items-start justify-between gap-4">
+                <h2 className="text-lg font-bold text-slate-900 leading-snug">{activeModalProduct.name}</h2>
+                <div className="text-right shrink-0">
+                  <span className="text-xl font-black text-slate-900">
+                    ₦{activeModalProduct.price.toLocaleString()}
+                  </span>
+                </div>
+              </div>
+
+              {/* Specifications Block */}
+              <div className="mt-4">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Specifications & Details</h4>
+                <p className="text-sm text-slate-600 mt-1.5 leading-relaxed whitespace-pre-line">
+                  {activeModalProduct.description}
+                </p>
+              </div>
+
+              {/* Video Demo Link */}
+              {activeModalProduct.video && (
+                <div className="mt-4 p-3 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-xs font-semibold text-blue-900">
+                    <Video className="w-4 h-4 text-blue-600" />
+                    <span>Product video clip available</span>
+                  </div>
+                  <a
+                    href={activeModalProduct.video}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-xs font-bold text-blue-600 hover:underline inline-flex items-center gap-1"
+                  >
+                    Watch Video <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Bottom Bar */}
+            <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+              <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                <span>Verified Stock @ ABH Plaza</span>
+              </div>
+              <button
+                onClick={() => initiateWhatsAppOrder(activeModalProduct)}
+                disabled={!activeModalProduct.in_stock}
+                className={`inline-flex items-center gap-2 text-sm font-bold px-6 py-2.5 rounded-xl shadow-md transition-all ${
+                  activeModalProduct.in_stock
+                    ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/30'
+                    : 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                }`}
+              >
+                <ShoppingBag className="w-4 h-4" />
+                <span>Order via WhatsApp</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Corporate Brand Identity Modal[cite: 1, 2] */}
+      {showAboutModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 relative border border-slate-200 shadow-2xl">
+            <button
+              onClick={() => setShowAboutModal(false)}
+              className="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center"
+            >
+              <X className="w-4 h-4" />
+            </button>
+            <div className="flex items-center gap-2 mb-4">
+              <ShieldCheck className="w-6 h-6 text-blue-600" />
+              <h3 className="text-lg font-bold text-slate-900">About Swiftwave Variety Mall[cite: 1]</h3>
+            </div>
+            <p className="text-xs text-slate-600 leading-relaxed mb-4">
+              Swiftwave is your modern everyday marketplace built for the way you actually live[cite: 1]. Bringing together gadgets, home essentials, school supplies, phone accessories, beauty products, children's toys, and creator tools under one roof[cite: 1].
+            </p>
+            <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 mb-3">
+              <span className="text-[11px] font-bold text-slate-900 uppercase tracking-wider block">Our Mission[cite: 1]</span>
+              <p className="text-xs text-slate-600 mt-1">
+                To create stylish, affordable, and practical accessories that help students and everyday users stay organized and express their identity[cite: 1].
+              </p>
+            </div>
+            <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 mb-4">
+              <span className="text-[11px] font-bold text-slate-900 uppercase tracking-wider block">Corporate Registration[cite: 2]</span>
+              <p className="text-xs font-mono text-slate-600 mt-1">
+                Incorporated as SWIFTWAVE VARIETY MALL LIMITED[cite: 2]<br />
+                RC: 9468092 | TIN: 2622689087269[cite: 2]
+              </p>
             </div>
             <button
-              onClick={() => setIsDrawerOpen(true)}
-              className="flex items-center gap-1.5 rounded-xl bg-emerald-500 px-4 py-2 text-xs font-bold text-white transition hover:bg-emerald-600 active:scale-95"
+              onClick={() => setShowAboutModal(false)}
+              className="w-full bg-slate-900 text-white font-bold text-xs py-2.5 rounded-xl hover:bg-slate-800 transition-colors"
             >
-              <span>View Order</span>
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7" />
-              </svg>
+              Back to Catalog
             </button>
           </div>
         </div>
       )}
 
-      {/* ENLARGED MODAL (STICKY BOTTOM BAR & RESPONSIVE VIDEO/GALLERY) */}
-      {enlargedProduct && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-3 backdrop-blur-xs transition-opacity"
-          onClick={handleCloseProductModal}
-        >
-          <div
-            className={`relative flex max-h-[92vh] w-full ${
-              showVideo ? 'max-w-lg' : 'max-w-sm'
-            } flex-col overflow-hidden rounded-3xl bg-white shadow-2xl transition-all duration-200`}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Top Bar */}
-            <div className="flex flex-shrink-0 items-center justify-between border-b border-slate-100 px-4 py-3">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                {showVideo ? '🎬 Video Demo' : '🖼️️ Product Inspection'}
-              </span>
-              <button
-                onClick={handleCloseProductModal}
-                className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-700 shadow-xs active:scale-90"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* Scrollable Modal Content */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-3">
-              {/* Media Screen */}
-              <div
-                className={`relative w-full overflow-hidden rounded-2xl bg-black flex items-center justify-center ${
-                  showVideo ? 'h-60 sm:h-72' : 'aspect-square bg-slate-100'
-                }`}
-              >
-                {showVideo && activeVideoEmbed ? (
-                  activeVideoEmbed.type === 'video' ? (
-                    <video
-                      controls
-                      playsInline
-                      autoPlay
-                      className="h-full w-full object-contain"
-                      src={activeVideoEmbed.embedUrl}
-                    />
-                  ) : (
-                    <iframe
-                      src={activeVideoEmbed.embedUrl}
-                      title={`${enlargedProduct.name} video preview`}
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
-                      allowFullScreen
-                      className="h-full w-full border-0"
-                    />
-                  )
-                ) : (
-                  <>
-                    <img
-                      src={enlargedProduct.images[activeImageIndex] || enlargedProduct.images[0] || FALLBACK_IMAGE_SVG}
-                      alt={enlargedProduct.name}
-                      onError={(e) => {
-                        e.currentTarget.src = FALLBACK_IMAGE_SVG;
-                      }}
-                      className="h-full w-full object-contain"
-                    />
-                    {enlargedProduct.badge && (
-                      <span className="absolute bottom-2 left-2 rounded-lg bg-slate-900/80 px-2 py-1 text-[10px] font-bold text-white backdrop-blur-xs">
-                        {enlargedProduct.badge}
-                      </span>
-                    )}
-                    {enlargedProduct.images.length > 1 && (
-                      <span className="absolute top-2 left-2 rounded-md bg-black/60 px-2 py-0.5 text-[10px] font-bold text-white backdrop-blur-xs">
-                        {activeImageIndex + 1} / {enlargedProduct.images.length}
-                      </span>
-                    )}
-                  </>
-                )}
-              </div>
-
-              {/* Media Controls Strip */}
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-1.5 overflow-x-auto py-0.5 max-w-[60%]">
-                  {enlargedProduct.images.map((imgUrl, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => {
-                        setActiveImageIndex(idx);
-                        setShowVideo(false);
-                      }}
-                      className={`relative h-10 w-10 flex-shrink-0 overflow-hidden rounded-lg border-2 transition ${
-                        activeImageIndex === idx && !showVideo
-                          ? 'border-emerald-600 ring-2 ring-emerald-600/30 scale-105'
-                          : 'border-slate-200 opacity-60 hover:opacity-100'
-                      }`}
-                    >
-                      <img src={imgUrl} alt="" className="h-full w-full object-cover" />
-                    </button>
-                  ))}
+      {/* Trust-Anchored Footer[cite: 1, 2] */}
+      <footer className="bg-slate-950 text-slate-400 text-xs border-t border-slate-800 pt-10 pb-8 mt-auto">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pb-8 border-b border-slate-800">
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold">
+                  S
                 </div>
-
-                {/* Video / Photo Toggles */}
-                {activeVideoEmbed && (
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => setShowVideo(!showVideo)}
-                      className={`inline-flex items-center gap-1 rounded-xl px-3 py-1.5 text-[11px] font-bold transition active:scale-95 ${
-                        showVideo
-                          ? 'bg-slate-900 text-white'
-                          : 'border border-emerald-600 bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
-                      }`}
-                    >
-                      <span>{showVideo ? '🖼️ Photos' : '🎬 Watch Video'}</span>
-                    </button>
-
-                    {showVideo && (
-                      <a
-                        href={activeVideoEmbed.directUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 rounded-xl bg-slate-100 px-2.5 py-1.5 text-[10px] font-bold text-slate-700 hover:bg-slate-200 transition"
-                        title="Open in Google Drive for full HD playback"
-                      >
-                        <span>↗ Open HD</span>
-                      </a>
-                    )}
-                  </div>
-                )}
+                <span className="text-sm font-black tracking-tight text-white">SWIFTWAVE</span>
               </div>
-
-              {/* Product Details */}
-              <div>
-                <h3 className="text-sm font-extrabold text-slate-900 leading-snug">{enlargedProduct.name}</h3>
-                <p className="mt-1 text-xs text-slate-600 leading-relaxed">
-                  {enlargedProduct.description}
-                </p>
-              </div>
+              <p className="text-slate-400 leading-relaxed text-xs max-w-sm">
+                Friendly, fast, and affordable. The one-stop shop that keeps everyday life moving[cite: 1].
+              </p>
             </div>
 
-            {/* Permanent Sticky Action Footer */}
-            <div className="flex flex-shrink-0 items-center justify-between border-t border-slate-100 bg-white px-4 py-3">
-              <div>
-                <p className="text-[10px] font-medium text-slate-400">Total Price</p>
-                <span className="text-base font-extrabold text-slate-900">
-                  ₦{enlargedProduct.price.toLocaleString()}
-                </span>
-              </div>
-              <button
-                onClick={() => {
-                  addToCart(enlargedProduct.id);
-                  handleCloseProductModal();
-                }}
-                className="rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-bold text-white shadow-md shadow-emerald-600/20 active:scale-95"
-              >
-                + Add to Order
-              </button>
+            <div>
+              <h4 className="text-white font-bold text-xs uppercase tracking-wider mb-3">Physical Store</h4>
+              <p className="leading-relaxed text-slate-400">
+                Shop 9 & 10, ABH Plaza,<br />
+                Opposite Federal University of Technology (FUTMINNA) Road,<br />
+                Minna, Niger State.
+              </p>
+            </div>
+
+            <div>
+              <h4 className="text-white font-bold text-xs uppercase tracking-wider mb-3">Corporate Credentials[cite: 2]</h4>
+              <p className="text-slate-400 leading-relaxed font-mono">
+                Entity: Swiftwave Variety Mall Limited[cite: 2]<br />
+                Registration No: 9468092[cite: 2]<br />
+                Tax ID: 2622689087269[cite: 2]
+              </p>
+            </div>
+          </div>
+
+          <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-slate-500">
+            <p>© {new Date().getFullYear()} Swiftwave Variety Mall Limited. All rights reserved[cite: 2].</p>
+            <div className="flex items-center gap-2 text-slate-400">
+              <ShieldCheck className="w-4 h-4 text-emerald-400" />
+              <span>Certified CAC Registered Commercial Vendor[cite: 2]</span>
             </div>
           </div>
         </div>
-      )}
-
-      {/* Cart Drawer & Order Form */}
-      {isDrawerOpen && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-xs">
-          <div className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-t-3xl bg-white p-5 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div>
-                <h3 className="text-sm font-extrabold text-slate-900">Review Your Order</h3>
-                <p className="text-[11px] text-slate-500">Fast fulfillment for Minna & nationwide orders</p>
-              </div>
-              <button
-                onClick={() => setIsDrawerOpen(false)}
-                className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-xs text-slate-600"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* Cart Items */}
-            <div className="divide-y divide-slate-100 py-2">
-              {Object.entries(cart).map(([id, qty]) => {
-                const item = products.find((p) => p.id === id);
-                if (!item) return null;
-                return (
-                  <div key={id} className="flex items-center justify-between py-2.5">
-                    <div className="pr-2">
-                      <p className="text-xs font-bold text-slate-900">{item.name}</p>
-                      <p className="text-[11px] text-slate-500">
-                        ₦{item.price.toLocaleString()} × {qty}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold text-slate-900">
-                        ₦{(item.price * qty).toLocaleString()}
-                      </span>
-                      <button
-                        onClick={() => deleteFromCart(id)}
-                        className="text-slate-400 hover:text-red-500 ml-1 text-xs"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="flex items-center justify-between border-t border-b border-slate-100 py-2.5">
-              <span className="text-xs font-bold text-slate-600">Total Due</span>
-              <span className="text-base font-extrabold text-slate-950">₦{cartTotalAmount.toLocaleString()}</span>
-            </div>
-
-            {/* Checkout Form */}
-            <form onSubmit={handleSendWhatsAppOrder} className="mt-3 space-y-2.5">
-              {formError && (
-                <p className="rounded-lg bg-red-50 p-2 text-[11px] font-semibold text-red-600">{formError}</p>
-              )}
-
-              <div>
-                <label className="block text-[11px] font-bold text-slate-700">Full Name *</label>
-                <input
-                  type="text"
-                  required
-                  value={customerName}
-                  onChange={(e) => setCustomerName(e.target.value)}
-                  placeholder="e.g. Ibrahim Giwa"
-                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-xs outline-none focus:border-slate-900"
-                />
-              </div>
-
-              {/* Fulfillment Type Toggle */}
-              <div>
-                <label className="block text-[11px] font-bold text-slate-700 mb-1">How will you receive it? *</label>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setFulfillmentType('pickup')}
-                    className={`rounded-xl border p-2 text-left text-xs font-semibold transition ${
-                      fulfillmentType === 'pickup'
-                        ? 'border-emerald-600 bg-emerald-50 text-emerald-900'
-                        : 'border-slate-200 bg-white text-slate-700'
-                    }`}
-                  >
-                    🏢 In-Store Pickup
-                    <span className="block text-[10px] font-normal text-slate-500">Shop 9 & 10 ABH Plaza</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setFulfillmentType('delivery')}
-                    className={`rounded-xl border p-2 text-left text-xs font-semibold transition ${
-                      fulfillmentType === 'delivery'
-                        ? 'border-emerald-600 bg-emerald-50 text-emerald-900'
-                        : 'border-slate-200 bg-white text-slate-700'
-                    }`}
-                  >
-                    🚚 Delivery / Waybill
-                    <span className="block text-[10px] font-normal text-slate-500">Minna or Nationwide</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Address Field — Conditional */}
-              {fulfillmentType === 'delivery' && (
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-700">Delivery Address / Destination *</label>
-                  <input
-                    type="text"
-                    required
-                    value={deliveryLocation}
-                    onChange={(e) => setDeliveryLocation(e.target.value)}
-                    placeholder="e.g. Bosso, Maitumbi, Abuja, or Kaduna"
-                    className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-xs outline-none focus:border-slate-900"
-                  />
-                </div>
-              )}
-
-              <div>
-                <label className="block text-[11px] font-bold text-slate-700">Item Notes (Optional)</label>
-                <input
-                  type="text"
-                  value={orderNotes}
-                  onChange={(e) => setOrderNotes(e.target.value)}
-                  placeholder="e.g. Black color, or urgent dispatch"
-                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-xs outline-none focus:border-slate-900"
-                />
-              </div>
-
-              <button
-                type="submit"
-                className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 py-3 text-xs font-bold text-white shadow-md shadow-emerald-600/20 active:scale-98"
-              >
-                <span>Send Order to WhatsApp</span>
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
+      </footer>
     </div>
   );
 }
