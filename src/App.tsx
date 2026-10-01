@@ -516,4 +516,730 @@ Account: ${ACCOUNT_NAME}
           <div className="py-24 text-center">
             <div className="inline-block w-8 h-8 border-4 border-purple-700 border-t-transparent rounded-full animate-spin"></div>
             <p className="mt-3 text-sm text-slate-500 font-medium">Syncing live catalog from store inventory...</p>
-   
+          </div>
+        ) : filteredProducts.length === 0 ? (
+          <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center max-w-md mx-auto my-12 shadow-sm">
+            <div className="w-12 h-12 bg-purple-50 text-purple-600 rounded-full flex items-center justify-center mx-auto mb-3">
+              <Search className="w-6 h-6" />
+            </div>
+            <h3 className="text-base font-bold text-slate-900">No products found</h3>
+            <p className="text-xs text-slate-500 mt-1">
+              {selectedCategory !== 'All' 
+                ? `No items found in "${selectedCategory}". Products will appear here when assigned this category in your spreadsheet.`
+                : "No products matched your search query."}
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+            {filteredProducts.map((product) => {
+              const displayImage = formatDriveUrl(product.images[0]);
+              return (
+                <div
+                  key={product.id}
+                  className="group bg-white rounded-2xl border border-slate-200 hover:border-purple-300 hover:shadow-xl hover:shadow-purple-950/5 transition-all duration-300 flex flex-col overflow-hidden"
+                >
+                  <div 
+                    className="relative aspect-square w-full bg-slate-100 overflow-hidden cursor-pointer"
+                    onClick={() => {
+                      setActiveModalProduct(product);
+                      setActiveImageIndex(0);
+                      setMediaViewMode('photos');
+                    }}
+                  >
+                    <img
+                      src={displayImage}
+                      alt={product.name}
+                      className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
+                      loading="lazy"
+                    />
+
+                    {!product.in_stock && (
+                      <div className="absolute inset-0 bg-slate-950/65 backdrop-blur-[2px] flex items-center justify-center">
+                        <span className="bg-rose-600 text-white font-bold text-xs uppercase px-3 py-1 rounded-full shadow-lg">
+                          Sold Out
+                        </span>
+                      </div>
+                    )}
+
+                    {product.badge && (
+                      <span className="absolute top-2.5 left-2.5 bg-purple-700 text-white text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full shadow-md">
+                        {product.badge}
+                      </span>
+                    )}
+
+                    {product.video && (
+                      <span className="absolute bottom-2.5 right-2.5 bg-purple-950/80 backdrop-blur-md text-white px-2 py-1 rounded-full text-[10px] font-bold flex items-center gap-1 shadow-md">
+                        <Video className="w-3 h-3 text-purple-300" />
+                        <span>Video</span>
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="p-4 flex-1 flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center justify-between text-[11px] font-semibold text-slate-400 mb-1">
+                        <span className="text-purple-800 font-bold">{product.category}</span>
+                        <span className="font-mono text-slate-500">{product.id}</span>
+                      </div>
+
+                      <h3 
+                        onClick={() => {
+                          setActiveModalProduct(product);
+                          setActiveImageIndex(0);
+                          setMediaViewMode('photos');
+                        }}
+                        className="text-sm font-bold text-slate-900 line-clamp-2 hover:text-purple-700 cursor-pointer transition-colors"
+                      >
+                        {product.name}
+                      </h3>
+
+                      <p className="text-xs text-slate-500 line-clamp-2 mt-1.5 leading-relaxed">
+                        {product.description}
+                      </p>
+                    </div>
+
+                    <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+                      <div>
+                        <span className="text-[10px] text-slate-400 block font-medium">Price</span>
+                        <span className="text-base font-black text-slate-900">
+                          ₦{product.price.toLocaleString()}
+                        </span>
+                      </div>
+
+                      <button
+                        onClick={() => addToCart(product)}
+                        disabled={!product.in_stock}
+                        className={`inline-flex items-center gap-1.5 text-xs font-bold px-3.5 py-2 rounded-xl transition-all ${
+                          product.in_stock
+                            ? 'bg-purple-700 hover:bg-purple-800 text-white shadow-sm shadow-purple-700/30 active:scale-95'
+                            : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                        }`}
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Add</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </main>
+
+      {/* Product Detail Modal (Photos & On-Site Video Embed Player) */}
+      {activeModalProduct && (
+        <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-2xl w-full overflow-hidden shadow-2xl relative border border-slate-200 flex flex-col max-h-[92vh]">
+            
+            {/* Modal Header */}
+            <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-mono font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-md">
+                  {activeModalProduct.id}
+                </span>
+                <span className="text-xs text-slate-400">• {activeModalProduct.category}</span>
+              </div>
+              <button
+                onClick={() => setActiveModalProduct(null)}
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto flex-1">
+              
+              {/* Media Switcher: Photos vs Live Video */}
+              {activeModalProduct.video && (
+                <div className="flex items-center gap-2 mb-3">
+                  <button
+                    onClick={() => setMediaViewMode('photos')}
+                    className={`inline-flex items-center gap-1.5 text-xs font-bold px-3.5 py-1.5 rounded-full transition-all ${
+                      mediaViewMode === 'photos'
+                        ? 'bg-purple-700 text-white shadow-sm'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    <ImageIcon className="w-3.5 h-3.5" />
+                    <span>Product Photos ({activeModalProduct.images.length})</span>
+                  </button>
+
+                  <button
+                    onClick={() => setMediaViewMode('video')}
+                    className={`inline-flex items-center gap-1.5 text-xs font-bold px-3.5 py-1.5 rounded-full transition-all ${
+                      mediaViewMode === 'video'
+                        ? 'bg-purple-700 text-white shadow-sm'
+                        : 'bg-purple-50 text-purple-700 hover:bg-purple-100'
+                    }`}
+                  >
+                    <Video className="w-3.5 h-3.5" />
+                    <span>Watch Video Demo</span>
+                  </button>
+                </div>
+              )}
+
+              {/* Main Media Stage */}
+              {mediaViewMode === 'video' && activeVideoEmbed ? (
+                <div className="relative aspect-video rounded-2xl bg-black overflow-hidden mb-4 shadow-md border border-slate-800">
+                  {activeVideoEmbed.type === 'iframe' ? (
+                    <iframe
+                      src={activeVideoEmbed.embedUrl}
+                      title={activeModalProduct.name}
+                      className="w-full h-full border-0"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                      allowFullScreen
+                    />
+                  ) : (
+                    <video controls autoPlay className="w-full h-full object-contain">
+                      <source src={activeVideoEmbed.embedUrl} type="video/mp4" />
+                      Your browser does not support HTML5 video.
+                    </video>
+                  )}
+                </div>
+              ) : (
+                <div className="relative aspect-video rounded-2xl bg-slate-100 overflow-hidden mb-4">
+                  <img
+                    src={formatDriveUrl(activeModalProduct.images[activeImageIndex] || activeModalProduct.images[0])}
+                    alt={activeModalProduct.name}
+                    className="w-full h-full object-contain"
+                  />
+
+                  {activeModalProduct.images.length > 1 && (
+                    <div className="absolute inset-0 flex items-center justify-between px-3 pointer-events-none">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActiveImageIndex((prev) => (prev === 0 ? activeModalProduct.images.length - 1 : prev - 1));
+                        }}
+                        className="pointer-events-auto w-8 h-8 rounded-full bg-slate-950/70 hover:bg-slate-950 text-white flex items-center justify-center transition-all"
+                      >
+                        <ChevronLeft className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActiveImageIndex((prev) => (prev === activeModalProduct.images.length - 1 ? 0 : prev + 1));
+                        }}
+                        className="pointer-events-auto w-8 h-8 rounded-full bg-slate-950/70 hover:bg-slate-950 text-white flex items-center justify-center transition-all"
+                      >
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Photo Thumbnails */}
+              {mediaViewMode === 'photos' && activeModalProduct.images.length > 1 && (
+                <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
+                  {activeModalProduct.images.map((img, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setActiveImageIndex(idx)}
+                      className={`w-14 h-14 rounded-lg overflow-hidden border-2 transition-all shrink-0 ${
+                        activeImageIndex === idx ? 'border-purple-600 scale-95' : 'border-slate-200 opacity-60'
+                      }`}
+                    >
+                      <img src={formatDriveUrl(img)} alt="" className="w-full h-full object-cover" />
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Title & Price Header */}
+              <div className="flex items-start justify-between gap-4">
+                <h2 className="text-lg font-bold text-slate-900 leading-snug">{activeModalProduct.name}</h2>
+                <div className="text-right shrink-0">
+                  <span className="text-xl font-black text-purple-900">
+                    ₦{activeModalProduct.price.toLocaleString()}
+                  </span>
+                </div>
+              </div>
+
+              {/* Specifications Block */}
+              <div className="mt-4">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Specifications & Details</h4>
+                <p className="text-sm text-slate-600 mt-1.5 leading-relaxed whitespace-pre-line">
+                  {activeModalProduct.description}
+                </p>
+              </div>
+
+              {/* External Source Fallback Link */}
+              {activeModalProduct.video && (
+                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+                  <span className="flex items-center gap-1 text-purple-700 font-semibold">
+                    <Video className="w-3.5 h-3.5" />
+                    On-site HD Video Enabled
+                  </span>
+                  <a
+                    href={activeModalProduct.video}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-purple-600 hover:underline font-bold inline-flex items-center gap-1"
+                  >
+                    Open Original Player <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Bottom Bar */}
+            <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+              <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                <span>Verified Stock @ ABH Plaza</span>
+              </div>
+              <button
+                onClick={() => {
+                  addToCart(activeModalProduct);
+                  setActiveModalProduct(null);
+                }}
+                disabled={!activeModalProduct.in_stock}
+                className={`inline-flex items-center gap-2 text-sm font-bold px-6 py-2.5 rounded-xl shadow-md transition-all ${
+                  activeModalProduct.in_stock
+                    ? 'bg-purple-700 hover:bg-purple-800 text-white shadow-purple-700/30'
+                    : 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                }`}
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add to Cart</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cart Drawer */}
+      {isCartOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex justify-end">
+          <div className="bg-white w-full max-w-md h-full shadow-2xl flex flex-col justify-between">
+            <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <ShoppingBag className="w-5 h-5 text-purple-700" />
+                <h3 className="font-bold text-slate-900">Your Shopping Cart</h3>
+                <span className="text-xs bg-purple-50 text-purple-700 font-bold px-2 py-0.5 rounded-full">
+                  {totalCartCount}
+                </span>
+              </div>
+              <button 
+                onClick={() => setIsCartOpen(false)}
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-4 space-y-3">
+              {cart.length === 0 ? (
+                <div className="text-center py-20 text-slate-400">
+                  <ShoppingBag className="w-12 h-12 mx-auto stroke-[1.5] mb-2 opacity-40 text-purple-600" />
+                  <p className="text-sm font-medium">Your cart is empty</p>
+                  <button
+                    onClick={() => setIsCartOpen(false)}
+                    className="mt-4 text-xs font-bold text-purple-700 hover:underline"
+                  >
+                    Browse products
+                  </button>
+                </div>
+              ) : (
+                cart.map(({ product, quantity }) => (
+                  <div key={product.id} className="flex gap-3 p-3 bg-slate-50 rounded-2xl border border-slate-100 items-center">
+                    <img 
+                      src={formatDriveUrl(product.images[0])} 
+                      alt="" 
+                      className="w-14 h-14 object-cover rounded-xl bg-white border border-slate-200" 
+                    />
+                    <div className="flex-1 min-w-0">
+                      <h4 className="text-xs font-bold text-slate-900 truncate">{product.name}</h4>
+                      <p className="text-xs font-mono font-semibold text-purple-700 mt-0.5">
+                        ₦{(product.price * quantity).toLocaleString()}
+                      </p>
+                      
+                      <div className="flex items-center gap-2 mt-2">
+                        <button
+                          onClick={() => updateQuantity(product.id, -1)}
+                          className="w-6 h-6 rounded-md bg-white border border-slate-200 text-slate-600 flex items-center justify-center hover:bg-slate-100"
+                        >
+                          <Minus className="w-3 h-3" />
+                        </button>
+                        <span className="text-xs font-bold font-mono px-1">{quantity}</span>
+                        <button
+                          onClick={() => updateQuantity(product.id, 1)}
+                          className="w-6 h-6 rounded-md bg-white border border-slate-200 text-slate-600 flex items-center justify-center hover:bg-slate-100"
+                        >
+                          <Plus className="w-3 h-3" />
+                        </button>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => removeFromCart(product.id)}
+                      className="text-slate-400 hover:text-rose-600 p-2"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {cart.length > 0 && (
+              <div className="p-4 border-t border-slate-100 bg-slate-50 space-y-3">
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-slate-500 font-medium">Subtotal</span>
+                  <span className="font-black text-slate-900 text-base">₦{cartSubtotal.toLocaleString()}</span>
+                </div>
+                <button
+                  onClick={() => {
+                    setIsCartOpen(false);
+                    setIsCheckoutOpen(true);
+                  }}
+                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm py-3 rounded-2xl shadow-lg shadow-emerald-600/30 transition-all flex items-center justify-center gap-2"
+                >
+                  <span>Proceed to Payment</span>
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Checkout & Direct Bank Payment Modal */}
+      {isCheckoutOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-lg w-full max-h-[90vh] overflow-y-auto p-6 relative border border-slate-200 shadow-2xl">
+            <button
+              onClick={() => setIsCheckoutOpen(false)}
+              className="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <h3 className="text-lg font-bold text-slate-900 mb-1">Checkout & Payment</h3>
+            <p className="text-xs text-slate-500 mb-4">Complete your transfer and submit your order details for dispatch confirmation.</p>
+
+            <div className="space-y-3 mb-5">
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1">Full Name</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Ibrahim Mukhtar"
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                  className="w-full text-xs p-2.5 rounded-xl border border-slate-200 focus:border-purple-600 outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1">Phone Number (WhatsApp Active)</label>
+                <input
+                  type="tel"
+                  placeholder="e.g. 08012345678"
+                  value={customerPhone}
+                  onChange={(e) => setCustomerPhone(e.target.value)}
+                  className="w-full text-xs p-2.5 rounded-xl border border-slate-200 focus:border-purple-600 outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1.5">Fulfillment Method</label>
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setDeliveryMethod('pickup')}
+                    className={`p-2.5 rounded-xl border text-center transition-all ${
+                      deliveryMethod === 'pickup'
+                        ? 'border-purple-600 bg-purple-50 text-purple-900 font-bold'
+                        : 'border-slate-200 text-slate-600'
+                    }`}
+                  >
+                    <Building2 className="w-4 h-4 mx-auto mb-1 text-purple-700" />
+                    <span className="text-[11px] block">Shop Pickup</span>
+                    <span className="text-[10px] text-emerald-600 font-bold">Free</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setDeliveryMethod('minna')}
+                    className={`p-2.5 rounded-xl border text-center transition-all ${
+                      deliveryMethod === 'minna'
+                        ? 'border-purple-600 bg-purple-50 text-purple-900 font-bold'
+                        : 'border-slate-200 text-slate-600'
+                    }`}
+                  >
+                    <Truck className="w-4 h-4 mx-auto mb-1 text-purple-700" />
+                    <span className="text-[11px] block">Minna Delivery</span>
+                    <span className="text-[10px] font-bold text-slate-600">₦1,500</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setDeliveryMethod('nationwide')}
+                    className={`p-2.5 rounded-xl border text-center transition-all ${
+                      deliveryMethod === 'nationwide'
+                        ? 'border-purple-600 bg-purple-50 text-purple-900 font-bold'
+                        : 'border-slate-200 text-slate-600'
+                    }`}
+                  >
+                    <Truck className="w-4 h-4 mx-auto mb-1 text-purple-700" />
+                    <span className="text-[11px] block">Nationwide</span>
+                    <span className="text-[10px] font-bold text-slate-600">₦4,500</span>
+                  </button>
+                </div>
+              </div>
+
+              {deliveryMethod !== 'pickup' && (
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">Delivery Address & Landmark</label>
+                  <input
+                    type="text"
+                    placeholder="Hostel, Street address, or Campus Area"
+                    value={deliveryAddress}
+                    onChange={(e) => setDeliveryAddress(e.target.value)}
+                    className="w-full text-xs p-2.5 rounded-xl border border-slate-200 focus:border-purple-600 outline-none"
+                  />
+                </div>
+              )}
+
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1">Order Notes (Optional)</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Call when dispatch arrives, preferred color"
+                  value={orderNotes}
+                  onChange={(e) => setOrderNotes(e.target.value)}
+                  className="w-full text-xs p-2.5 rounded-xl border border-slate-200 focus:border-purple-600 outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="bg-[#170a2c] text-white rounded-2xl p-4 mb-5 space-y-2 border border-purple-900/60">
+              <span className="text-[10px] font-bold tracking-wider text-emerald-400 uppercase block">
+                Direct Bank Transfer Details
+              </span>
+              
+              <div className="flex justify-between items-center pt-1 border-t border-purple-950">
+                <span className="text-xs text-purple-200/70">Bank Name</span>
+                <span className="text-xs font-bold">{BANK_NAME}</span>
+              </div>
+
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-purple-200/70">Account Number</span>
+                <button
+                  type="button"
+                  onClick={copyAccountNumber}
+                  className="inline-flex items-center gap-1.5 font-mono text-sm font-bold text-emerald-400 hover:underline"
+                >
+                  <span>{ACCOUNT_NUMBER}</span>
+                  <Copy className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-purple-200/70">Account Name</span>
+                <span className="text-xs font-semibold">{ACCOUNT_NAME}</span>
+              </div>
+
+              <div className="flex justify-between items-center pt-2 border-t border-purple-950 text-sm">
+                <span className="font-bold text-purple-200">Amount Due</span>
+                <span className="font-black text-emerald-400 text-base">₦{orderTotal.toLocaleString()}</span>
+              </div>
+            </div>
+
+            {copiedBank && (
+              <p className="text-center text-xs text-emerald-600 font-bold mb-3 animate-fade-in">
+                Account number copied to clipboard!
+              </p>
+            )}
+
+            <button
+              type="button"
+              onClick={handleFinalOrder}
+              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm py-3 rounded-2xl shadow-lg shadow-emerald-600/30 transition-all flex items-center justify-center gap-2"
+            >
+              <span>I Have Transferred • Submit via WhatsApp</span>
+              <ExternalLink className="w-4 h-4" />
+            </button>
+            <p className="text-[11px] text-slate-400 text-center mt-2 leading-relaxed">
+              Your formatted invoice will open directly in WhatsApp to verify your payment receipt with the store manager.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Brand Identity Modal (Displays High-Res Logo Prominently) */}
+      {showAboutModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 relative border border-slate-200 shadow-2xl">
+            <button
+              onClick={() => setShowAboutModal(false)}
+              className="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+            
+            {/* Prominent High-Resolution Logo Stage */}
+            <div className="flex justify-center mb-4 bg-purple-50/60 p-4 rounded-2xl border border-purple-100">
+              <img 
+                src="/logo.png" 
+                alt="Swiftwave Variety Mall" 
+                className="h-14 sm:h-16 w-auto object-contain"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                }}
+              />
+            </div>
+
+            <div className="flex items-center gap-2 mb-2">
+              <ShieldCheck className="w-5 h-5 text-purple-700" />
+              <h3 className="text-base font-bold text-slate-900">About Swiftwave Variety Mall</h3>
+            </div>
+            
+            <p className="text-xs text-slate-600 leading-relaxed mb-4">
+              Swiftwave is your modern everyday marketplace built for the way you actually live. Bringing together gadgets, home essentials, school supplies, phone accessories, beauty products, children's toys, and creator tools under one roof.
+            </p>
+
+            <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 mb-3">
+              <span className="text-[11px] font-bold text-slate-900 uppercase tracking-wider block">Our Mission</span>
+              <p className="text-xs text-slate-600 mt-1">
+                To create stylish, affordable, and practical accessories that help students and everyday users stay organized and express their identity.
+              </p>
+            </div>
+
+            <div className="p-3.5 bg-purple-50/60 rounded-xl border border-purple-100 mb-4">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold text-purple-950 uppercase tracking-wider">
+                  Corporate Registration
+                </span>
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-full">
+                  <CheckCircle2 className="w-3 h-3" /> CAC Verified
+                </span>
+              </div>
+              
+              <p className="text-xs font-mono text-slate-700 mt-1.5 leading-relaxed">
+                <span className="font-semibold text-slate-900">SWIFTWAVE VARIETY MALL LIMITED</span><br />
+                RC: <span className="text-purple-700 font-bold">9468092</span> | TIN: 2622689087269
+              </p>
+
+              <button
+                onClick={() => setShowCertLightbox(true)}
+                className="mt-3 w-full bg-white hover:bg-purple-700 hover:text-white text-purple-700 border border-purple-200 hover:border-transparent font-bold text-xs py-2 px-3 rounded-lg transition-all flex items-center justify-center gap-1.5 shadow-sm shadow-purple-500/5"
+              >
+                <ShieldCheck className="w-3.5 h-3.5" />
+                <span>View Certificate of Incorporation</span>
+                <ExternalLink className="w-3 h-3 ml-0.5" />
+              </button>
+            </div>
+
+            <button
+              onClick={() => setShowAboutModal(false)}
+              className="w-full bg-slate-900 text-white font-bold text-xs py-2.5 rounded-xl hover:bg-slate-800 transition-colors"
+            >
+              Back to Catalog
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Official CAC Certificate Lightbox Modal */}
+      {showCertLightbox && (
+        <div 
+          className="fixed inset-0 z-[60] bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4"
+          onClick={() => setShowCertLightbox(false)}
+        >
+          <div 
+            className="bg-white rounded-2xl max-w-xl w-full p-4 relative shadow-2xl border border-slate-200 overflow-hidden max-h-[92vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="w-5 h-5 text-emerald-600" />
+                <div>
+                  <h4 className="text-xs font-bold text-slate-900 leading-none">Federal Republic of Nigeria</h4>
+                  <p className="text-[10px] text-slate-500 font-mono mt-0.5">RC: 9468092 | Incorporated April 7, 2026</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowCertLightbox(false)}
+                className="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto my-3 bg-slate-50 rounded-xl p-2 flex items-center justify-center">
+              <img
+                src="/cac-certificate.jpg"
+                alt="Swiftwave Variety Mall Limited CAC Certificate"
+                className="w-full max-h-[70vh] object-contain rounded-lg shadow-sm"
+              />
+            </div>
+
+            <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+              <span>Issued under Companies and Allied Matters Act 2020</span>
+              <a
+                href="/cac-certificate.jpg"
+                target="_blank"
+                rel="noreferrer"
+                className="text-purple-700 hover:underline font-bold inline-flex items-center gap-1"
+              >
+                Open Original <ExternalLink className="w-3 h-3" />
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Trust-Anchored Footer (Deep Purple/Black) */}
+      <footer className="bg-[#120722] text-purple-200/80 text-xs border-t border-purple-950 pt-10 pb-8 mt-auto">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pb-8 border-b border-purple-950">
+            <div>
+              <div className="mb-3">
+                <img 
+                  src="/logo.png" 
+                  alt="Swiftwave" 
+                  className="h-8 w-auto object-contain filter brightness-110"
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                  }}
+                />
+              </div>
+              <p className="text-purple-300/70 leading-relaxed text-xs max-w-sm">
+                Friendly, fast, and affordable. The one-stop shop that keeps everyday life moving.
+              </p>
+            </div>
+
+            <div>
+              <h4 className="text-white font-bold text-xs uppercase tracking-wider mb-3">Physical Store</h4>
+              <p className="leading-relaxed text-purple-300/70">
+                Shop 9 & 10, ABH Plaza,<br />
+                Opposite Federal University of Technology (FUTMINNA) Road,<br />
+                Minna, Niger State.
+              </p>
+            </div>
+
+            <div>
+              <h4 className="text-white font-bold text-xs uppercase tracking-wider mb-3">Corporate Credentials</h4>
+              <p className="text-purple-300/70 leading-relaxed font-mono">
+                Entity: Swiftwave Variety Mall Limited<br />
+                Registration No: 9468092<br />
+                Tax ID: 2622689087269
+              </p>
+            </div>
+          </div>
+
+          <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-purple-400/60">
+            <p>© {new Date().getFullYear()} Swiftwave Variety Mall Limited. All rights reserved.</p>
+            <div className="flex items-center gap-2 text-purple-300">
+              <ShieldCheck className="w-4 h-4 text-emerald-400" />
+              <span>Certified CAC Registered Commercial Vendor</span>
+            </div>
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+}
