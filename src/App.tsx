@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 
 // ==========================================
-// 1. IMAGE & VIDEO RESOLVERS
+// 1. DATA FORMATTERS & EMBED RESOLVERS
 // ==========================================
 export function formatDriveUrl(url: string): string {
   if (!url) return "https://images.unsplash.com/photo-1526738549149-8e07eca6c147?auto=format&fit=crop&w=600&q=80";
@@ -40,7 +40,6 @@ export function formatDriveUrl(url: string): string {
   return url.trim();
 }
 
-// Converts YouTube or Google Drive share links into embeddable on-site players
 export function getVideoEmbed(url?: string): { type: 'iframe' | 'video'; embedUrl: string } | null {
   if (!url) return null;
   const cleanUrl = url.trim();
@@ -74,7 +73,6 @@ export function getVideoEmbed(url?: string): { type: 'iframe' | 'video'; embedUr
   return null;
 }
 
-// Typo guard and category normalizer
 export function normalizeCategory(raw: string): string {
   if (!raw) return 'Gadgets';
   const s = raw.toLowerCase().trim();
@@ -129,7 +127,7 @@ function parseCSVLine(text: string): string[] {
 }
 
 // ==========================================
-// 2. TYPES
+// 2. TYPES & CONFIG
 // ==========================================
 export interface Product {
   id: string;
@@ -141,6 +139,7 @@ export interface Product {
   badge?: string;
   in_stock: boolean;
   video?: string;
+  stock_quantity?: number;
 }
 
 export interface CartItem {
@@ -160,9 +159,39 @@ const CATEGORIES = [
   'Creator Tools'
 ] as const;
 
-// Permanent Live Google Sheet GViz CSV endpoint
 const GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1XysYSGvgDR9t70VSrIwdXsN3GwzOjFmLUOfgB2s8Xbo/gviz/tq?tqx=out:csv"; 
 
+const SHOP_ACCOUNTS = {
+  shop9: {
+    title: "Shop 9: Daily Essentials & Home",
+    bank: "OPay",
+    number: "6551680741",
+    name: "SWIFTWAVE VARIETY MALL LIMITED",
+  },
+  shop10: {
+    title: "Shop 10: Gadgets & Tech Accessories",
+    bank: "OPay",
+    number: "6551791518",
+    name: "SWIFTWAVE VARIETY MALL LIMITED",
+  },
+};
+
+const getProductShop = (category: string): 'shop9' | 'shop10' => {
+  const cat = category.toLowerCase();
+  if (
+    cat.includes('gadget') || 
+    cat.includes('phone') || 
+    cat.includes('creator') ||
+    cat.includes('electronic')
+  ) {
+    return 'shop10';
+  }
+  return 'shop9';
+};
+
+// ==========================================
+// 3. MAIN COMPONENT
+// ==========================================
 export default function App() {
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
@@ -176,14 +205,30 @@ export default function App() {
   const [showAboutModal, setShowAboutModal] = useState<boolean>(false);
   const [showCertLightbox, setShowCertLightbox] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
+  const [isOffline, setIsOffline] = useState<boolean>(!navigator.onLine);
 
-  // Cart & Checkout
-  const [cart, setCart] = useState<CartItem[]>([]);
+  // Cart with LocalStorage Persistence
+  const [cart, setCart] = useState<CartItem[]>(() => {
+    if (typeof window === 'undefined') return [];
+    try {
+      const savedCart = localStorage.getItem('swiftwave_cart');
+      return savedCart ? JSON.parse(savedCart) : [];
+    } catch {
+      return [];
+    }
+  });
+
   const [isCartOpen, setIsCartOpen] = useState<boolean>(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState<boolean>(false);
-  const [copiedBank, setCopiedBank] = useState<boolean>(false);
+  const [copiedShop9, setCopiedShop9] = useState<boolean>(false);
+  const [copiedShop10, setCopiedShop10] = useState<boolean>(false);
+  const [removedItemsNotice, setRemovedItemsNotice] = useState<string[]>([]);
 
-  // Form Fields
+  // PWA Install Prompt State
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [showInstallBanner, setShowInstallBanner] = useState<boolean>(false);
+
+  // Customer Form Fields
   const [customerName, setCustomerName] = useState<string>('');
   const [customerPhone, setCustomerPhone] = useState<string>('');
   const [deliveryMethod, setDeliveryMethod] = useState<'pickup' | 'minna' | 'nationwide'>('pickup');
@@ -191,11 +236,68 @@ export default function App() {
   const [orderNotes, setOrderNotes] = useState<string>('');
 
   const WHATSAPP_PHONE = "2349066524315";
-  const BANK_NAME = "Moniepoint MFB";
-  const ACCOUNT_NUMBER = "9468092000";
-  const ACCOUNT_NAME = "Swiftwave Variety Mall Limited";
 
-  // Google Sheet Inventory Sync
+  // Sync Cart to LocalStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('swiftwave_cart', JSON.stringify(cart));
+    } catch (error) {
+      console.error('Error saving cart to storage:', error);
+    }
+  }, [cart]);
+
+  // Network State Listener
+  useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  // PWA Install Banner Listener
+  useEffect(() => {
+    const handleBeforeInstall = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      const dismissed = sessionStorage.getItem('swiftwave_install_dismissed');
+      if (!dismissed) {
+        setShowInstallBanner(true);
+      }
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstall);
+    window.addEventListener('appinstalled', () => {
+      setShowInstallBanner(false);
+      setDeferredPrompt(null);
+    });
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
+    };
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      setShowInstallBanner(false);
+      setDeferredPrompt(null);
+    }
+  };
+
+  const dismissInstallBanner = () => {
+    setShowInstallBanner(false);
+    sessionStorage.setItem('swiftwave_install_dismissed', 'true');
+  };
+
+  // Google Sheet Catalog Sync
   useEffect(() => {
     fetch(GOOGLE_SHEET_CSV_URL)
       .then((res) => res.text())
@@ -212,6 +314,13 @@ export default function App() {
             ? clean(row[5]).split(/[;,]/).map(u => clean(u)).filter(Boolean)
             : [];
 
+          const rawQuantity = clean(row[9]);
+          const parsedQty = rawQuantity !== '' && !isNaN(Number(rawQuantity)) 
+            ? Number(rawQuantity) 
+            : undefined;
+
+          const isExplicitlySoldOut = parsedQty !== undefined && parsedQty <= 0;
+
           parsed.push({
             id: clean(row[0]) || `SW-${String(i).padStart(3, '0')}`,
             name: clean(row[1]),
@@ -220,8 +329,9 @@ export default function App() {
             description: clean(row[4]),
             images: rawImages.length > 0 ? rawImages : [""],
             badge: clean(row[6]) || undefined,
-            in_stock: clean(row[7]).toLowerCase() === 'true' || clean(row[7]).toLowerCase() === 'yes',
+            in_stock: !isExplicitlySoldOut && (clean(row[7]).toLowerCase() === 'true' || clean(row[7]).toLowerCase() === 'yes'),
             video: clean(row[8]) || undefined,
+            stock_quantity: parsedQty,
           });
         }
 
@@ -231,27 +341,80 @@ export default function App() {
       .finally(() => setLoading(false));
   }, []);
 
-  const filteredProducts = useMemo(() => {
-    return products.filter((p) => {
-      const matchesCategory = 
-        selectedCategory === 'All' 
-          ? true 
-          : selectedCategory === 'New In'
-            ? (p.badge?.toLowerCase() === 'new' || p.badge?.toLowerCase() === 'new in')
-            : p.category.toLowerCase() === selectedCategory.toLowerCase();
+  // Cart & Inventory Stock Reconciliation
+  useEffect(() => {
+    if (products.length === 0) return;
 
-      const matchesSearch = 
-        p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-        p.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        p.id.toLowerCase().includes(searchQuery.toLowerCase());
+    setCart((currentCart) => {
+      if (currentCart.length === 0) return currentCart;
 
-      return matchesCategory && matchesSearch;
+      const notices: string[] = [];
+      const updatedCart: CartItem[] = [];
+
+      currentCart.forEach((item) => {
+        const liveProduct = products.find((p) => p.id === item.product.id);
+
+        if (!liveProduct || !liveProduct.in_stock || (liveProduct.stock_quantity !== undefined && liveProduct.stock_quantity <= 0)) {
+          notices.push(`"${item.product.name}" is now sold out and was removed.`);
+        } else {
+          let adjustedQty = item.quantity;
+          if (liveProduct.stock_quantity !== undefined && item.quantity > liveProduct.stock_quantity) {
+            adjustedQty = liveProduct.stock_quantity;
+            notices.push(
+              `"${liveProduct.name}" quantity adjusted from ${item.quantity} to ${liveProduct.stock_quantity} (max available).`
+            );
+          }
+
+          updatedCart.push({
+            product: liveProduct,
+            quantity: adjustedQty,
+          });
+        }
+      });
+
+      if (notices.length > 0) {
+        setRemovedItemsNotice(notices);
+      }
+
+      return updatedCart;
     });
+  }, [products]);
+
+  // Catalog Sorter: In-Stock Items First
+  const filteredProducts = useMemo(() => {
+    return products
+      .filter((p) => {
+        const matchesCategory = 
+          selectedCategory === 'All' 
+            ? true 
+            : selectedCategory === 'New In'
+              ? (p.badge?.toLowerCase() === 'new' || p.badge?.toLowerCase() === 'new in')
+              : p.category.toLowerCase() === selectedCategory.toLowerCase();
+
+        const matchesSearch = 
+          p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+          p.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          p.id.toLowerCase().includes(searchQuery.toLowerCase());
+
+        return matchesCategory && matchesSearch;
+      })
+      .sort((a, b) => {
+        if (a.in_stock === b.in_stock) return 0;
+        return a.in_stock ? -1 : 1;
+      });
   }, [products, selectedCategory, searchQuery]);
 
+  // Cart Operations
   const addToCart = (product: Product) => {
     setCart((prev) => {
       const existing = prev.find((item) => item.product.id === product.id);
+      const currentQty = existing ? existing.quantity : 0;
+      const maxStock = product.stock_quantity;
+
+      if (maxStock !== undefined && currentQty >= maxStock) {
+        return prev;
+      }
+
       if (existing) {
         return prev.map((item) => 
           item.product.id === product.id 
@@ -269,7 +432,13 @@ export default function App() {
       prev
         .map((item) => {
           if (item.product.id === productId) {
+            const maxStock = item.product.stock_quantity;
             const newQty = item.quantity + delta;
+
+            if (delta > 0 && maxStock !== undefined && item.quantity >= maxStock) {
+              return item;
+            }
+
             return newQty > 0 ? { ...item, quantity: newQty } : null;
           }
           return item;
@@ -282,9 +451,39 @@ export default function App() {
     setCart((prev) => prev.filter((item) => item.product.id !== productId));
   };
 
+  // Subtotal & Department Calculations
   const cartSubtotal = useMemo(() => {
     return cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
   }, [cart]);
+
+  const { shop9Items, shop10Items, shop9Total, shop10Total } = useMemo(() => {
+    const s9Items: CartItem[] = [];
+    const s10Items: CartItem[] = [];
+    let s9Sum = 0;
+    let s10Sum = 0;
+
+    cart.forEach((item) => {
+      const shop = getProductShop(item.product.category);
+      if (shop === 'shop10') {
+        s10Items.push(item);
+        s10Sum += item.product.price * item.quantity;
+      } else {
+        s9Items.push(item);
+        s9Sum += item.product.price * item.quantity;
+      }
+    });
+
+    return {
+      shop9Items: s9Items,
+      shop10Items: s10Items,
+      shop9Total: s9Sum,
+      shop10Total: s10Sum,
+    };
+  }, [cart]);
+
+  const hasShop9 = shop9Items.length > 0;
+  const hasShop10 = shop10Items.length > 0;
+  const isMixedCart = hasShop9 && hasShop10;
 
   const deliveryFee = useMemo(() => {
     if (deliveryMethod === 'pickup') return 0;
@@ -294,12 +493,6 @@ export default function App() {
 
   const orderTotal = cartSubtotal + deliveryFee;
   const totalCartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
-
-  const copyAccountNumber = () => {
-    navigator.clipboard.writeText(ACCOUNT_NUMBER);
-    setCopiedBank(true);
-    setTimeout(() => setCopiedBank(false), 2000);
-  };
 
   const handleFinalOrder = () => {
     if (!customerName.trim() || !customerPhone.trim()) {
@@ -312,16 +505,44 @@ export default function App() {
       return;
     }
 
-    const itemsSummary = cart.map((item, idx) => 
-      `${idx + 1}. ${item.product.name} (ID: ${item.product.id}) x${item.quantity} = ₦${(item.product.price * item.quantity).toLocaleString()}`
-    ).join('\n');
-
     const deliveryTitle = 
       deliveryMethod === 'pickup' 
         ? "Store Pickup @ ABH Plaza, Minna (FREE)"
         : deliveryMethod === 'minna'
           ? "Local Dispatch within Minna (₦1,500)"
           : "Nationwide Logistics Dispatch (₦4,500)";
+
+    let paymentBreakdownText = "";
+    if (isMixedCart) {
+      paymentBreakdownText = `*PAYMENT SPLIT INSTRUCTIONS:*
+• Shop 9 (Essentials Subtotal): ₦${shop9Total.toLocaleString()} -> Pay to OPay (${SHOP_ACCOUNTS.shop9.number})
+• Shop 10 (Gadgets Subtotal): ₦${shop10Total.toLocaleString()} -> Pay to OPay (${SHOP_ACCOUNTS.shop10.number})
+• Delivery Fee: ₦${deliveryFee.toLocaleString()} (Paid to either account)
+*TOTAL PAID:* ₦${orderTotal.toLocaleString()}`;
+    } else if (hasShop10) {
+      paymentBreakdownText = `*PAYMENT ACCOUNT:*
+Paid into OPay (${SHOP_ACCOUNTS.shop10.number}) - Shop 10 Gadgets
+Account: ${SHOP_ACCOUNTS.shop10.name}
+*TOTAL PAID:* ₦${orderTotal.toLocaleString()}`;
+    } else {
+      paymentBreakdownText = `*PAYMENT ACCOUNT:*
+Paid into OPay (${SHOP_ACCOUNTS.shop9.number}) - Shop 9 Daily Essentials
+Account: ${SHOP_ACCOUNTS.shop9.name}
+*TOTAL PAID:* ₦${orderTotal.toLocaleString()}`;
+    }
+
+    let itemsSummary = "";
+    if (isMixedCart) {
+      itemsSummary = `*SHOP 10 (GADGETS & TECH):*
+${shop10Items.map((item, idx) => `  ${idx + 1}. ${item.product.name} x${item.quantity} = ₦${(item.product.price * item.quantity).toLocaleString()}`).join('\n')}
+
+*SHOP 9 (DAILY ESSENTIALS):*
+${shop9Items.map((item, idx) => `  ${idx + 1}. ${item.product.name} x${item.quantity} = ₦${(item.product.price * item.quantity).toLocaleString()}`).join('\n')}`;
+    } else {
+      itemsSummary = cart.map((item, idx) => 
+        `${idx + 1}. ${item.product.name} (ID: ${item.product.id}) x${item.quantity} = ₦${(item.product.price * item.quantity).toLocaleString()}`
+      ).join('\n');
+    }
 
     const message = `🛍️ *PAID ORDER CONFIRMATION - SWIFTWAVE MALL*
 ----------------------------------------
@@ -335,15 +556,14 @@ ${itemsSummary}
 ----------------------------------------
 *Subtotal:* ₦${cartSubtotal.toLocaleString()}
 *Delivery Fee:* ₦${deliveryFee.toLocaleString()}
-*TOTAL PAID:* ₦${orderTotal.toLocaleString()}
 ----------------------------------------
-*Payment Details:*
-Paid into ${BANK_NAME} (${ACCOUNT_NUMBER})
-Account: ${ACCOUNT_NAME}
-
+${paymentBreakdownText}
+----------------------------------------
 *(Attached is my payment transfer receipt screenshot)*`;
 
     window.open(`https://wa.me/${WHATSAPP_PHONE}?text=${encodeURIComponent(message)}`, '_blank');
+    setCart([]);
+    setIsCheckoutOpen(false);
   };
 
   const activeVideoEmbed = useMemo(() => {
@@ -353,7 +573,14 @@ Account: ${ACCOUNT_NAME}
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans flex flex-col antialiased">
       
-      {/* Top Corporate Legal Badge Bar (Dark Purple/Black) */}
+      {/* Offline Alert Strip */}
+      {isOffline && (
+        <div className="bg-amber-500 text-amber-950 text-xs py-1.5 px-4 font-bold text-center flex items-center justify-center gap-1.5 shadow-sm">
+          <span>⚠️ You are browsing offline. Showing saved inventory and catalog prices.</span>
+        </div>
+      )}
+
+      {/* Top Corporate Legal Badge Bar */}
       <div className="bg-[#170a2c] text-purple-200 text-xs py-2 px-4 border-b border-purple-950">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-2">
           <div className="flex items-center gap-2">
@@ -384,7 +611,7 @@ Account: ${ACCOUNT_NAME}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
           <div className="flex items-center justify-between gap-4">
             
-            {/* Brand Logo: Full Horizontal Viewport Layout */}
+            {/* Brand Logo */}
             <div className="flex items-center">
               <img 
                 src="/logo.png" 
@@ -399,7 +626,6 @@ Account: ${ACCOUNT_NAME}
                 }}
               />
               
-              {/* Fallback Text If Logo Is Missing */}
               <div className="hidden items-center gap-2">
                 <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-purple-700 to-violet-600 flex items-center justify-center text-white shadow-md font-black">
                   S
@@ -454,7 +680,7 @@ Account: ${ACCOUNT_NAME}
             />
           </div>
 
-          {/* Category Filter Pills (Purple Active States) */}
+          {/* Category Filter Pills */}
           <nav className="flex items-center gap-2 overflow-x-auto no-scrollbar pt-3 pb-1">
             {CATEGORIES.map((cat) => {
               const active = selectedCategory === cat;
@@ -479,7 +705,7 @@ Account: ${ACCOUNT_NAME}
       {/* Main Catalog */}
       <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
         
-        {/* Brand Hero Banner (Royal Purple Gradient) */}
+        {/* Brand Hero Banner */}
         <section className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-purple-950 via-purple-900 to-indigo-950 text-white p-6 sm:p-10 mb-8 shadow-xl border border-purple-900/40">
           <div className="relative z-10 max-w-2xl">
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-white/10 text-purple-200 backdrop-blur-md mb-3 border border-white/15">
@@ -533,6 +759,9 @@ Account: ${ACCOUNT_NAME}
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
             {filteredProducts.map((product) => {
               const displayImage = formatDriveUrl(product.images[0]);
+              const inCartQty = cart.find((i) => i.product.id === product.id)?.quantity || 0;
+              const isMaxed = product.stock_quantity !== undefined && inCartQty >= product.stock_quantity;
+
               return (
                 <div
                   key={product.id}
@@ -564,6 +793,14 @@ Account: ${ACCOUNT_NAME}
                     {product.badge && (
                       <span className="absolute top-2.5 left-2.5 bg-purple-700 text-white text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full shadow-md">
                         {product.badge}
+                      </span>
+                    )}
+
+                    {/* Low Stock Warning Badge */}
+                    {product.in_stock && product.stock_quantity !== undefined && product.stock_quantity > 0 && product.stock_quantity <= 3 && (
+                      <span className="absolute top-2.5 right-2.5 bg-amber-400 text-amber-950 text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full shadow-md flex items-center gap-1 border border-amber-300">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-900 animate-ping"></span>
+                        Only {product.stock_quantity} left
                       </span>
                     )}
 
@@ -606,18 +843,34 @@ Account: ${ACCOUNT_NAME}
                         </span>
                       </div>
 
-                      <button
-                        onClick={() => addToCart(product)}
-                        disabled={!product.in_stock}
-                        className={`inline-flex items-center gap-1.5 text-xs font-bold px-3.5 py-2 rounded-xl transition-all ${
-                          product.in_stock
-                            ? 'bg-purple-700 hover:bg-purple-800 text-white shadow-sm shadow-purple-700/30 active:scale-95'
-                            : 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                        }`}
-                      >
-                        <Plus className="w-3.5 h-3.5" />
-                        <span>Add</span>
-                      </button>
+                      {product.in_stock ? (
+                        <button
+                          onClick={() => addToCart(product)}
+                          disabled={isMaxed}
+                          className={`inline-flex items-center gap-1.5 text-xs font-bold px-3.5 py-2 rounded-xl transition-all ${
+                            isMaxed
+                              ? 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'
+                              : 'bg-purple-700 hover:bg-purple-800 text-white shadow-sm shadow-purple-700/30 active:scale-95'
+                          }`}
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>{isMaxed ? 'Max in Cart' : 'Add'}</span>
+                        </button>
+                      ) : (
+                        <a
+                          href={`https://wa.me/${WHATSAPP_PHONE}?text=${encodeURIComponent(
+                            `Hello Swiftwave Mall, I noticed "${product.name}" (ID: ${product.id}) is sold out. Please notify me when it is back in stock!`
+                          )}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-2 rounded-xl transition-all bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 hover:border-emerald-300 active:scale-95 shrink-0"
+                          title="Notify me when restocked via WhatsApp"
+                        >
+                          <span>Restock</span>
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -627,12 +880,11 @@ Account: ${ACCOUNT_NAME}
         )}
       </main>
 
-      {/* Product Detail Modal (Photos & On-Site Video Embed Player) */}
+      {/* Product Detail Modal */}
       {activeModalProduct && (
         <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-2xl w-full overflow-hidden shadow-2xl relative border border-slate-200 flex flex-col max-h-[92vh]">
             
-            {/* Modal Header */}
             <div className="p-4 border-b border-slate-100 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="text-xs font-mono font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-md">
@@ -650,7 +902,6 @@ Account: ${ACCOUNT_NAME}
 
             <div className="p-6 overflow-y-auto flex-1">
               
-              {/* Media Switcher: Photos vs Live Video */}
               {activeModalProduct.video && (
                 <div className="flex items-center gap-2 mb-3">
                   <button
@@ -747,7 +998,6 @@ Account: ${ACCOUNT_NAME}
                 </div>
               )}
 
-              {/* Title & Price Header */}
               <div className="flex items-start justify-between gap-4">
                 <h2 className="text-lg font-bold text-slate-900 leading-snug">{activeModalProduct.name}</h2>
                 <div className="text-right shrink-0">
@@ -757,7 +1007,6 @@ Account: ${ACCOUNT_NAME}
                 </div>
               </div>
 
-              {/* Specifications Block */}
               <div className="mt-4">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Specifications & Details</h4>
                 <p className="text-sm text-slate-600 mt-1.5 leading-relaxed whitespace-pre-line">
@@ -765,7 +1014,6 @@ Account: ${ACCOUNT_NAME}
                 </p>
               </div>
 
-              {/* External Source Fallback Link */}
               {activeModalProduct.video && (
                 <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
                   <span className="flex items-center gap-1 text-purple-700 font-semibold">
@@ -786,25 +1034,43 @@ Account: ${ACCOUNT_NAME}
 
             {/* Modal Bottom Bar */}
             <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
-              <div className="flex items-center gap-1.5 text-xs text-slate-500">
-                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                <span>Verified Stock @ ABH Plaza</span>
+              <div className="flex flex-col text-xs text-slate-500">
+                <div className="flex items-center gap-1.5">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                  <span>Verified Stock @ ABH Plaza</span>
+                </div>
+
+                {activeModalProduct.in_stock && activeModalProduct.stock_quantity !== undefined && activeModalProduct.stock_quantity <= 3 && activeModalProduct.stock_quantity > 0 && (
+                  <span className="text-[11px] font-bold text-amber-700 mt-0.5 flex items-center gap-1">
+                    ⚠️ High demand: Only {activeModalProduct.stock_quantity} units remaining
+                  </span>
+                )}
               </div>
-              <button
-                onClick={() => {
-                  addToCart(activeModalProduct);
-                  setActiveModalProduct(null);
-                }}
-                disabled={!activeModalProduct.in_stock}
-                className={`inline-flex items-center gap-2 text-sm font-bold px-6 py-2.5 rounded-xl shadow-md transition-all ${
-                  activeModalProduct.in_stock
-                    ? 'bg-purple-700 hover:bg-purple-800 text-white shadow-purple-700/30'
-                    : 'bg-slate-300 text-slate-500 cursor-not-allowed'
-                }`}
-              >
-                <Plus className="w-4 h-4" />
-                <span>Add to Cart</span>
-              </button>
+
+              {activeModalProduct.in_stock ? (
+                <button
+                  onClick={() => {
+                    addToCart(activeModalProduct);
+                    setActiveModalProduct(null);
+                  }}
+                  className="inline-flex items-center gap-2 text-sm font-bold px-6 py-2.5 rounded-xl shadow-md bg-purple-700 hover:bg-purple-800 text-white shadow-purple-700/30 transition-all active:scale-95"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Add to Cart</span>
+                </button>
+              ) : (
+                <a
+                  href={`https://wa.me/${WHATSAPP_PHONE}?text=${encodeURIComponent(
+                    `Hello Swiftwave Mall, I saw that "${activeModalProduct.name}" (ID: ${activeModalProduct.id}) is currently sold out. When are you restocking it?`
+                  )}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-2 text-xs font-bold px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-600/20 transition-all"
+                >
+                  <span>Request Restock via WhatsApp</span>
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+              )}
             </div>
           </div>
         </div>
@@ -831,6 +1097,27 @@ Account: ${ACCOUNT_NAME}
             </div>
 
             <div className="flex-1 overflow-y-auto p-4 space-y-3">
+              {/* Notice for auto-reconciled items */}
+              {removedItemsNotice.length > 0 && (
+                <div className="mb-3 p-3 bg-amber-50 border border-amber-200 rounded-2xl flex items-start justify-between gap-2 text-xs">
+                  <div>
+                    <span className="font-bold text-amber-950 block">Inventory Update</span>
+                    <ul className="list-disc list-inside mt-1 font-semibold text-amber-900 text-[11px] space-y-0.5">
+                      {removedItemsNotice.map((msg, i) => (
+                        <li key={i}>{msg}</li>
+                      ))}
+                    </ul>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setRemovedItemsNotice([])}
+                    className="text-amber-600 hover:text-amber-950 p-1 font-bold"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
+
               {cart.length === 0 ? (
                 <div className="text-center py-20 text-slate-400">
                   <ShoppingBag className="w-12 h-12 mx-auto stroke-[1.5] mb-2 opacity-40 text-purple-600" />
@@ -866,10 +1153,21 @@ Account: ${ACCOUNT_NAME}
                         <span className="text-xs font-bold font-mono px-1">{quantity}</span>
                         <button
                           onClick={() => updateQuantity(product.id, 1)}
-                          className="w-6 h-6 rounded-md bg-white border border-slate-200 text-slate-600 flex items-center justify-center hover:bg-slate-100"
+                          disabled={product.stock_quantity !== undefined && quantity >= product.stock_quantity}
+                          className={`w-6 h-6 rounded-md border flex items-center justify-center transition-all ${
+                            product.stock_quantity !== undefined && quantity >= product.stock_quantity
+                              ? 'bg-slate-100 border-slate-200 text-slate-300 cursor-not-allowed'
+                              : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100 active:scale-95'
+                          }`}
                         >
                           <Plus className="w-3 h-3" />
                         </button>
+
+                        {product.stock_quantity !== undefined && quantity >= product.stock_quantity && (
+                          <span className="text-[10px] text-amber-700 font-bold ml-1 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
+                            Max ({product.stock_quantity})
+                          </span>
+                        )}
                       </div>
                     </div>
 
@@ -906,7 +1204,7 @@ Account: ${ACCOUNT_NAME}
         </div>
       )}
 
-      {/* Checkout & Direct Bank Payment Modal */}
+      {/* Checkout Modal: Dynamic Dual Account Routing */}
       {isCheckoutOpen && (
         <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-lg w-full max-h-[90vh] overflow-y-auto p-6 relative border border-slate-200 shadow-2xl">
@@ -1007,7 +1305,7 @@ Account: ${ACCOUNT_NAME}
                 <label className="text-xs font-bold text-slate-700 block mb-1">Order Notes (Optional)</label>
                 <input
                   type="text"
-                  placeholder="e.g. Call when dispatch arrives, preferred color"
+                  placeholder="e.g. Preferred color or delivery instructions"
                   value={orderNotes}
                   onChange={(e) => setOrderNotes(e.target.value)}
                   className="w-full text-xs p-2.5 rounded-xl border border-slate-200 focus:border-purple-600 outline-none"
@@ -1015,44 +1313,109 @@ Account: ${ACCOUNT_NAME}
               </div>
             </div>
 
-            <div className="bg-[#170a2c] text-white rounded-2xl p-4 mb-5 space-y-2 border border-purple-900/60">
-              <span className="text-[10px] font-bold tracking-wider text-emerald-400 uppercase block">
-                Direct Bank Transfer Details
+            {/* Dynamic Bank Account Cards */}
+            <div className="space-y-3 mb-5">
+              <span className="text-[10px] font-bold tracking-wider text-purple-900 uppercase block">
+                {isMixedCart ? 'Transfer Payment by Store Department' : 'Official OPay Transfer Details'}
               </span>
-              
-              <div className="flex justify-between items-center pt-1 border-t border-purple-950">
-                <span className="text-xs text-purple-200/70">Bank Name</span>
-                <span className="text-xs font-bold">{BANK_NAME}</span>
-              </div>
 
-              <div className="flex justify-between items-center">
-                <span className="text-xs text-purple-200/70">Account Number</span>
-                <button
-                  type="button"
-                  onClick={copyAccountNumber}
-                  className="inline-flex items-center gap-1.5 font-mono text-sm font-bold text-emerald-400 hover:underline"
-                >
-                  <span>{ACCOUNT_NUMBER}</span>
-                  <Copy className="w-3.5 h-3.5" />
-                </button>
-              </div>
+              {/* Shop 10 Box */}
+              {hasShop10 && (
+                <div className="bg-[#170a2c] text-white rounded-2xl p-3.5 border border-purple-900/60 shadow-sm">
+                  <div className="flex justify-between items-center pb-2 border-b border-purple-950">
+                    <div>
+                      <span className="text-[10px] font-extrabold tracking-wider text-emerald-400 uppercase block">
+                        SHOP 10 • GADGETS & ACCESSORIES
+                      </span>
+                      <span className="text-xs text-purple-200 font-medium">Bank: OPay</span>
+                    </div>
+                    {isMixedCart && (
+                      <span className="text-xs font-mono font-bold text-purple-200 bg-purple-900/50 px-2 py-0.5 rounded">
+                        Due: ₦{shop10Total.toLocaleString()}
+                      </span>
+                    )}
+                  </div>
 
-              <div className="flex justify-between items-center">
-                <span className="text-xs text-purple-200/70">Account Name</span>
-                <span className="text-xs font-semibold">{ACCOUNT_NAME}</span>
-              </div>
+                  <div className="flex justify-between items-center mt-2.5">
+                    <div>
+                      <span className="text-[10px] text-purple-300 block">Account Number</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText(SHOP_ACCOUNTS.shop10.number);
+                          setCopiedShop10(true);
+                          setTimeout(() => setCopiedShop10(false), 2000);
+                        }}
+                        className="inline-flex items-center gap-1.5 font-mono text-base font-black text-emerald-400 hover:underline"
+                      >
+                        <span>{SHOP_ACCOUNTS.shop10.number}</span>
+                        <Copy className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                    <span className="text-[10px] text-right font-semibold text-purple-300 max-w-[150px] leading-tight">
+                      SWIFTWAVE VARIETY MALL LIMITED
+                    </span>
+                  </div>
+                  {copiedShop10 && (
+                    <p className="text-[11px] text-emerald-400 font-bold mt-1">✓ Copied Shop 10 Account!</p>
+                  )}
+                </div>
+              )}
 
-              <div className="flex justify-between items-center pt-2 border-t border-purple-950 text-sm">
-                <span className="font-bold text-purple-200">Amount Due</span>
-                <span className="font-black text-emerald-400 text-base">₦{orderTotal.toLocaleString()}</span>
+              {/* Shop 9 Box */}
+              {hasShop9 && (
+                <div className="bg-[#170a2c] text-white rounded-2xl p-3.5 border border-purple-900/60 shadow-sm">
+                  <div className="flex justify-between items-center pb-2 border-b border-purple-950">
+                    <div>
+                      <span className="text-[10px] font-extrabold tracking-wider text-amber-400 uppercase block">
+                        SHOP 9 • DAILY ESSENTIALS & HOME
+                      </span>
+                      <span className="text-xs text-purple-200 font-medium">Bank: OPay</span>
+                    </div>
+                    {isMixedCart && (
+                      <span className="text-xs font-mono font-bold text-purple-200 bg-purple-900/50 px-2 py-0.5 rounded">
+                        Due: ₦{shop9Total.toLocaleString()}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex justify-between items-center mt-2.5">
+                    <div>
+                      <span className="text-[10px] text-purple-300 block">Account Number</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText(SHOP_ACCOUNTS.shop9.number);
+                          setCopiedShop9(true);
+                          setTimeout(() => setCopiedShop9(false), 2000);
+                        }}
+                        className="inline-flex items-center gap-1.5 font-mono text-base font-black text-amber-300 hover:underline"
+                      >
+                        <span>{SHOP_ACCOUNTS.shop9.number}</span>
+                        <Copy className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                    <span className="text-[10px] text-right font-semibold text-purple-300 max-w-[150px] leading-tight">
+                      SWIFTWAVE VARIETY MALL LIMITED
+                    </span>
+                  </div>
+                  {copiedShop9 && (
+                    <p className="text-[11px] text-amber-300 font-bold mt-1">✓ Copied Shop 9 Account!</p>
+                  )}
+                </div>
+              )}
+
+              {/* Total Summary */}
+              <div className="p-3 bg-purple-50 rounded-2xl border border-purple-200 flex justify-between items-center">
+                <div>
+                  <span className="text-xs font-bold text-purple-950 block">Grand Total Due</span>
+                  <span className="text-[10px] text-purple-700">Includes ₦{deliveryFee.toLocaleString()} delivery</span>
+                </div>
+                <span className="text-lg font-black text-purple-950">
+                  ₦{orderTotal.toLocaleString()}
+                </span>
               </div>
             </div>
-
-            {copiedBank && (
-              <p className="text-center text-xs text-emerald-600 font-bold mb-3 animate-fade-in">
-                Account number copied to clipboard!
-              </p>
-            )}
 
             <button
               type="button"
@@ -1069,7 +1432,7 @@ Account: ${ACCOUNT_NAME}
         </div>
       )}
 
-      {/* Brand Identity Modal (Displays High-Res Logo Prominently) */}
+      {/* Brand Identity Modal */}
       {showAboutModal && (
         <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-lg w-full p-6 relative border border-slate-200 shadow-2xl">
@@ -1080,7 +1443,6 @@ Account: ${ACCOUNT_NAME}
               <X className="w-4 h-4" />
             </button>
             
-            {/* Prominent High-Resolution Logo Stage */}
             <div className="flex justify-center mb-4 bg-purple-50/60 p-4 rounded-2xl border border-purple-100">
               <img 
                 src="/logo.png" 
@@ -1192,7 +1554,46 @@ Account: ${ACCOUNT_NAME}
         </div>
       )}
 
-      {/* Trust-Anchored Footer (Deep Purple/Black) */}
+      {/* Floating Mobile Install App Banner */}
+      {showInstallBanner && (
+        <aside 
+          aria-label="Install App"
+          className="fixed bottom-4 left-4 right-4 sm:hidden z-40 bg-[#170a2c] text-white p-3.5 rounded-2xl border border-purple-800/80 shadow-2xl flex items-center justify-between gap-3 animate-fade-in"
+        >
+          <div className="flex items-center gap-3 min-w-0">
+            <img
+              src="/logo.png"
+              alt="Swiftwave"
+              className="w-10 h-10 rounded-xl object-contain bg-purple-950 p-1 border border-purple-800 shrink-0"
+              onError={(e) => {
+                (e.currentTarget as HTMLElement).style.display = 'none';
+              }}
+            />
+            <div className="min-w-0">
+              <h4 className="text-xs font-bold text-white truncate">Install Swiftwave App</h4>
+              <p className="text-[10px] text-purple-300 truncate">Faster browsing & instant order tracking</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={handleInstallClick}
+              className="bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs px-3 py-1.5 rounded-xl transition-all shadow-md shadow-purple-900/40 active:scale-95"
+            >
+              Install
+            </button>
+            <button
+              onClick={dismissInstallBanner}
+              className="text-purple-400 hover:text-white p-1"
+              aria-label="Dismiss banner"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </aside>
+      )}
+
+      {/* Footer */}
       <footer className="bg-[#120722] text-purple-200/80 text-xs border-t border-purple-950 pt-10 pb-8 mt-auto">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pb-8 border-b border-purple-950">
