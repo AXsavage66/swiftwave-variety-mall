@@ -4,13 +4,13 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Swiftwave Variety Mall Limited | Minna</title>
-    
+
     <!-- Mobile Browser Address Bar Tint (Swiftwave Royal Purple) -->
     <meta name="theme-color" content="#6D28D9" />
 
     <!-- Search Metadata -->
     <meta name="description" content="Swiftwave Variety Mall Limited — Shop 9 & 10 ABH Plaza, Minna. Verified gadgets, phone accessories, school supplies, home essentials, and fast dispatch." />
-    
+
     <!-- WhatsApp & Social Media Preview Cards (Strict Absolute URLs) -->
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://swiftwave-variety-mall.vercel.app/" />
@@ -28,14 +28,32 @@
     <meta name="twitter:description" content="Shop 9 & 10 ABH Plaza, Minna. Verified gadgets, accessories, and everyday essentials." />
     <meta name="twitter:image" content="https://swiftwave-variety-mall.vercel.app/logo.png" />
 
-    <!-- Favicon & Mobile Home Screen Icons -->
+    <!-- Favicon & Mobile Icons -->
     <link rel="icon" type="image/png" sizes="32x32" href="/logo.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="/logo.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/logo.png" />
     <link rel="shortcut icon" href="/logo.png" />
+
+    <!-- Web App Manifest for Android Installation -->
+    <link rel="manifest" href="/manifest.json" />
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+
+    <!-- Offline Service Worker Registration -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .then((registration) => {
+              console.log('Swiftwave Service Worker active:', registration.scope);
+            })
+            .catch((error) => {
+              console.error('Service Worker registration failed:', error);
+            });
+        });
+      }
+    </script>
   </body>
 </html>
