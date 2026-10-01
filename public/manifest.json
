@@ -1,19 +1,23 @@
 {
   "short_name": "Swiftwave",
-  "name": "Swiftwave Variety Mall Limited",
-  "description": "Everyday essentials built for the way you actually live. Shop 9 & 10 ABH Plaza, Minna.",
+  "name": "Swiftwave Variety Mall",
   "start_url": "/",
   "id": "/",
   "display": "standalone",
-  "orientation": "portrait",
   "background_color": "#170a2c",
   "theme_color": "#6D28D9",
   "icons": [
     {
-      "src": "/logo.png",
+      "src": "/icon.png",
       "sizes": "192x192 512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/icon.png",
+      "sizes": "192x192 512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }
