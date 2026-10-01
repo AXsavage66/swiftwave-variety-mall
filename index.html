@@ -11,7 +11,7 @@
     <!-- Search Metadata -->
     <meta name="description" content="Swiftwave Variety Mall Limited — Shop 9 & 10 ABH Plaza, Minna. Verified gadgets, phone accessories, school supplies, home essentials, and fast dispatch." />
 
-    <!-- WhatsApp & Social Media Preview Cards (Strict Absolute URLs) -->
+    <!-- WhatsApp & Social Media Preview Cards (Full Horizontal Banner) -->
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://swiftwave-variety-mall.vercel.app/" />
     <meta property="og:title" content="Swiftwave Variety Mall Limited" />
@@ -22,17 +22,10 @@
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
 
-    <!-- Twitter Summary -->
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Swiftwave Variety Mall Limited" />
-    <meta name="twitter:description" content="Shop 9 & 10 ABH Plaza, Minna. Verified gadgets, accessories, and everyday essentials." />
-    <meta name="twitter:image" content="https://swiftwave-variety-mall.vercel.app/logo.png" />
-
-    <!-- Favicon & Mobile Icons -->
-    <link rel="icon" type="image/png" sizes="32x32" href="/logo.png" />
-    <link rel="icon" type="image/png" sizes="16x16" href="/logo.png" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/logo.png" />
-    <link rel="shortcut icon" href="/logo.png" />
+    <!-- Square App Icons for Android, Brave, iOS, and Browser Tabs -->
+    <link rel="icon" type="image/png" sizes="192x192" href="/icon.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icon.png" />
+    <link rel="shortcut icon" href="/icon.png" />
 
     <!-- Web App Manifest for Android Installation -->
     <link rel="manifest" href="/manifest.json" />
@@ -41,7 +34,7 @@
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
 
-    <!-- Offline Service Worker Registration -->
+    <!-- Service Worker Registration -->
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
