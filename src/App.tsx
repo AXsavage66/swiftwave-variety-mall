@@ -78,12 +78,12 @@ export function getVideoEmbed(url?: string): { type: 'iframe' | 'video'; embedUr
     };
   }
 
-  // Google Drive Video Links
+  // Google Drive Video Links - Direct Raw Stream
   const driveMatch = cleanUrl.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) || cleanUrl.match(/id=([a-zA-Z0-9_-]+)/);
   if (driveMatch && driveMatch[1]) {
     return {
-      type: 'iframe',
-      embedUrl: `https://drive.google.com/file/d/${driveMatch[1]}/preview`
+      type: 'video',
+      embedUrl: `https://drive.usercontent.google.com/download?id=${driveMatch[1]}&export=download`
     };
   }
 
