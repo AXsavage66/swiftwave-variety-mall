@@ -75,12 +75,12 @@ export function getVideoEmbed(url?: string): { type: 'iframe' | 'video'; embedUr
     };
   }
 
-  // Google Drive Video Links
+  // Google Drive Video Links - Direct Raw Stream (Bypasses Preview Iframe & UI overlays)
   const driveMatch = cleanUrl.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) || cleanUrl.match(/id=([a-zA-Z0-9_-]+)/);
   if (driveMatch && driveMatch[1]) {
     return {
-      type: 'iframe',
-      embedUrl: `https://drive.google.com/file/d/${driveMatch[1]}/preview`
+      type: 'video',
+      embedUrl: `https://drive.usercontent.google.com/download?id=${driveMatch[1]}&export=download`
     };
   }
 
@@ -261,7 +261,7 @@ export default function App() {
   const [isCartOpen, setIsCartOpen] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Checkout Modal State (Persisted in localStorage against app switching)
+  // Checkout Modal State
   const [isCheckoutOpen, setIsCheckoutOpen] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
     return localStorage.getItem('swiftwave_checkout_open') === 'true';
@@ -1102,7 +1102,8 @@ ${paymentBreakdownText}
               {/* Main Media Stage with Click-to-Zoom */}
               {mediaViewMode === 'video' && activeVideoEmbed ? (
                 <div className="mb-4">
-                  <div className="relative aspect-video rounded-2xl bg-black overflow-hidden shadow-md border border-slate-800">
+                  {/* Flexible aspect ratio: taller on mobile so vertical phone videos are not squished */}
+                  <div className="relative aspect-[4/3] sm:aspect-video max-h-[380px] w-full rounded-2xl bg-black overflow-hidden shadow-md border border-slate-800 flex items-center justify-center">
                     {activeVideoEmbed.type === 'iframe' ? (
                       <iframe
                         src={activeVideoEmbed.embedUrl}
@@ -1112,17 +1113,21 @@ ${paymentBreakdownText}
                         allowFullScreen
                       />
                     ) : (
-                      <video controls playsInline preload="metadata" className="w-full h-full object-contain">
+                      <video 
+                        controls 
+                        playsInline 
+                        preload="auto" 
+                        className="w-full h-full object-contain"
+                      >
                         <source src={activeVideoEmbed.embedUrl} type="video/mp4" />
                         Your browser does not support HTML5 video.
                       </video>
                     )}
                   </div>
                   
-                  {/* Clean 1-Tap HD Fullscreen Option */}
                   {activeModalProduct.video && (
                     <div className="mt-2 flex items-center justify-between text-xs text-slate-500">
-                      <span>Live demonstration preview</span>
+                      <span>Direct video stream</span>
                       <a
                         href={activeModalProduct.video}
                         target="_blank"
