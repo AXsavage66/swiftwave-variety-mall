@@ -47,14 +47,11 @@ export function getVideoThumbnail(videoUrl?: string): string | null {
   if (!videoUrl) return null;
   const cleanUrl = videoUrl.trim();
 
-  // Google Drive Video Links - Direct Raw Stream
-const driveMatch = cleanUrl.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) || cleanUrl.match(/id=([a-zA-Z0-9_-]+)/);
-if (driveMatch && driveMatch[1]) {
-  return {
-    type: 'video',
-    embedUrl: `https://drive.usercontent.google.com/download?id=${driveMatch[1]}&export=download`
-  };
-}
+  // Google Drive Video Preview Frame
+  const driveMatch = cleanUrl.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) || cleanUrl.match(/id=([a-zA-Z0-9_-]+)/);
+  if (driveMatch && driveMatch[1]) {
+    return `https://lh3.googleusercontent.com/d/${driveMatch[1]}=w800`;
+  }
 
   // YouTube / Shorts High-Res Thumbnail
   const ytMatch = cleanUrl.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([a-zA-Z0-9_-]+)/);
@@ -78,12 +75,12 @@ export function getVideoEmbed(url?: string): { type: 'iframe' | 'video'; embedUr
     };
   }
 
-  // Google Drive Video Links - Direct Raw Stream
+  // Google Drive Video Links
   const driveMatch = cleanUrl.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) || cleanUrl.match(/id=([a-zA-Z0-9_-]+)/);
   if (driveMatch && driveMatch[1]) {
     return {
-      type: 'video',
-      embedUrl: `https://drive.usercontent.google.com/download?id=${driveMatch[1]}&export=download`
+      type: 'iframe',
+      embedUrl: `https://drive.google.com/file/d/${driveMatch[1]}/preview`
     };
   }
 
@@ -201,7 +198,6 @@ const SHOP_ACCOUNTS = {
   },
 };
 
-// Refined, accurate Minna metropolitan and campus hubs
 const MINNA_ZONES = [
   'FUTMINNA Gidan Kwano (Main Campus / Main Gate)',
   'Bosso (FUTMINNA Bosso Campus / Bosso Low-Cost / Mobil)',
@@ -214,7 +210,7 @@ const MINNA_ZONES = [
 ];
 
 const getProductShop = (category: string): 'shop9' | 'shop10' => {
-  const cat = category.toLowerCase();
+  const cat = (category || '').toLowerCase();
   if (
     cat.includes('gadget') || 
     cat.includes('phone') || 
@@ -244,22 +240,25 @@ export default function App() {
   const [showAboutModal, setShowAboutModal] = useState<boolean>(false);
   const [showCertLightbox, setShowCertLightbox] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
-  const [isOffline, setIsOffline] = useState<boolean>(!navigator.onLine);
+  const [isOffline, setIsOffline] = useState<boolean>(typeof navigator !== 'undefined' ? !navigator.onLine : false);
 
-  // Cart with LocalStorage Persistence
+  // Cart with Defensive LocalStorage Persistence
   const [cart, setCart] = useState<CartItem[]>(() => {
     if (typeof window === 'undefined') return [];
     try {
       const savedCart = localStorage.getItem('swiftwave_cart');
-      return savedCart ? JSON.parse(savedCart) : [];
+      if (!savedCart) return [];
+      const parsed = JSON.parse(savedCart);
+      if (Array.isArray(parsed)) {
+        return parsed.filter((item: any) => item && item.product && typeof item.product.price === 'number');
+      }
+      return [];
     } catch {
       return [];
     }
   });
 
   const [isCartOpen, setIsCartOpen] = useState<boolean>(false);
-  
-  // Floating Toast Notification when adding items
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Checkout Modal State (Persisted in localStorage against app switching)
@@ -277,7 +276,7 @@ export default function App() {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showInstallBanner, setShowInstallBanner] = useState<boolean>(false);
 
-  // Customer, Fulfillment & Order Reference Fields (Persisted in localStorage)
+  // Customer, Fulfillment & Order Reference Fields
   const [orderId, setOrderId] = useState<string>(() => {
     if (typeof window === 'undefined') return '';
     return localStorage.getItem('swiftwave_order_id') || '';
@@ -320,7 +319,7 @@ export default function App() {
 
   const WHATSAPP_PHONE = "2349066524315";
 
-  // Sync Form States to LocalStorage to survive banking app switches
+  // Sync Form States to LocalStorage
   useEffect(() => {
     try {
       localStorage.setItem('swiftwave_cart', JSON.stringify(cart));
@@ -389,7 +388,7 @@ export default function App() {
     sessionStorage.setItem('swiftwave_install_dismissed', 'true');
   };
 
-  // Google Sheet Catalog Sync (Reversed for newest at top)
+  // Google Sheet Catalog Sync
   useEffect(() => {
     fetch(GOOGLE_SHEET_CSV_URL)
       .then((res) => res.text())
@@ -453,6 +452,7 @@ export default function App() {
       const updatedCart: CartItem[] = [];
 
       currentCart.forEach((item) => {
+        if (!item || !item.product) return;
         const liveProduct = products.find((p) => p.id === item.product.id);
 
         if (!liveProduct || !liveProduct.in_stock || (liveProduct.stock_quantity !== undefined && liveProduct.stock_quantity <= 0)) {
@@ -481,23 +481,30 @@ export default function App() {
     });
   }, [products]);
 
-  // Catalog Filtering with Automatic "New In" Detection
+  // Catalog Filtering
   const filteredProducts = useMemo(() => {
+    if (!Array.isArray(products)) return [];
     return products
       .filter((p, index) => {
+        if (!p) return false;
         const isAutoNew = index < 10 || (p.badge?.toLowerCase().includes('new') ?? false);
-
+        const pCategory = p.category || '';
         const matchesCategory = 
           selectedCategory === 'All' 
             ? true 
             : selectedCategory === 'New In'
               ? isAutoNew
-              : p.category.toLowerCase() === selectedCategory.toLowerCase();
+              : pCategory.toLowerCase() === selectedCategory.toLowerCase();
+
+        const pName = p.name || '';
+        const pDesc = p.description || '';
+        const pId = p.id || '';
+        const q = searchQuery.toLowerCase();
 
         const matchesSearch = 
-          p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-          p.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          p.id.toLowerCase().includes(searchQuery.toLowerCase());
+          pName.toLowerCase().includes(q) || 
+          pDesc.toLowerCase().includes(q) ||
+          pId.toLowerCase().includes(q);
 
         return matchesCategory && matchesSearch;
       })
@@ -507,10 +514,10 @@ export default function App() {
       });
   }, [products, selectedCategory, searchQuery]);
 
-  // Non-intrusive Add to Cart (Never forces open the cart drawer)
+  // Non-intrusive Add to Cart
   const addToCart = (product: Product) => {
     setCart((prev) => {
-      const existing = prev.find((item) => item.product.id === product.id);
+      const existing = prev.find((item) => item?.product?.id === product.id);
       const currentQty = existing ? existing.quantity : 0;
       const maxStock = product.stock_quantity;
 
@@ -528,8 +535,7 @@ export default function App() {
       return [...prev, { product, quantity: 1 }];
     });
 
-    // Sleek non-blocking confirmation toast
-    setToastMessage(`Added "${product.name.slice(0, 26)}..." to cart`);
+    setToastMessage(`Added "${(product.name || '').slice(0, 26)}..." to cart`);
     setTimeout(() => {
       setToastMessage(null);
     }, 3000);
@@ -539,7 +545,7 @@ export default function App() {
     setCart((prev) => 
       prev
         .map((item) => {
-          if (item.product.id === productId) {
+          if (item?.product?.id === productId) {
             const maxStock = item.product.stock_quantity;
             const newQty = item.quantity + delta;
 
@@ -556,12 +562,15 @@ export default function App() {
   };
 
   const removeFromCart = (productId: string) => {
-    setCart((prev) => prev.filter((item) => item.product.id !== productId));
+    setCart((prev) => prev.filter((item) => item?.product?.id !== productId));
   };
 
   // Subtotal & Department Calculations
   const cartSubtotal = useMemo(() => {
-    return cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
+    return cart.reduce((sum, item) => {
+      if (!item || !item.product || typeof item.product.price !== 'number') return sum;
+      return sum + item.product.price * (item.quantity || 1);
+    }, 0);
   }, [cart]);
 
   const { shop9Items, shop10Items, shop9Total, shop10Total } = useMemo(() => {
@@ -571,13 +580,16 @@ export default function App() {
     let s10Sum = 0;
 
     cart.forEach((item) => {
-      const shop = getProductShop(item.product.category);
+      if (!item || !item.product) return;
+      const shop = getProductShop(item.product.category || '');
+      const qty = item.quantity || 1;
+      const price = item.product.price || 0;
       if (shop === 'shop10') {
         s10Items.push(item);
-        s10Sum += item.product.price * item.quantity;
+        s10Sum += price * qty;
       } else {
         s9Items.push(item);
-        s9Sum += item.product.price * item.quantity;
+        s9Sum += price * qty;
       }
     });
 
@@ -600,9 +612,9 @@ export default function App() {
   }, [deliveryMethod]);
 
   const orderTotal = cartSubtotal + deliveryFee;
-  const totalCartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+  const totalCartCount = cart.reduce((sum, item) => sum + (item?.quantity || 0), 0);
 
-  // Opens Checkout preserving or generating order ID
+  // Opens Checkout preserving order ID
   const openCheckout = () => {
     if (!orderId) {
       const randomSuffix = Math.floor(1000 + Math.random() * 9000);
@@ -688,7 +700,6 @@ ${paymentBreakdownText}
 
     window.open(`https://wa.me/${WHATSAPP_PHONE}?text=${encodeURIComponent(message)}`, '_blank');
     
-    // Clear transient order data while keeping customer name & phone for future orders
     setCart([]);
     setOrderId('');
     setOrderNotes('');
@@ -914,8 +925,8 @@ ${paymentBreakdownText}
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
             {filteredProducts.map((product) => {
-              const displayImage = formatDriveUrl(product.images[0]);
-              const inCartQty = cart.find((i) => i.product.id === product.id)?.quantity || 0;
+              const displayImage = formatDriveUrl(product.images?.[0] || '');
+              const inCartQty = cart.find((i) => i?.product?.id === product.id)?.quantity || 0;
               const isMaxed = product.stock_quantity !== undefined && inCartQty >= product.stock_quantity;
 
               return (
@@ -928,7 +939,7 @@ ${paymentBreakdownText}
                     onClick={() => {
                       setActiveModalProduct(product);
                       setActiveImageIndex(0);
-                      setMediaViewMode(product.video && (!product.images[0] || product.images[0].includes('unsplash')) ? 'video' : 'photos');
+                      setMediaViewMode('photos');
                       setIsDescExpanded(false);
                     }}
                   >
@@ -980,7 +991,7 @@ ${paymentBreakdownText}
                         onClick={() => {
                           setActiveModalProduct(product);
                           setActiveImageIndex(0);
-                          setMediaViewMode(product.video && (!product.images[0] || product.images[0].includes('unsplash')) ? 'video' : 'photos');
+                          setMediaViewMode('photos');
                           setIsDescExpanded(false);
                         }}
                         className="text-sm font-bold text-slate-900 line-clamp-2 hover:text-purple-700 cursor-pointer transition-colors"
@@ -1071,7 +1082,7 @@ ${paymentBreakdownText}
                     }`}
                   >
                     <ImageIcon className="w-3.5 h-3.5" />
-                    <span>Product Photos ({activeModalProduct.images.length})</span>
+                    <span>Product Photos ({activeModalProduct.images?.length || 1})</span>
                   </button>
 
                   <button
@@ -1090,20 +1101,38 @@ ${paymentBreakdownText}
 
               {/* Main Media Stage with Click-to-Zoom */}
               {mediaViewMode === 'video' && activeVideoEmbed ? (
-                <div className="relative aspect-video rounded-2xl bg-black overflow-hidden mb-4 shadow-md border border-slate-800">
-                  {activeVideoEmbed.type === 'iframe' ? (
-                    <iframe
-                      src={activeVideoEmbed.embedUrl}
-                      title={activeModalProduct.name}
-                      className="w-full h-full border-0"
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                      allowFullScreen
-                    />
-                  ) : (
-                    <video controls autoPlay className="w-full h-full object-contain">
-                      <source src={activeVideoEmbed.embedUrl} type="video/mp4" />
-                      Your browser does not support HTML5 video.
-                    </video>
+                <div className="mb-4">
+                  <div className="relative aspect-video rounded-2xl bg-black overflow-hidden shadow-md border border-slate-800">
+                    {activeVideoEmbed.type === 'iframe' ? (
+                      <iframe
+                        src={activeVideoEmbed.embedUrl}
+                        title={activeModalProduct.name}
+                        className="w-full h-full border-0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                        allowFullScreen
+                      />
+                    ) : (
+                      <video controls playsInline preload="metadata" className="w-full h-full object-contain">
+                        <source src={activeVideoEmbed.embedUrl} type="video/mp4" />
+                        Your browser does not support HTML5 video.
+                      </video>
+                    )}
+                  </div>
+                  
+                  {/* Clean 1-Tap HD Fullscreen Option */}
+                  {activeModalProduct.video && (
+                    <div className="mt-2 flex items-center justify-between text-xs text-slate-500">
+                      <span>Live demonstration preview</span>
+                      <a
+                        href={activeModalProduct.video}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-purple-700 hover:text-purple-900 font-bold inline-flex items-center gap-1 bg-purple-50 hover:bg-purple-100 px-2.5 py-1 rounded-lg border border-purple-200 transition-colors"
+                      >
+                        <span>Open 1080p Original</span>
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </div>
                   )}
                 </div>
               ) : (
@@ -1113,7 +1142,7 @@ ${paymentBreakdownText}
                   title="Click to view full image in high resolution"
                 >
                   <img
-                    src={formatDriveUrl(activeModalProduct.images[activeImageIndex] || activeModalProduct.images[0])}
+                    src={formatDriveUrl(activeModalProduct.images?.[activeImageIndex] || activeModalProduct.images?.[0] || '')}
                     alt={activeModalProduct.name}
                     className="w-full h-full object-contain"
                   />
@@ -1122,7 +1151,7 @@ ${paymentBreakdownText}
                     <Maximize2 className="w-4 h-4" />
                   </div>
 
-                  {activeModalProduct.images.length > 1 && (
+                  {activeModalProduct.images && activeModalProduct.images.length > 1 && (
                     <div className="absolute inset-0 flex items-center justify-between px-3 pointer-events-none">
                       <button
                         onClick={(e) => {
@@ -1148,7 +1177,7 @@ ${paymentBreakdownText}
               )}
 
               {/* Photo Thumbnails */}
-              {mediaViewMode === 'photos' && activeModalProduct.images.length > 1 && (
+              {mediaViewMode === 'photos' && activeModalProduct.images && activeModalProduct.images.length > 1 && (
                 <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
                   {activeModalProduct.images.map((img, idx) => (
                     <button
@@ -1248,7 +1277,7 @@ ${paymentBreakdownText}
           <div className="flex items-center justify-between text-white max-w-5xl mx-auto w-full" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center gap-3">
               <span className="font-mono text-xs text-purple-300 font-bold bg-purple-900/60 px-2.5 py-1 rounded-lg border border-purple-700/50">
-                {activeImageIndex + 1} / {activeModalProduct.images.length}
+                {activeImageIndex + 1} / {activeModalProduct.images?.length || 1}
               </span>
               <h4 className="text-xs sm:text-sm font-semibold truncate max-w-[200px] sm:max-w-md text-slate-200">
                 {activeModalProduct.name}
@@ -1264,12 +1293,12 @@ ${paymentBreakdownText}
 
           <div className="relative flex-1 flex items-center justify-center max-w-5xl mx-auto w-full my-4" onClick={(e) => e.stopPropagation()}>
             <img
-              src={formatDriveUrl(activeModalProduct.images[activeImageIndex])}
+              src={formatDriveUrl(activeModalProduct.images?.[activeImageIndex] || activeModalProduct.images?.[0] || '')}
               alt=""
               className="max-h-[80vh] max-w-full object-contain rounded-2xl shadow-2xl select-none"
             />
 
-            {activeModalProduct.images.length > 1 && (
+            {activeModalProduct.images && activeModalProduct.images.length > 1 && (
               <>
                 <button
                   onClick={() => setActiveImageIndex((prev) => (prev === 0 ? activeModalProduct.images.length - 1 : prev - 1))}
@@ -1287,7 +1316,7 @@ ${paymentBreakdownText}
             )}
           </div>
 
-          {activeModalProduct.images.length > 1 && (
+          {activeModalProduct.images && activeModalProduct.images.length > 1 && (
             <div className="flex justify-center gap-2 max-w-md mx-auto overflow-x-auto py-2" onClick={(e) => e.stopPropagation()}>
               {activeModalProduct.images.map((img, idx) => (
                 <button
@@ -1361,7 +1390,7 @@ ${paymentBreakdownText}
                 cart.map(({ product, quantity }) => (
                   <div key={product.id} className="flex gap-3 p-3 bg-slate-50 rounded-2xl border border-slate-100 items-center">
                     <img 
-                      src={formatDriveUrl(product.images[0])} 
+                      src={formatDriveUrl(product.images?.[0] || '')} 
                       alt="" 
                       className="w-14 h-14 object-cover rounded-xl bg-white border border-slate-200" 
                     />
@@ -1429,14 +1458,12 @@ ${paymentBreakdownText}
         </div>
       )}
 
-      {/* Checkout Modal: Persistent State & Streamlined Flow */}
+      {/* Checkout Modal */}
       {isCheckoutOpen && (
         <div 
           className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4"
-          // Prevent accidental backdrop taps from destroying session
           onClick={(e) => {
             if (e.target === e.currentTarget) {
-              // Click outside closes modal visually but localStorage preserves all data
               setIsCheckoutOpen(false);
             }
           }}
