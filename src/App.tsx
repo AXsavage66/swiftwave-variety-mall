@@ -47,11 +47,14 @@ export function getVideoThumbnail(videoUrl?: string): string | null {
   if (!videoUrl) return null;
   const cleanUrl = videoUrl.trim();
 
-  // Google Drive Video Preview Frame
-  const driveMatch = cleanUrl.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) || cleanUrl.match(/id=([a-zA-Z0-9_-]+)/);
-  if (driveMatch && driveMatch[1]) {
-    return `https://lh3.googleusercontent.com/d/${driveMatch[1]}=w800`;
-  }
+  // Google Drive Video Links - Direct Raw Stream
+const driveMatch = cleanUrl.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) || cleanUrl.match(/id=([a-zA-Z0-9_-]+)/);
+if (driveMatch && driveMatch[1]) {
+  return {
+    type: 'video',
+    embedUrl: `https://drive.usercontent.google.com/download?id=${driveMatch[1]}&export=download`
+  };
+}
 
   // YouTube / Shorts High-Res Thumbnail
   const ytMatch = cleanUrl.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([a-zA-Z0-9_-]+)/);
