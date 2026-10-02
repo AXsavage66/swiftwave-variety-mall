@@ -41,6 +41,25 @@ export function formatDriveUrl(url: string): string {
   return url.trim();
 }
 
+export function getVideoThumbnail(videoUrl?: string): string | null {
+  if (!videoUrl) return null;
+  const cleanUrl = videoUrl.trim();
+
+  // Google Drive Video Preview Frame
+  const driveMatch = cleanUrl.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) || cleanUrl.match(/id=([a-zA-Z0-9_-]+)/);
+  if (driveMatch && driveMatch[1]) {
+    return `https://lh3.googleusercontent.com/d/${driveMatch[1]}=w800`;
+  }
+
+  // YouTube / Shorts High-Res Thumbnail
+  const ytMatch = cleanUrl.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([a-zA-Z0-9_-]+)/);
+  if (ytMatch && ytMatch[1]) {
+    return `https://img.youtube.com/vi/${ytMatch[1]}/hqdefault.jpg`;
+  }
+
+  return null;
+}
+
 export function getVideoEmbed(url?: string): { type: 'iframe' | 'video'; embedUrl: string } | null {
   if (!url) return null;
   const cleanUrl = url.trim();
@@ -330,6 +349,16 @@ export default function App() {
             ? clean(row[5]).split(/[;,]/).map(u => clean(u)).filter(Boolean)
             : [];
 
+          const rawVideo = clean(row[8]);
+          const videoThumbnail = getVideoThumbnail(rawVideo);
+
+          // Use custom images if present; falls back to video preview frame automatically
+          const finalImages = rawImages.length > 0 
+            ? rawImages 
+            : videoThumbnail 
+              ? [videoThumbnail] 
+              : [""];
+
           const rawQuantity = clean(row[9]);
           const parsedQty = rawQuantity !== '' && !isNaN(Number(rawQuantity)) 
             ? Number(rawQuantity) 
@@ -343,10 +372,10 @@ export default function App() {
             category: normalizeCategory(clean(row[2])),
             price: Number(clean(row[3]).replace(/[^0-9.-]+/g, '')) || 0,
             description: clean(row[4]),
-            images: rawImages.length > 0 ? rawImages : [""],
+            images: finalImages,
             badge: clean(row[6]) || undefined,
             in_stock: !isExplicitlySoldOut && (clean(row[7]).toLowerCase() === 'true' || clean(row[7]).toLowerCase() === 'yes'),
-            video: clean(row[8]) || undefined,
+            video: rawVideo || undefined,
             stock_quantity: parsedQty,
           });
         }
@@ -611,7 +640,7 @@ ${paymentBreakdownText}
       {/* Offline Alert Strip */}
       {isOffline && (
         <div className="bg-amber-500 text-amber-950 text-xs py-1.5 px-4 font-bold text-center flex items-center justify-center gap-1.5 shadow-sm">
-          <span>⚠️️ You are browsing offline. Showing saved inventory and catalog prices.</span>
+          <span>⚠ You are browsing offline. Showing saved inventory and catalog prices.</span>
         </div>
       )}
 
@@ -807,7 +836,8 @@ ${paymentBreakdownText}
                     onClick={() => {
                       setActiveModalProduct(product);
                       setActiveImageIndex(0);
-                      setMediaViewMode('photos');
+                      // If product has a video and no custom images, jump directly to video mode
+                      setMediaViewMode(product.video && (!product.images[0] || product.images[0].includes('unsplash')) ? 'video' : 'photos');
                       setIsDescExpanded(false);
                     }}
                   >
@@ -859,7 +889,7 @@ ${paymentBreakdownText}
                         onClick={() => {
                           setActiveModalProduct(product);
                           setActiveImageIndex(0);
-                          setMediaViewMode('photos');
+                          setMediaViewMode(product.video && (!product.images[0] || product.images[0].includes('unsplash')) ? 'video' : 'photos');
                           setIsDescExpanded(false);
                         }}
                         className="text-sm font-bold text-slate-900 line-clamp-2 hover:text-purple-700 cursor-pointer transition-colors"
