@@ -3,21 +3,66 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Swiftwave Variety Mall</title>
-    
-    <!-- Search & Social Metadata -->
-    <meta name="description" content="Swiftwave Variety Mall — Shop 9 & 10 ABH Plaza, Bosso Road, Minna. Premium gadgets, household essentials, and free Sunday campus delivery." />
-    
-    <!-- WhatsApp & Social Link Previews -->
-    <meta property="og:title" content="Swiftwave Variety Mall" />
-    <meta property="og:description" content="Shop 9 & 10 ABH Plaza, Minna. Gadgets, household supplies, and hostel delivery." />
-    <meta property="og:type" content="website" />
+    <title>Swiftwave Variety Mall Limited | Minna</title>
 
-    <!-- Shopping Bag Tab Icon -->
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23059669'%3E%3Cpath d='M16 6V4a4 4 0 0 0-8 0v2H4a1 1 0 0 0-1 1v13a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7a1 1 0 0 0-1-1h-3zm-6-2a2 2 0 0 1 4 0v2h-4V4zm8 15H6V8h2v2a1 1 0 1 0 2 0V8h4v2a1 1 0 1 0 2 0V8h2v11z'/%3E%3C/svg%3E" />
+    <!-- Mobile Browser Address Bar Tint (Swiftwave Royal Purple) -->
+    <meta name="theme-color" content="#6D28D9" />
+
+    <!-- Search Metadata -->
+    <meta
+      name="description"
+      content="Swiftwave Variety Mall Limited — Shop 9 & 10 ABH Plaza, Minna. Verified gadgets, phone accessories, school supplies, home essentials, and fast dispatch."
+    />
+
+    <!-- WhatsApp & Social Media Preview Cards (Full Horizontal Banner) -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://swiftwave-variety-mall.vercel.app/" />
+    <meta property="og:title" content="Swiftwave Variety Mall Limited" />
+    <meta
+      property="og:description"
+      content="Everyday essentials built for the way you actually live. Shop 9 & 10 ABH Plaza, Minna."
+    />
+    <meta property="og:image" content="https://swiftwave-variety-mall.vercel.app/logo.png" />
+    <meta property="og:image:secure_url" content="https://swiftwave-variety-mall.vercel.app/logo.png" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+
+    <!-- Twitter Summary Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Swiftwave Variety Mall Limited" />
+    <meta
+      name="twitter:description"
+      content="Shop 9 & 10 ABH Plaza, Minna. Verified gadgets, accessories, and everyday essentials."
+    />
+    <meta name="twitter:image" content="https://swiftwave-variety-mall.vercel.app/logo.png" />
+
+    <!-- Square Launcher & App Icons (Android, Brave, iOS, Favicons) -->
+    <link rel="icon" type="image/png" sizes="192x192" href="/icon.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icon.png" />
+    <link rel="shortcut icon" href="/icon.png" />
+
+    <!-- Web App Manifest -->
+    <link rel="manifest" href="/manifest.json" />
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+
+    <!-- Offline Service Worker Registration -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker
+            .register('/sw.js')
+            .then((registration) => {
+              console.log('Swiftwave Service Worker registered:', registration.scope);
+            })
+            .catch((error) => {
+              console.error('Service Worker registration failed:', error);
+            });
+        });
+      }
+    </script>
   </body>
 </html>
