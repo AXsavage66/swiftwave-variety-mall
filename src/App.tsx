@@ -572,12 +572,65 @@ export default function App() {
       });
   }, [products, selectedCategory, searchQuery]);
 
-  // Related Products Calculation
+  // Smart Semantic & Price-Tier Related Products Recommendation Engine
   const relatedProducts = useMemo(() => {
     if (!activeModalProduct || products.length === 0) return [];
-    return products
-      .filter((p) => p.id !== activeModalProduct.id && p.category === activeModalProduct.category)
-      .slice(0, 4);
+
+    const stopWords = new Set([
+      'and', 'the', 'for', 'with', 'in', 'of', 'to', 'a', 'an', 'at', 
+      'by', 'from', 'on', 'is', 'it', 'or', 'as', 'are', 'be', 'this',
+      'that', 'your', 'original', 'high', 'quality', 'new', 'best', 'pro', 'plus'
+    ]);
+
+    // Tokenize active product name into meaningful search terms
+    const currentTokens = activeModalProduct.name
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, ' ')
+      .split(/\s+/)
+      .filter((w) => w.length > 2 && !stopWords.has(w));
+
+    const scored = products
+      .filter((p) => p.id !== activeModalProduct.id)
+      .map((p) => {
+        let score = 0;
+        const pNameLower = p.name.toLowerCase();
+        const pDescLower = (p.description || '').toLowerCase();
+
+        // 1. Same category baseline
+        if (p.category.toLowerCase() === activeModalProduct.category.toLowerCase()) {
+          score += 3;
+        }
+
+        // 2. High-value keyword match (e.g., "laptop", "dell", "stand", "charger")
+        currentTokens.forEach((token) => {
+          if (pNameLower.includes(token)) {
+            score += 7; // Matches specific product family directly in title
+          } else if (pDescLower.includes(token)) {
+            score += 1.5;
+          }
+        });
+
+        // 3. In-stock priority
+        if (p.in_stock) {
+          score += 1;
+        }
+
+        return { product: p, score };
+      });
+
+    // Sort by relevance score first, then break ties by price proximity
+    const sorted = scored
+      .filter((item) => item.score > 0)
+      .sort((a, b) => {
+        if (b.score !== a.score) {
+          return b.score - a.score;
+        }
+        const diffA = Math.abs(a.product.price - activeModalProduct.price);
+        const diffB = Math.abs(b.product.price - activeModalProduct.price);
+        return diffA - diffB;
+      });
+
+    return sorted.slice(0, 4).map((item) => item.product);
   }, [activeModalProduct, products]);
 
   // Add to Cart
@@ -1316,14 +1369,14 @@ ${paymentBreakdownText}
                 </div>
               </div>
 
-              {/* Related Products Section */}
+              {/* Smart Related Products Section */}
               {relatedProducts.length > 0 && (
                 <div className="mt-6 pt-5 border-t border-slate-100">
                   <div className="flex items-center justify-between mb-3">
                     <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700">
-                      Related in {activeModalProduct.category}
+                      Similar & Related Products
                     </h4>
-                    <span className="text-[10px] text-purple-700 font-semibold">Similar items</span>
+                    <span className="text-[10px] text-purple-700 font-semibold">Recommended for you</span>
                   </div>
 
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
@@ -2035,7 +2088,7 @@ ${paymentBreakdownText}
           onClick={() => setShowCertLightbox(false)}
         >
           <div 
-            className="bg-white rounded-2xl max-xl w-full p-4 relative shadow-2xl border border-slate-200 overflow-hidden max-h-[92vh] flex flex-col"
+            className="bg-white rounded-2xl max-w-xl w-full p-4 relative shadow-2xl border border-slate-200 overflow-hidden max-h-[92vh] flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
