@@ -75,7 +75,7 @@ export function getVideoEmbed(url?: string): { type: 'iframe' | 'video'; embedUr
     };
   }
 
-  // Google Drive Video Links - Official Embed Preview (Reliable on mobile)
+  // Google Drive Video Links - Official Embed Preview
   const driveMatch = cleanUrl.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) || cleanUrl.match(/id=([a-zA-Z0-9_-]+)/);
   if (driveMatch && driveMatch[1]) {
     return {
@@ -1099,17 +1099,16 @@ ${paymentBreakdownText}
                 </div>
               )}
 
-              {/* Main Media Stage: Portrait-First Container */}
+              {/* Main Media Stage: Full Width 4:3 with Fullscreen support */}
               {mediaViewMode === 'video' && activeVideoEmbed ? (
                 <div className="mb-4">
-                  {/* Portrait-friendly 9:16 aspect ratio box with max width so mobile videos aren't squeezed */}
-                  <div className="relative w-full max-w-[320px] mx-auto aspect-[9/16] max-h-[460px] rounded-2xl bg-black overflow-hidden shadow-md border border-slate-800 flex items-center justify-center">
+                  <div className="relative w-full aspect-[4/3] sm:aspect-video rounded-2xl bg-black overflow-hidden shadow-md border border-slate-800 flex items-center justify-center">
                     {activeVideoEmbed.type === 'iframe' ? (
                       <iframe
                         src={activeVideoEmbed.embedUrl}
                         title={activeModalProduct.name}
                         className="w-full h-full border-0"
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                        allow="fullscreen; accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                         allowFullScreen
                       />
                     ) : (
@@ -1126,7 +1125,7 @@ ${paymentBreakdownText}
                   </div>
                   
                   {activeModalProduct.video && (
-                    <div className="mt-2.5 flex items-center justify-between text-xs text-slate-500 max-w-[320px] mx-auto">
+                    <div className="mt-2.5 flex items-center justify-between text-xs text-slate-500">
                       <span>Store demonstration</span>
                       <a
                         href={activeModalProduct.video}
@@ -1134,7 +1133,7 @@ ${paymentBreakdownText}
                         rel="noreferrer"
                         className="text-purple-700 hover:text-purple-900 font-bold inline-flex items-center gap-1 bg-purple-50 hover:bg-purple-100 px-2.5 py-1 rounded-lg border border-purple-200 transition-colors"
                       >
-                        <span>Open in Google Drive</span>
+                        <span>Open Original Link</span>
                         <ExternalLink className="w-3 h-3" />
                       </a>
                     </div>
