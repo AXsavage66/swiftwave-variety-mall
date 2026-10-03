@@ -75,12 +75,12 @@ export function getVideoEmbed(url?: string): { type: 'iframe' | 'video'; embedUr
     };
   }
 
-  // Google Drive Video Links - Direct Raw Stream (Bypasses Preview Iframe & UI overlays)
+  // Google Drive Video Links - Official Embed Preview (Reliable on mobile)
   const driveMatch = cleanUrl.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) || cleanUrl.match(/id=([a-zA-Z0-9_-]+)/);
   if (driveMatch && driveMatch[1]) {
     return {
-      type: 'video',
-      embedUrl: `https://drive.usercontent.google.com/download?id=${driveMatch[1]}&export=download`
+      type: 'iframe',
+      embedUrl: `https://drive.google.com/file/d/${driveMatch[1]}/preview`
     };
   }
 
@@ -1099,11 +1099,11 @@ ${paymentBreakdownText}
                 </div>
               )}
 
-              {/* Main Media Stage with Click-to-Zoom */}
+              {/* Main Media Stage: Portrait-First Container */}
               {mediaViewMode === 'video' && activeVideoEmbed ? (
                 <div className="mb-4">
-                  {/* Flexible aspect ratio: taller on mobile so vertical phone videos are not squished */}
-                  <div className="relative aspect-[4/3] sm:aspect-video max-h-[380px] w-full rounded-2xl bg-black overflow-hidden shadow-md border border-slate-800 flex items-center justify-center">
+                  {/* Portrait-friendly 9:16 aspect ratio box with max width so mobile videos aren't squeezed */}
+                  <div className="relative w-full max-w-[320px] mx-auto aspect-[9/16] max-h-[460px] rounded-2xl bg-black overflow-hidden shadow-md border border-slate-800 flex items-center justify-center">
                     {activeVideoEmbed.type === 'iframe' ? (
                       <iframe
                         src={activeVideoEmbed.embedUrl}
@@ -1126,15 +1126,15 @@ ${paymentBreakdownText}
                   </div>
                   
                   {activeModalProduct.video && (
-                    <div className="mt-2 flex items-center justify-between text-xs text-slate-500">
-                      <span>Direct video stream</span>
+                    <div className="mt-2.5 flex items-center justify-between text-xs text-slate-500 max-w-[320px] mx-auto">
+                      <span>Store demonstration</span>
                       <a
                         href={activeModalProduct.video}
                         target="_blank"
                         rel="noreferrer"
                         className="text-purple-700 hover:text-purple-900 font-bold inline-flex items-center gap-1 bg-purple-50 hover:bg-purple-100 px-2.5 py-1 rounded-lg border border-purple-200 transition-colors"
                       >
-                        <span>Open 1080p Original</span>
+                        <span>Open in Google Drive</span>
                         <ExternalLink className="w-3 h-3" />
                       </a>
                     </div>
