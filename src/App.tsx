@@ -2114,7 +2114,7 @@ ${paymentBreakdownText}
               <h4 className="text-white font-bold text-xs uppercase tracking-wider mb-3">Store Location</h4>
               <p className="leading-relaxed text-purple-300/70">
                 Shop 9 & 10, ABH Plaza,<br />
-                Opposite FUTMINNA Road,<br />
+                Bosso Road, Opposite Fire Service,<br />
                 Minna, Niger State.
               </p>
             </div>
