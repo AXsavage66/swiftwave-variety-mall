@@ -51,13 +51,11 @@ export function getVideoThumbnail(videoUrl?: string): string | null {
   if (!videoUrl) return null;
   const cleanUrl = videoUrl.trim();
 
-  // Google Drive Video Preview Frame
   const driveMatch = cleanUrl.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) || cleanUrl.match(/id=([a-zA-Z0-9_-]+)/);
   if (driveMatch && driveMatch[1]) {
     return `https://lh3.googleusercontent.com/d/${driveMatch[1]}=w800`;
   }
 
-  // YouTube / Shorts High-Res Thumbnail
   const ytMatch = cleanUrl.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([a-zA-Z0-9_-]+)/);
   if (ytMatch && ytMatch[1]) {
     return `https://img.youtube.com/vi/${ytMatch[1]}/hqdefault.jpg`;
@@ -70,7 +68,6 @@ export function getVideoEmbed(url?: string): { type: 'iframe' | 'video'; embedUr
   if (!url) return null;
   const cleanUrl = url.trim();
 
-  // YouTube Links (Standard, Shorts, or youtu.be)
   const ytMatch = cleanUrl.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([a-zA-Z0-9_-]+)/);
   if (ytMatch && ytMatch[1]) {
     return {
@@ -79,7 +76,6 @@ export function getVideoEmbed(url?: string): { type: 'iframe' | 'video'; embedUr
     };
   }
 
-  // Google Drive Video Links - Official Embed Preview
   const driveMatch = cleanUrl.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) || cleanUrl.match(/id=([a-zA-Z0-9_-]+)/);
   if (driveMatch && driveMatch[1]) {
     return {
@@ -88,7 +84,6 @@ export function getVideoEmbed(url?: string): { type: 'iframe' | 'video'; embedUr
     };
   }
 
-  // Direct MP4 / WebM
   if (cleanUrl.match(/\.(mp4|webm|ogg)$/i)) {
     return {
       type: 'video',
@@ -215,10 +210,10 @@ const SUPPORT_REPS = [
 ];
 
 const MINNA_ZONES = [
-  'FUTMINNA Gidan Kwano (Main Campus / Main Gate)',
   'Bosso (FUTMINNA Bosso Campus / Bosso Low-Cost / Mobil)',
-  'Tunga (Commercial Hub / Market / Police HQ / GRA)',
   'Chanchaga / Shiroro Road / College of Education (COE)',
+  'Tunga (Commercial Hub / Market / Police HQ / GRA)',
+  'FUTMINNA Gidan Kwano (Main Campus / Main Gate)',
   'Kpakungu / Western Bypass / Minna City Gate',
   'Maitumbi / Old Airport Road',
   'Dutsen Kura (Gwari & Hausa) / Kure Market',
@@ -461,6 +456,49 @@ export default function App() {
       .finally(() => setLoading(false));
   }, []);
 
+  // Deep Link State Recovery: Restore Product Modal on Browser Reload
+  useEffect(() => {
+    if (products.length === 0) return;
+
+    const params = new URLSearchParams(window.location.search);
+    const productIdFromUrl = params.get('product') || sessionStorage.getItem('swiftwave_active_modal');
+
+    if (productIdFromUrl && !activeModalProduct) {
+      const matched = products.find((p) => p.id === productIdFromUrl);
+      if (matched) {
+        setActiveModalProduct(matched);
+        setActiveImageIndex(0);
+        setMediaViewMode('photos');
+      }
+    }
+  }, [products]);
+
+  // Modal Open & Close with URL Bar and Session State Synchronization
+  const openProductModal = (product: Product) => {
+    setActiveModalProduct(product);
+    setActiveImageIndex(0);
+    setMediaViewMode('photos');
+    setIsDescExpanded(false);
+
+    try {
+      const newUrl = `${window.location.pathname}?product=${encodeURIComponent(product.id)}`;
+      window.history.replaceState(null, '', newUrl);
+      sessionStorage.setItem('swiftwave_active_modal', product.id);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const closeProductModal = () => {
+    setActiveModalProduct(null);
+    try {
+      window.history.replaceState(null, '', window.location.pathname);
+      sessionStorage.removeItem('swiftwave_active_modal');
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   // Cart & Inventory Stock Reconciliation
   useEffect(() => {
     if (products.length === 0) return;
@@ -533,6 +571,14 @@ export default function App() {
         return a.in_stock ? -1 : 1;
       });
   }, [products, selectedCategory, searchQuery]);
+
+  // Related Products Calculation
+  const relatedProducts = useMemo(() => {
+    if (!activeModalProduct || products.length === 0) return [];
+    return products
+      .filter((p) => p.id !== activeModalProduct.id && p.category === activeModalProduct.category)
+      .slice(0, 4);
+  }, [activeModalProduct, products]);
 
   // Add to Cart
   const addToCart = (product: Product) => {
@@ -984,12 +1030,7 @@ ${paymentBreakdownText}
                 >
                   <div 
                     className="relative aspect-square w-full bg-slate-100 overflow-hidden cursor-pointer"
-                    onClick={() => {
-                      setActiveModalProduct(product);
-                      setActiveImageIndex(0);
-                      setMediaViewMode('photos');
-                      setIsDescExpanded(false);
-                    }}
+                    onClick={() => openProductModal(product)}
                   >
                     <img
                       src={displayImage}
@@ -1036,12 +1077,7 @@ ${paymentBreakdownText}
                       </div>
 
                       <h3 
-                        onClick={() => {
-                          setActiveModalProduct(product);
-                          setActiveImageIndex(0);
-                          setMediaViewMode('photos');
-                          setIsDescExpanded(false);
-                        }}
+                        onClick={() => openProductModal(product)}
                         className="text-sm font-bold text-slate-900 line-clamp-2 hover:text-purple-700 cursor-pointer transition-colors"
                       >
                         {product.name}
@@ -1099,7 +1135,12 @@ ${paymentBreakdownText}
 
       {/* Product Detail Modal */}
       {activeModalProduct && (
-        <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4">
+        <div 
+          className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) closeProductModal();
+          }}
+        >
           <div className="bg-white rounded-3xl max-w-2xl w-full overflow-hidden shadow-2xl relative border border-slate-200 flex flex-col max-h-[92vh]">
             
             <div className="p-4 border-b border-slate-100 flex items-center justify-between">
@@ -1110,7 +1151,7 @@ ${paymentBreakdownText}
                 <span className="text-xs text-slate-400">• {activeModalProduct.category}</span>
               </div>
               <button
-                onClick={() => setActiveModalProduct(null)}
+                onClick={closeProductModal}
                 className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-colors"
               >
                 <X className="w-4 h-4" />
@@ -1147,7 +1188,7 @@ ${paymentBreakdownText}
                 </div>
               )}
 
-              {/* Main Media Stage: Full Width 4:3 with Fullscreen support */}
+              {/* Main Media Stage */}
               {mediaViewMode === 'video' && activeVideoEmbed ? (
                 <div className="mb-4">
                   <div className="relative w-full aspect-[4/3] sm:aspect-video rounded-2xl bg-black overflow-hidden shadow-md border border-slate-800 flex items-center justify-center">
@@ -1274,6 +1315,45 @@ ${paymentBreakdownText}
                   )}
                 </div>
               </div>
+
+              {/* Related Products Section */}
+              {relatedProducts.length > 0 && (
+                <div className="mt-6 pt-5 border-t border-slate-100">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                      Related in {activeModalProduct.category}
+                    </h4>
+                    <span className="text-[10px] text-purple-700 font-semibold">Similar items</span>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                    {relatedProducts.map((relProduct) => (
+                      <div
+                        key={relProduct.id}
+                        onClick={() => openProductModal(relProduct)}
+                        className="group cursor-pointer bg-slate-50 hover:bg-purple-50/50 p-2 rounded-xl border border-slate-200/80 hover:border-purple-300 transition-all flex flex-col justify-between"
+                      >
+                        <div className="aspect-square w-full rounded-lg overflow-hidden bg-white mb-2 border border-slate-100">
+                          <img
+                            src={formatDriveUrl(relProduct.images?.[0] || '')}
+                            alt={relProduct.name}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            loading="lazy"
+                          />
+                        </div>
+                        <div>
+                          <p className="text-[11px] font-bold text-slate-900 line-clamp-1 group-hover:text-purple-700">
+                            {relProduct.name}
+                          </p>
+                          <p className="text-[11px] font-mono font-black text-purple-900 mt-0.5">
+                            ₦{relProduct.price.toLocaleString()}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Modal Bottom Bar */}
@@ -1295,7 +1375,7 @@ ${paymentBreakdownText}
                 <button
                   onClick={() => {
                     addToCart(activeModalProduct);
-                    setActiveModalProduct(null);
+                    closeProductModal();
                   }}
                   className="inline-flex items-center gap-2 text-sm font-bold px-6 py-2.5 rounded-xl shadow-md bg-purple-700 hover:bg-purple-800 text-white shadow-purple-700/30 transition-all active:scale-95"
                 >
@@ -1684,13 +1764,13 @@ ${paymentBreakdownText}
                     </label>
                     <input
                       type="text"
-                      placeholder="e.g. Gidan Kwano Main Gate, Bosso Low-Cost, or Street Address in Tunga"
+                      placeholder="e.g. Bosso Low-Cost, Mobil, or Street Address in Tunga"
                       value={landmarkHostel}
                       onChange={(e) => setLandmarkHostel(e.target.value)}
                       className="w-full text-xs p-2.5 rounded-xl border border-purple-300 bg-white text-slate-800 focus:border-purple-600 outline-none"
                     />
                     <p className="text-[10px] text-purple-700/80 mt-1">
-                      ℹ Campus dispatch riders meet customers at the Main School Gate / central landmark.
+                      ℹ Campus and metropolitan dispatch riders meet customers at the designated drop-off landmark.
                     </p>
                   </div>
                 </div>
@@ -1907,7 +1987,7 @@ ${paymentBreakdownText}
                   rel="noreferrer"
                   className="flex-1 inline-flex items-center justify-center gap-1.5 bg-white border border-slate-200 hover:border-purple-300 text-slate-700 hover:text-purple-700 py-2 rounded-xl text-xs font-bold transition-all shadow-sm"
                 >
-                  <Facebook className="w-3.5 h-3.5 text-blue-600" />
+                  <Facebook className="w-3.5 h-3.5" />
                   <span>Facebook</span>
                 </a>
               </div>
@@ -1955,7 +2035,7 @@ ${paymentBreakdownText}
           onClick={() => setShowCertLightbox(false)}
         >
           <div 
-            className="bg-white rounded-2xl max-w-xl w-full p-4 relative shadow-2xl border border-slate-200 overflow-hidden max-h-[92vh] flex flex-col"
+            className="bg-white rounded-2xl max-xl w-full p-4 relative shadow-2xl border border-slate-200 overflow-hidden max-h-[92vh] flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
