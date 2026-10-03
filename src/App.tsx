@@ -21,7 +21,11 @@ import {
   Image as ImageIcon,
   Maximize2,
   PhoneCall,
-  Check
+  Check,
+  Instagram,
+  Facebook,
+  MessageCircle,
+  Headphones
 } from 'lucide-react';
 
 // ==========================================
@@ -149,7 +153,7 @@ function parseCSVLine(text: string): string[] {
 }
 
 // ==========================================
-// 2. TYPES & STORE CONFIGURATION
+// 2. STORE CONFIGURATION & SOCIAL HANDLES
 // ==========================================
 export interface Product {
   id: string;
@@ -197,6 +201,18 @@ const SHOP_ACCOUNTS = {
     name: "SWIFTWAVE VARIETY MALL LIMITED",
   },
 };
+
+const SOCIAL_LINKS = {
+  instagram: "https://instagram.com/swiiftwave_variety_mall",
+  tiktok: "https://www.tiktok.com/@swiftwave.variety.mall",
+  facebook: "https://facebook.com/swiftwaveNG",
+};
+
+const SUPPORT_REPS = [
+  { id: 'sup1', name: 'Support 1 (Main Store)', number: '2349066524315' },
+  { id: 'sup2', name: 'Support 2 (Desk Rep)', number: '2348069318521' },
+  { id: 'sup3', name: 'Support 3 (Customer Line)', number: '2349132028088' },
+];
 
 const MINNA_ZONES = [
   'FUTMINNA Gidan Kwano (Main Campus / Main Gate)',
@@ -276,7 +292,12 @@ export default function App() {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showInstallBanner, setShowInstallBanner] = useState<boolean>(false);
 
-  // Customer, Fulfillment & Order Reference Fields
+  // Customer, Fulfillment & Rep Routing
+  const [selectedRepNumber, setSelectedRepNumber] = useState<string>(() => {
+    if (typeof window === 'undefined') return SUPPORT_REPS[0].number;
+    return localStorage.getItem('swiftwave_support_rep') || SUPPORT_REPS[0].number;
+  });
+
   const [orderId, setOrderId] = useState<string>(() => {
     if (typeof window === 'undefined') return '';
     return localStorage.getItem('swiftwave_order_id') || '';
@@ -317,8 +338,6 @@ export default function App() {
     return localStorage.getItem('swiftwave_order_notes') || '';
   });
 
-  const WHATSAPP_PHONE = "2349066524315";
-
   // Sync Form States to LocalStorage
   useEffect(() => {
     try {
@@ -332,10 +351,11 @@ export default function App() {
       localStorage.setItem('swiftwave_landmark', landmarkHostel);
       localStorage.setItem('swiftwave_deliv_address', deliveryAddress);
       localStorage.setItem('swiftwave_order_notes', orderNotes);
+      localStorage.setItem('swiftwave_support_rep', selectedRepNumber);
     } catch (e) {
       console.error('Storage sync error:', e);
     }
-  }, [cart, isCheckoutOpen, orderId, customerName, customerPhone, deliveryMethod, minnaCampusZone, landmarkHostel, deliveryAddress, orderNotes]);
+  }, [cart, isCheckoutOpen, orderId, customerName, customerPhone, deliveryMethod, minnaCampusZone, landmarkHostel, deliveryAddress, orderNotes, selectedRepNumber]);
 
   // Network State Listener
   useEffect(() => {
@@ -514,7 +534,7 @@ export default function App() {
       });
   }, [products, selectedCategory, searchQuery]);
 
-  // Non-intrusive Add to Cart
+  // Add to Cart
   const addToCart = (product: Product) => {
     setCart((prev) => {
       const existing = prev.find((item) => item?.product?.id === product.id);
@@ -698,7 +718,7 @@ ${paymentBreakdownText}
 *Transfer Remark Used:* ${orderId}
 *(Attached is my payment transfer receipt screenshot)*`;
 
-    window.open(`https://wa.me/${WHATSAPP_PHONE}?text=${encodeURIComponent(message)}`, '_blank');
+    window.open(`https://wa.me/${selectedRepNumber}?text=${encodeURIComponent(message)}`, '_blank');
     
     setCart([]);
     setOrderId('');
@@ -747,7 +767,7 @@ ${paymentBreakdownText}
         </aside>
       )}
 
-      {/* Top Corporate Legal Badge Bar */}
+      {/* Top Corporate Legal Badge Bar & Social Presence */}
       <div className="bg-[#170a2c] text-purple-200 text-xs py-2 px-4 border-b border-purple-950">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-2">
           <div className="flex items-center gap-2">
@@ -755,14 +775,42 @@ ${paymentBreakdownText}
             <span className="font-semibold text-white tracking-wide">SWIFTWAVE VARIETY MALL LIMITED</span>
             <span className="hidden md:inline text-purple-400/40">|</span>
             <span className="hidden md:inline font-mono text-purple-300">RC: 9468092</span>
-            <span className="hidden lg:inline text-purple-400/40">|</span>
-            <span className="hidden lg:inline font-mono text-purple-300">TIN: 2622689087269</span>
           </div>
+
           <div className="flex items-center gap-4 text-purple-300">
-            <span className="flex items-center gap-1">
-              <MapPin className="w-3.5 h-3.5 text-purple-400" />
-              Shop 9 & 10, ABH Plaza, Minna
-            </span>
+            {/* Social Header Quick Links */}
+            <div className="flex items-center gap-2.5 pr-2 border-r border-purple-900/80">
+              <a 
+                href={SOCIAL_LINKS.instagram} 
+                target="_blank" 
+                rel="noreferrer" 
+                className="hover:text-white transition-colors"
+                title="Follow on Instagram"
+              >
+                <Instagram className="w-3.5 h-3.5" />
+              </a>
+              <a 
+                href={SOCIAL_LINKS.tiktok} 
+                target="_blank" 
+                rel="noreferrer" 
+                className="hover:text-white transition-colors flex items-center"
+                title="Follow on TikTok"
+              >
+                <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                  <path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.99v8.29c.03 2.05-.72 4.17-2.18 5.62-1.74 1.79-4.34 2.5-6.75 1.95-2.61-.53-4.78-2.6-5.46-5.18-.8-2.91.43-6.19 3.02-7.66 1.48-.87 3.26-1.07 4.93-.68v4.11c-.93-.31-1.99-.25-2.87.21-1.09.56-1.74 1.77-1.64 3 .07 1.19.86 2.27 2 2.59 1.25.37 2.7-.1 3.42-1.13.38-.52.55-1.17.54-1.81V.02z" />
+                </svg>
+              </a>
+              <a 
+                href={SOCIAL_LINKS.facebook} 
+                target="_blank" 
+                rel="noreferrer" 
+                className="hover:text-white transition-colors"
+                title="Follow on Facebook"
+              >
+                <Facebook className="w-3.5 h-3.5" />
+              </a>
+            </div>
+
             <button 
               onClick={() => setShowAboutModal(true)} 
               className="hover:text-white underline underline-offset-2 flex items-center gap-1 text-xs transition-colors"
@@ -1027,7 +1075,7 @@ ${paymentBreakdownText}
                         </button>
                       ) : (
                         <a
-                          href={`https://wa.me/${WHATSAPP_PHONE}?text=${encodeURIComponent(
+                          href={`https://wa.me/${selectedRepNumber}?text=${encodeURIComponent(
                             `Hello Swiftwave Mall, I noticed "${product.name}" (ID: ${product.id}) is sold out. Please notify me when it is back in stock!`
                           )}`}
                           target="_blank"
@@ -1256,7 +1304,7 @@ ${paymentBreakdownText}
                 </button>
               ) : (
                 <a
-                  href={`https://wa.me/${WHATSAPP_PHONE}?text=${encodeURIComponent(
+                  href={`https://wa.me/${selectedRepNumber}?text=${encodeURIComponent(
                     `Hello Swiftwave Mall, I saw that "${activeModalProduct.name}" (ID: ${activeModalProduct.id}) is currently sold out. When are you restocking it?`
                   )}`}
                   target="_blank"
@@ -1504,10 +1552,39 @@ ${paymentBreakdownText}
 
             <h3 className="text-lg font-bold text-slate-900 mb-0.5">Checkout & Payment</h3>
             <p className="text-xs text-slate-500 mb-4 leading-relaxed">
-              Your details are safely saved. Copy the bank details below, complete the transfer in your banking app, and return here to submit your receipt via WhatsApp.
+              Copy the bank details below, transfer via your banking app, and return here to submit your receipt via WhatsApp.
             </p>
 
             <div className="space-y-3 mb-5">
+              
+              {/* WhatsApp Support Rep Selector */}
+              <div>
+                <label className="text-xs font-bold text-slate-700 flex items-center justify-between mb-1.5">
+                  <span className="flex items-center gap-1">
+                    <Headphones className="w-3.5 h-3.5 text-purple-700" />
+                    <span>Send Order To WhatsApp Rep</span>
+                  </span>
+                  <span className="text-[10px] text-slate-400">Choose who to message</span>
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  {SUPPORT_REPS.map((rep) => (
+                    <button
+                      key={rep.id}
+                      type="button"
+                      onClick={() => setSelectedRepNumber(rep.number)}
+                      className={`p-2 rounded-xl border text-left transition-all ${
+                        selectedRepNumber === rep.number
+                          ? 'border-emerald-600 bg-emerald-50 text-emerald-950 font-bold shadow-sm'
+                          : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                      }`}
+                    >
+                      <span className="text-[11px] block font-semibold leading-tight">{rep.name}</span>
+                      <span className="text-[10px] text-slate-500 font-mono mt-0.5 block">{rep.number}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <div>
                 <label className="text-xs font-bold text-slate-700 block mb-1">Full Name</label>
                 <input
@@ -1763,7 +1840,7 @@ ${paymentBreakdownText}
               <ExternalLink className="w-4 h-4" />
             </button>
             <p className="text-[11px] text-slate-400 text-center mt-2 leading-relaxed">
-              Your message will pre-fill with reference <strong className="font-mono text-slate-600">#{orderId}</strong> for instant store confirmation.
+              Order routes to selected rep with reference <strong className="font-mono text-slate-600">#{orderId}</strong> for instant store confirmation.
             </p>
           </div>
         </div>
@@ -1800,11 +1877,40 @@ ${paymentBreakdownText}
               Swiftwave is your modern everyday marketplace built for the way you actually live. Bringing together gadgets, home essentials, school supplies, phone accessories, beauty products, children's toys, and creator tools under one roof.
             </p>
 
-            <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 mb-3">
-              <span className="text-[11px] font-bold text-slate-900 uppercase tracking-wider block">Our Mission</span>
-              <p className="text-xs text-slate-600 mt-1">
-                To create stylish, affordable, and practical accessories that help students, professionals, and everyday users stay organized and express their identity.
-              </p>
+            {/* Official Social Media Strip */}
+            <div className="mb-4 p-3 bg-slate-50 rounded-2xl border border-slate-100">
+              <span className="text-[11px] font-bold text-slate-900 uppercase tracking-wider block mb-2">Connect With Us</span>
+              <div className="flex items-center gap-2">
+                <a
+                  href={SOCIAL_LINKS.instagram}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex-1 inline-flex items-center justify-center gap-1.5 bg-white border border-slate-200 hover:border-purple-300 text-slate-700 hover:text-purple-700 py-2 rounded-xl text-xs font-bold transition-all shadow-sm"
+                >
+                  <Instagram className="w-3.5 h-3.5 text-pink-600" />
+                  <span>Instagram</span>
+                </a>
+                <a
+                  href={SOCIAL_LINKS.tiktok}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex-1 inline-flex items-center justify-center gap-1.5 bg-white border border-slate-200 hover:border-purple-300 text-slate-700 hover:text-purple-700 py-2 rounded-xl text-xs font-bold transition-all shadow-sm"
+                >
+                  <svg className="w-3.5 h-3.5 fill-current text-slate-900" viewBox="0 0 24 24">
+                    <path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.99v8.29c.03 2.05-.72 4.17-2.18 5.62-1.74 1.79-4.34 2.5-6.75 1.95-2.61-.53-4.78-2.6-5.46-5.18-.8-2.91.43-6.19 3.02-7.66 1.48-.87 3.26-1.07 4.93-.68v4.11c-.93-.31-1.99-.25-2.87.21-1.09.56-1.74 1.77-1.64 3 .07 1.19.86 2.27 2 2.59 1.25.37 2.7-.1 3.42-1.13.38-.52.55-1.17.54-1.81V.02z" />
+                  </svg>
+                  <span>TikTok</span>
+                </a>
+                <a
+                  href={SOCIAL_LINKS.facebook}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex-1 inline-flex items-center justify-center gap-1.5 bg-white border border-slate-200 hover:border-purple-300 text-slate-700 hover:text-purple-700 py-2 rounded-xl text-xs font-bold transition-all shadow-sm"
+                >
+                  <Facebook className="w-3.5 h-3.5 text-blue-600" />
+                  <span>Facebook</span>
+                </a>
+              </div>
             </div>
 
             <div className="p-3.5 bg-purple-50/60 rounded-xl border border-purple-100 mb-4">
@@ -1933,8 +2039,8 @@ ${paymentBreakdownText}
       {/* Footer */}
       <footer className="bg-[#120722] text-purple-200/80 text-xs border-t border-purple-950 pt-10 pb-8 mt-auto">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pb-8 border-b border-purple-950">
-            <div>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 pb-8 border-b border-purple-950">
+            <div className="md:col-span-1">
               <div className="mb-3">
                 <img 
                   src="/logo.png" 
@@ -1945,26 +2051,71 @@ ${paymentBreakdownText}
                   }}
                 />
               </div>
-              <p className="text-purple-300/70 leading-relaxed text-xs max-w-sm">
+              <p className="text-purple-300/70 leading-relaxed text-xs">
                 Friendly, fast, and affordable. The one-stop shop that keeps everyday life moving.
               </p>
             </div>
 
             <div>
-              <h4 className="text-white font-bold text-xs uppercase tracking-wider mb-3">Physical Store</h4>
-              <p className="leading-relaxed text-purple-300/70">
-                Shop 9 & 10, ABH Plaza,<br />
-                Opposite Federal University of Technology (FUTMINNA) Road,<br />
-                Minna, Niger State.
-              </p>
+              <h4 className="text-white font-bold text-xs uppercase tracking-wider mb-3">Customer Support</h4>
+              <ul className="space-y-2 text-purple-300/70">
+                {SUPPORT_REPS.map((rep) => (
+                  <li key={rep.id}>
+                    <a 
+                      href={`https://wa.me/${rep.number}`} 
+                      target="_blank" 
+                      rel="noreferrer"
+                      className="hover:text-emerald-400 transition-colors flex items-center gap-1.5"
+                    >
+                      <MessageCircle className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>{rep.name}</span>
+                    </a>
+                  </li>
+                ))}
+              </ul>
             </div>
 
             <div>
-              <h4 className="text-white font-bold text-xs uppercase tracking-wider mb-3">Corporate Credentials</h4>
-              <p className="text-purple-300/70 leading-relaxed font-mono">
-                Entity: Swiftwave Variety Mall Limited<br />
-                Registration No: 9468092<br />
-                Tax ID: 2622689087269
+              <h4 className="text-white font-bold text-xs uppercase tracking-wider mb-3">Connect With Us</h4>
+              <div className="flex flex-col space-y-2 text-purple-300/70">
+                <a 
+                  href={SOCIAL_LINKS.instagram} 
+                  target="_blank" 
+                  rel="noreferrer"
+                  className="hover:text-pink-400 transition-colors flex items-center gap-1.5"
+                >
+                  <Instagram className="w-3.5 h-3.5" />
+                  <span>Instagram</span>
+                </a>
+                <a 
+                  href={SOCIAL_LINKS.tiktok} 
+                  target="_blank" 
+                  rel="noreferrer"
+                  className="hover:text-white transition-colors flex items-center gap-1.5"
+                >
+                  <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                    <path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.99v8.29c.03 2.05-.72 4.17-2.18 5.62-1.74 1.79-4.34 2.5-6.75 1.95-2.61-.53-4.78-2.6-5.46-5.18-.8-2.91.43-6.19 3.02-7.66 1.48-.87 3.26-1.07 4.93-.68v4.11c-.93-.31-1.99-.25-2.87.21-1.09.56-1.74 1.77-1.64 3 .07 1.19.86 2.27 2 2.59 1.25.37 2.7-.1 3.42-1.13.38-.52.55-1.17.54-1.81V.02z" />
+                  </svg>
+                  <span>TikTok</span>
+                </a>
+                <a 
+                  href={SOCIAL_LINKS.facebook} 
+                  target="_blank" 
+                  rel="noreferrer"
+                  className="hover:text-blue-400 transition-colors flex items-center gap-1.5"
+                >
+                  <Facebook className="w-3.5 h-3.5" />
+                  <span>Facebook</span>
+                </a>
+              </div>
+            </div>
+
+            <div>
+              <h4 className="text-white font-bold text-xs uppercase tracking-wider mb-3">Store Location</h4>
+              <p className="leading-relaxed text-purple-300/70">
+                Shop 9 & 10, ABH Plaza,<br />
+                Opposite FUTMINNA Road,<br />
+                Minna, Niger State.
               </p>
             </div>
           </div>
