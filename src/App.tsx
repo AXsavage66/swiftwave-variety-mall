@@ -198,9 +198,9 @@ const SHOP_ACCOUNTS = {
 };
 
 const SOCIAL_LINKS = {
-  instagram: "https://instagram.com/swiiftwave_variety_mall",
+  instagram: "https://www.instagram.com/swiftwave_variety_mall",
   tiktok: "https://www.tiktok.com/@swiftwave.variety.mall",
-  facebook: "https://facebook.com/swiftwaveNG",
+  facebook: "https://www.facebook.com/share/1FYNyb95Kz/",
 };
 
 const SUPPORT_REPS = [
