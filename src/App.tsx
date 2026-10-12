@@ -568,6 +568,16 @@ export default function App() {
       });
   }, [products, selectedCategory, searchQuery]);
 
+  const suggestedProducts = useMemo(() => {
+    if (filteredProducts.length > 0 || !searchQuery) return [];
+    const q = searchQuery.toLowerCase().trim();
+    
+    return products.filter(p => {
+      const nameLower = p.name.toLowerCase();
+      return q.split(/\s+/).some(word => word.length > 3 && nameLower.includes(word));
+    }).slice(0, 4); 
+  }, [filteredProducts.length, searchQuery, products]);
+
   const relatedProducts = useMemo(() => {
     if (!activeModalProduct || products.length === 0) return [];
 
@@ -1050,10 +1060,34 @@ ${paymentBreakdownText}
             </div>
             <h3 className="text-base font-bold text-slate-900">No exact match found</h3>
             <p className="text-xs text-slate-500 mt-1 mb-6">
-              We couldn't find exactly "{searchQuery}". Try checking your spelling or using broader terms.
+              We couldn't find exactly "{searchQuery}". 
             </p>
 
-            {/* Empty State Recovery Navigation */}
+            {/* Smart Product Suggestions */}
+            {suggestedProducts.length > 0 ? (
+              <div className="text-left bg-purple-50/50 rounded-xl p-4 border border-purple-100 mb-4">
+                <h4 className="text-xs font-bold text-purple-900 mb-3 flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-purple-600" /> Did you mean one of these?
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {suggestedProducts.map(p => (
+                    <button
+                      key={p.id}
+                      onClick={() => openProductModal(p)}
+                      className="flex items-center gap-3 bg-white p-2 rounded-lg border border-purple-100 hover:border-purple-300 transition-colors text-left"
+                    >
+                      <img src={formatDriveUrl(p.images?.[0] || '')} className="w-10 h-10 rounded-md object-cover bg-slate-50" alt="" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[11px] font-bold text-slate-900 truncate">{p.name}</p>
+                        <p className="text-[10px] text-purple-700 font-bold mt-0.5">₦{p.price.toLocaleString()}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            {/* Empty State Recovery Categories */}
             <div className="text-left bg-slate-50 rounded-xl p-4 border border-slate-100">
               <h4 className="text-xs font-bold text-slate-700 mb-2">Explore Popular Categories:</h4>
               <div className="flex flex-wrap gap-2">
