@@ -575,7 +575,7 @@ export default function App() {
     if (q.length < 3) return [];
 
     // Extract the first 4 letters as a root to bypass typos at the end of the word
-    const searchRoot = q.slice(0, 4);
+    const searchRoot = q.slice(0, 3);
 
     return products.filter(p => {
       const nameLower = p.name.toLowerCase();
