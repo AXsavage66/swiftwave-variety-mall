@@ -25,7 +25,8 @@ import {
   Instagram,
   Facebook,
   MessageCircle,
-  Headphones
+  Headphones,
+  Share
 } from 'lucide-react';
 
 // ==========================================
@@ -98,29 +99,18 @@ export function normalizeCategory(raw: string): string {
   if (!raw) return 'Gadgets';
   const s = raw.toLowerCase().trim();
 
-  if (s.includes('phone') || s.includes('appliance') || s.includes('accessori') || s.includes('earphone') || s.includes('case')) {
-    return 'Phone Accessories';
-  }
-  if (s.includes('gadget') || s.includes('power bank') || s.includes('tech') || s.includes('electronic')) {
-    return 'Gadgets';
-  }
-  if (s.includes('school') || s.includes('stationer') || s.includes('book') || s.includes('bag') || s.includes('pen')) {
-    return 'School Supplies';
-  }
-  if (s.includes('home') || s.includes('essential') || s.includes('kitchen') || s.includes('room')) {
-    return 'Home Essentials';
-  }
-  if (s.includes('beaut') || s.includes('cosmetic') || s.includes('skin') || s.includes('care')) {
-    return 'Beauty Products';
-  }
-  if (s.includes('toy') || s.includes('child') || s.includes('kid')) {
-    return "Children's Toys";
-  }
-  if (s.includes('creator') || s.includes('tool') || s.includes('ring light') || s.includes('stream') || s.includes('stand')) {
-    return 'Creator Tools';
-  }
+  if (s.includes('phone') || s.includes('appliance') || s.includes('accessori') || s.includes('earphone') || s.includes('case')) return 'Phone Accessories';
+  if (s.includes('gadget') || s.includes('power bank') || s.includes('tech') || s.includes('electronic')) return 'Gadgets';
+  if (s.includes('school') || s.includes('stationer') || s.includes('book') || s.includes('pen')) return 'School Supplies';
+  if (s.includes('kitchen') || s.includes('dining') || s.includes('cook') || s.includes('flask') || s.includes('blender') || s.includes('drink')) return 'Kitchen & Dining';
+  if (s.includes('home') || s.includes('essential') || s.includes('room') || s.includes('decor') || s.includes('light')) return 'Room Essentials';
+  if (s.includes('health') || s.includes('fitness') || s.includes('gym') || s.includes('massage') || s.includes('brace')) return 'Health & Fitness';
+  if (s.includes('beaut') || s.includes('cosmetic') || s.includes('skin') || s.includes('care') || s.includes('hair') || s.includes('clipper')) return 'Beauty & Care';
+  if (s.includes('bag') || s.includes('travel') || s.includes('backpack') || s.includes('luggage')) return 'Bags & Travel';
+  if (s.includes('toy') || s.includes('child') || s.includes('kid') || s.includes('game') || s.includes('chess') || s.includes('rubik')) return "Children's Toys";
+  if (s.includes('creator') || s.includes('tool') || s.includes('ring light') || s.includes('stream') || s.includes('stand') || s.includes('tripod')) return 'Creator Tools';
 
-  return raw.trim();
+  return 'Room Essentials'; 
 }
 
 function parseCSVLine(text: string): string[] {
@@ -173,11 +163,14 @@ const CATEGORIES = [
   'New In',
   'Gadgets',
   'Phone Accessories',
+  'Creator Tools',
   'School Supplies',
-  'Home Essentials',
-  'Beauty Products',
-  "Children's Toys",
-  'Creator Tools'
+  'Kitchen & Dining',
+  'Room Essentials',
+  'Health & Fitness',
+  'Beauty & Care',
+  'Bags & Travel',
+  "Children's Toys"
 ] as const;
 
 const GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1XysYSGvgDR9t70VSrIwdXsN3GwzOjFmLUOfgB2s8Xbo/gviz/tq?tqx=out:csv"; 
@@ -253,7 +246,6 @@ export default function App() {
   const [loading, setLoading] = useState<boolean>(true);
   const [isOffline, setIsOffline] = useState<boolean>(typeof navigator !== 'undefined' ? !navigator.onLine : false);
 
-  // Cart with Defensive LocalStorage Persistence
   const [cart, setCart] = useState<CartItem[]>(() => {
     if (typeof window === 'undefined') return [];
     try {
@@ -272,7 +264,6 @@ export default function App() {
   const [isCartOpen, setIsCartOpen] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Checkout Modal State
   const [isCheckoutOpen, setIsCheckoutOpen] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
     return localStorage.getItem('swiftwave_checkout_open') === 'true';
@@ -283,11 +274,12 @@ export default function App() {
   const [copiedOrderId, setCopiedOrderId] = useState<boolean>(false);
   const [removedItemsNotice, setRemovedItemsNotice] = useState<string[]>([]);
 
-  // PWA Install Prompt State
+  // PWA & iOS Install State
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showInstallBanner, setShowInstallBanner] = useState<boolean>(false);
+  const [isIOS, setIsIOS] = useState<boolean>(false);
+  const [isStandalone, setIsStandalone] = useState<boolean>(false);
 
-  // Customer, Fulfillment & Rep Routing
   const [selectedRepNumber, setSelectedRepNumber] = useState<string>(() => {
     if (typeof window === 'undefined') return SUPPORT_REPS[0].number;
     return localStorage.getItem('swiftwave_support_rep') || SUPPORT_REPS[0].number;
@@ -333,7 +325,6 @@ export default function App() {
     return localStorage.getItem('swiftwave_order_notes') || '';
   });
 
-  // Sync Form States to LocalStorage
   useEffect(() => {
     try {
       localStorage.setItem('swiftwave_cart', JSON.stringify(cart));
@@ -352,7 +343,6 @@ export default function App() {
     }
   }, [cart, isCheckoutOpen, orderId, customerName, customerPhone, deliveryMethod, minnaCampusZone, landmarkHostel, deliveryAddress, orderNotes, selectedRepNumber]);
 
-  // Network State Listener
   useEffect(() => {
     const handleOnline = () => setIsOffline(false);
     const handleOffline = () => setIsOffline(true);
@@ -366,26 +356,35 @@ export default function App() {
     };
   }, []);
 
-  // PWA Install Prompt Listener
+  // iOS & Android PWA Install Logic
   useEffect(() => {
-    const handleBeforeInstall = (e: Event) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
-      const dismissed = sessionStorage.getItem('swiftwave_install_dismissed');
-      if (!dismissed) {
-        setShowInstallBanner(true);
-      }
-    };
+    if (typeof window !== 'undefined') {
+      const ua = window.navigator.userAgent.toLowerCase();
+      const iosDevice = /iphone|ipad|ipod/.test(ua);
+      const isPWA = ('standalone' in window.navigator) && !!(window.navigator as any).standalone;
+      
+      setIsIOS(iosDevice);
+      setIsStandalone(isPWA);
 
-    window.addEventListener('beforeinstallprompt', handleBeforeInstall);
-    window.addEventListener('appinstalled', () => {
-      setShowInstallBanner(false);
-      setDeferredPrompt(null);
-    });
+      const handleBeforeInstall = (e: Event) => {
+        e.preventDefault();
+        setDeferredPrompt(e);
+        const dismissed = sessionStorage.getItem('swiftwave_install_dismissed');
+        if (!dismissed) {
+          setShowInstallBanner(true);
+        }
+      };
 
-    return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
-    };
+      window.addEventListener('beforeinstallprompt', handleBeforeInstall);
+      window.addEventListener('appinstalled', () => {
+        setShowInstallBanner(false);
+        setDeferredPrompt(null);
+      });
+
+      return () => {
+        window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
+      };
+    }
   }, []);
 
   const handleInstallClick = async () => {
@@ -403,7 +402,6 @@ export default function App() {
     sessionStorage.setItem('swiftwave_install_dismissed', 'true');
   };
 
-  // Google Sheet Catalog Sync
   useEffect(() => {
     fetch(GOOGLE_SHEET_CSV_URL)
       .then((res) => res.text())
@@ -456,7 +454,6 @@ export default function App() {
       .finally(() => setLoading(false));
   }, []);
 
-  // Deep Link State Recovery: Restore Product Modal on Browser Reload
   useEffect(() => {
     if (products.length === 0) return;
 
@@ -473,7 +470,6 @@ export default function App() {
     }
   }, [products]);
 
-  // Modal Open & Close with URL Bar and Session State Synchronization
   const openProductModal = (product: Product) => {
     setActiveModalProduct(product);
     setActiveImageIndex(0);
@@ -499,7 +495,6 @@ export default function App() {
     }
   };
 
-  // Cart & Inventory Stock Reconciliation
   useEffect(() => {
     if (products.length === 0) return;
 
@@ -539,7 +534,6 @@ export default function App() {
     });
   }, [products]);
 
-  // Catalog Filtering
   const filteredProducts = useMemo(() => {
     if (!Array.isArray(products)) return [];
     return products
@@ -557,12 +551,14 @@ export default function App() {
         const pName = p.name || '';
         const pDesc = p.description || '';
         const pId = p.id || '';
-        const q = searchQuery.toLowerCase();
-
-        const matchesSearch = 
-          pName.toLowerCase().includes(q) || 
-          pDesc.toLowerCase().includes(q) ||
-          pId.toLowerCase().includes(q);
+        const q = searchQuery.toLowerCase().trim();
+        
+        const searchTokens = q.split(/\s+/).filter(Boolean);
+        const matchesSearch = searchTokens.length === 0 || searchTokens.every(token => 
+          pName.toLowerCase().includes(token) || 
+          pDesc.toLowerCase().includes(token) ||
+          pId.toLowerCase().includes(token)
+        );
 
         return matchesCategory && matchesSearch;
       })
@@ -572,7 +568,6 @@ export default function App() {
       });
   }, [products, selectedCategory, searchQuery]);
 
-  // Smart Semantic & Price-Tier Related Products Recommendation Engine
   const relatedProducts = useMemo(() => {
     if (!activeModalProduct || products.length === 0) return [];
 
@@ -582,7 +577,6 @@ export default function App() {
       'that', 'your', 'original', 'high', 'quality', 'new', 'best', 'pro', 'plus'
     ]);
 
-    // Tokenize active product name into meaningful search terms
     const currentTokens = activeModalProduct.name
       .toLowerCase()
       .replace(/[^a-z0-9\s]/g, ' ')
@@ -596,21 +590,18 @@ export default function App() {
         const pNameLower = p.name.toLowerCase();
         const pDescLower = (p.description || '').toLowerCase();
 
-        // 1. Same category baseline
         if (p.category.toLowerCase() === activeModalProduct.category.toLowerCase()) {
           score += 3;
         }
 
-        // 2. High-value keyword match (e.g., "laptop", "dell", "stand", "charger")
         currentTokens.forEach((token) => {
           if (pNameLower.includes(token)) {
-            score += 7; // Matches specific product family directly in title
+            score += 7; 
           } else if (pDescLower.includes(token)) {
             score += 1.5;
           }
         });
 
-        // 3. In-stock priority
         if (p.in_stock) {
           score += 1;
         }
@@ -618,7 +609,6 @@ export default function App() {
         return { product: p, score };
       });
 
-    // Sort by relevance score first, then break ties by price proximity
     const sorted = scored
       .filter((item) => item.score > 0)
       .sort((a, b) => {
@@ -633,7 +623,6 @@ export default function App() {
     return sorted.slice(0, 4).map((item) => item.product);
   }, [activeModalProduct, products]);
 
-  // Add to Cart
   const addToCart = (product: Product) => {
     setCart((prev) => {
       const existing = prev.find((item) => item?.product?.id === product.id);
@@ -684,7 +673,6 @@ export default function App() {
     setCart((prev) => prev.filter((item) => item?.product?.id !== productId));
   };
 
-  // Subtotal & Department Calculations
   const cartSubtotal = useMemo(() => {
     return cart.reduce((sum, item) => {
       if (!item || !item.product || typeof item.product.price !== 'number') return sum;
@@ -733,7 +721,6 @@ export default function App() {
   const orderTotal = cartSubtotal + deliveryFee;
   const totalCartCount = cart.reduce((sum, item) => sum + (item?.quantity || 0), 0);
 
-  // Opens Checkout preserving order ID
   const openCheckout = () => {
     if (!orderId) {
       const randomSuffix = Math.floor(1000 + Math.random() * 9000);
@@ -769,9 +756,9 @@ export default function App() {
     let paymentBreakdownText = "";
     if (isMixedCart) {
       paymentBreakdownText = `*PAYMENT SPLIT INSTRUCTIONS:*
-• Shop 9 (Essentials Subtotal): ₦${shop9Total.toLocaleString()} -> Pay to OPay (${SHOP_ACCOUNTS.shop9.number})
-• Shop 10 (Gadgets Subtotal): ₦${shop10Total.toLocaleString()} -> Pay to OPay (${SHOP_ACCOUNTS.shop10.number})
-• Delivery Fee: ₦${deliveryFee.toLocaleString()} (Paid to either account)
+- Shop 9 (Essentials Subtotal): ₦${shop9Total.toLocaleString()} -> Pay to OPay (${SHOP_ACCOUNTS.shop9.number})
+- Shop 10 (Gadgets Subtotal): ₦${shop10Total.toLocaleString()} -> Pay to OPay (${SHOP_ACCOUNTS.shop10.number})
+- Delivery Fee: ₦${deliveryFee.toLocaleString()} (Paid to either account)
 *TOTAL PAID:* ₦${orderTotal.toLocaleString()}`;
     } else if (hasShop10) {
       paymentBreakdownText = `*PAYMENT ACCOUNT:*
@@ -877,7 +864,6 @@ ${paymentBreakdownText}
           </div>
 
           <div className="flex items-center gap-4 text-purple-300">
-            {/* Social Header Quick Links */}
             <div className="flex items-center gap-2.5 pr-2 border-r border-purple-900/80">
               <a 
                 href={SOCIAL_LINKS.instagram} 
@@ -1058,16 +1044,33 @@ ${paymentBreakdownText}
             <p className="mt-3 text-sm text-slate-500 font-medium">Syncing live catalog from store inventory...</p>
           </div>
         ) : filteredProducts.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center max-w-md mx-auto my-12 shadow-sm">
+          <div className="bg-white rounded-2xl border border-slate-200 p-8 sm:p-12 text-center max-w-lg mx-auto my-12 shadow-sm">
             <div className="w-12 h-12 bg-purple-50 text-purple-600 rounded-full flex items-center justify-center mx-auto mb-3">
               <Search className="w-6 h-6" />
             </div>
-            <h3 className="text-base font-bold text-slate-900">No products found</h3>
-            <p className="text-xs text-slate-500 mt-1">
-              {selectedCategory !== 'All' 
-                ? `No items found in "${selectedCategory}". Products will appear here when assigned this category in your spreadsheet.`
-                : "No products matched your search query."}
+            <h3 className="text-base font-bold text-slate-900">No exact match found</h3>
+            <p className="text-xs text-slate-500 mt-1 mb-6">
+              We couldn't find exactly "{searchQuery}". Try checking your spelling or using broader terms.
             </p>
+
+            {/* Empty State Recovery Navigation */}
+            <div className="text-left bg-slate-50 rounded-xl p-4 border border-slate-100">
+              <h4 className="text-xs font-bold text-slate-700 mb-2">Explore Popular Categories:</h4>
+              <div className="flex flex-wrap gap-2">
+                {['Gadgets', 'Phone Accessories', 'Kitchen & Dining', 'School Supplies'].map(cat => (
+                  <button
+                    key={cat}
+                    onClick={() => {
+                      setSearchQuery('');
+                      setSelectedCategory(cat);
+                    }}
+                    className="text-[11px] font-semibold bg-white border border-slate-200 text-purple-700 px-3 py-1.5 rounded-lg shadow-sm hover:border-purple-300 transition-colors"
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
@@ -1107,10 +1110,10 @@ ${paymentBreakdownText}
                     )}
 
                     {/* Low Stock Warning Badge */}
-                    {product.in_stock && product.stock_quantity !== undefined && product.stock_quantity > 0 && product.stock_quantity <= 3 && (
-                      <span className="absolute top-2.5 right-2.5 bg-amber-400 text-amber-950 text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full shadow-md flex items-center gap-1 border border-amber-300">
-                        <span className="w-1.5 h-1.5 rounded-full bg-amber-900 animate-ping"></span>
-                        Only {product.stock_quantity} left
+                    {product.in_stock && product.stock_quantity !== undefined && product.stock_quantity > 0 && product.stock_quantity <= 5 && (
+                      <span className="absolute top-2.5 right-2.5 bg-rose-600 text-white text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-full shadow-md flex items-center gap-1 border border-rose-500">
+                        <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping"></span>
+                        🔥 Almost Sold Out ({product.stock_quantity} left)
                       </span>
                     )}
 
@@ -1417,9 +1420,9 @@ ${paymentBreakdownText}
                   <span>Verified Stock @ ABH Plaza</span>
                 </div>
 
-                {activeModalProduct.in_stock && activeModalProduct.stock_quantity !== undefined && activeModalProduct.stock_quantity <= 3 && activeModalProduct.stock_quantity > 0 && (
-                  <span className="text-[11px] font-bold text-amber-700 mt-0.5 flex items-center gap-1">
-                    ⚠️ High demand: Only {activeModalProduct.stock_quantity} units remaining
+                {activeModalProduct.in_stock && activeModalProduct.stock_quantity !== undefined && activeModalProduct.stock_quantity <= 5 && activeModalProduct.stock_quantity > 0 && (
+                  <span className="text-[11px] font-bold text-rose-600 mt-0.5 flex items-center gap-1">
+                    🔥 High demand: Only {activeModalProduct.stock_quantity} left
                   </span>
                 )}
               </div>
@@ -2131,33 +2134,26 @@ ${paymentBreakdownText}
       )}
 
       {/* Floating Mobile Install App Banner */}
-      {showInstallBanner && (
+      {(showInstallBanner || (isIOS && !isStandalone && !sessionStorage.getItem('swiftwave_install_dismissed'))) && (
         <aside 
           aria-label="Install App"
-          className="fixed bottom-4 left-4 right-4 sm:hidden z-40 bg-[#170a2c] text-white p-3.5 rounded-2xl border border-purple-800/80 shadow-2xl flex items-center justify-between gap-3 animate-fade-in"
+          className="fixed bottom-4 left-4 right-4 sm:hidden z-40 bg-[#170a2c] text-white p-4 rounded-2xl border border-purple-800/80 shadow-2xl flex flex-col gap-3 animate-fade-in"
         >
-          <div className="flex items-center gap-3 min-w-0">
-            <img
-              src="/logo.png"
-              alt="Swiftwave"
-              className="w-10 h-10 rounded-xl object-contain bg-purple-950 p-1 border border-purple-800 shrink-0"
-              onError={(e) => {
-                (e.currentTarget as HTMLElement).style.display = 'none';
-              }}
-            />
-            <div className="min-w-0">
-              <h4 className="text-xs font-bold text-white truncate">Install Swiftwave App</h4>
-              <p className="text-[10px] text-purple-300 truncate">Faster browsing & instant order tracking</p>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3 min-w-0">
+              <img
+                src="/logo.png"
+                alt="Swiftwave"
+                className="w-10 h-10 rounded-xl object-contain bg-white p-1 border border-purple-800 shrink-0"
+                onError={(e) => {
+                  (e.currentTarget as HTMLElement).style.display = 'none';
+                }}
+              />
+              <div className="min-w-0">
+                <h4 className="text-xs font-bold text-white truncate">Install Swiftwave App</h4>
+                <p className="text-[10px] text-purple-300 truncate">Faster browsing & instant access</p>
+              </div>
             </div>
-          </div>
-
-          <div className="flex items-center gap-2 shrink-0">
-            <button
-              onClick={handleInstallClick}
-              className="bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs px-3 py-1.5 rounded-xl transition-all shadow-md shadow-purple-900/40 active:scale-95"
-            >
-              Install
-            </button>
             <button
               onClick={dismissInstallBanner}
               className="text-purple-400 hover:text-white p-1"
@@ -2166,6 +2162,22 @@ ${paymentBreakdownText}
               <X className="w-4 h-4" />
             </button>
           </div>
+
+          {isIOS ? (
+            <div className="bg-purple-900/50 p-2.5 rounded-xl text-[11px] text-purple-100 flex items-center gap-2 border border-purple-700/50">
+              <div className="bg-white text-black p-1 rounded inline-flex">
+                <Share className="w-4 h-4 text-purple-900" />
+              </div>
+              <span>Tap the <strong>Share</strong> button below, then select <strong>"Add to Home Screen"</strong> to install.</span>
+            </div>
+          ) : (
+            <button
+              onClick={handleInstallClick}
+              className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs px-3 py-2.5 rounded-xl transition-all shadow-md active:scale-95"
+            >
+              Install App Now
+            </button>
+          )}
         </aside>
       )}
 
