@@ -570,11 +570,18 @@ export default function App() {
 
   const suggestedProducts = useMemo(() => {
     if (filteredProducts.length > 0 || !searchQuery) return [];
-    const q = searchQuery.toLowerCase().trim();
     
+    const q = searchQuery.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim();
+    if (q.length < 3) return [];
+
+    // Extract the first 4 letters as a root to bypass typos at the end of the word
+    const searchRoot = q.slice(0, 4);
+
     return products.filter(p => {
       const nameLower = p.name.toLowerCase();
-      return q.split(/\s+/).some(word => word.length > 3 && nameLower.includes(word));
+      const catLower = p.category.toLowerCase();
+      // Match the root against the product name or its category
+      return nameLower.includes(searchRoot) || catLower.includes(searchRoot);
     }).slice(0, 4); 
   }, [filteredProducts.length, searchQuery, products]);
 
