@@ -11,10 +11,20 @@ import {
 // 0. ADMIN SMART LEDGER UI (HIDDEN ROUTE)
 // ==========================================
 function AdminPanel() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [pinCode, setPinCode] = useState('');
   const [productId, setProductId] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ text: '', type: '' });
+
+  const ADMIN_PIN = "1275"; 
+
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (pinCode === ADMIN_PIN) setIsAuthenticated(true);
+    else { alert("Unauthorized Access"); setPinCode(''); }
+  };
 
   const handleLogSale = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,7 +41,8 @@ function AdminPanel() {
         headers: { 'Content-Type': 'text/plain' },
         body: JSON.stringify({
           productId: productId.trim(),
-          quantity: quantity
+          quantity: quantity,
+          pin: ADMIN_PIN
         })
       });
 
@@ -50,11 +61,25 @@ function AdminPanel() {
     setLoading(false);
   };
 
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-slate-100 flex flex-col items-center justify-center p-4">
+        <form onSubmit={handleLogin} className="bg-white p-8 rounded-3xl shadow-xl max-w-sm w-full text-center border border-slate-200">
+          <ShieldCheck className="w-12 h-12 text-[#A044C3] mx-auto mb-4" />
+          <h2 className="text-xl font-black text-slate-900 mb-2">Restricted Access</h2>
+          <p className="text-xs text-slate-500 mb-6">Enter admin PIN to access ledger</p>
+          <input type="password" value={pinCode} onChange={(e) => setPinCode(e.target.value)} className="w-full text-center text-2xl tracking-[0.5em] font-black p-4 rounded-xl border border-slate-300 focus:border-[#A044C3] outline-none mb-4" placeholder="••••" maxLength={4} />
+          <button type="submit" className="w-full bg-[#A044C3] text-[#FFBB1C] font-bold py-3 rounded-xl shadow-lg hover:opacity-90 transition-all">Unlock Desk</button>
+        </form>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col items-center justify-center p-4">
       <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl border border-slate-200">
         <div className="flex justify-center mb-4">
-          <div className="w-16 h-16 bg-violet-100 text-violet-700 rounded-full flex items-center justify-center">
+          <div className="w-16 h-16 bg-[#A044C3]/10 text-[#A044C3] rounded-full flex items-center justify-center">
             <Calculator className="w-8 h-8" />
           </div>
         </div>
@@ -77,7 +102,7 @@ function AdminPanel() {
               placeholder="e.g. SW-001"
               value={productId}
               onChange={(e) => setProductId(e.target.value)}
-              className="w-full p-3 rounded-xl border border-slate-300 focus:border-violet-600 focus:ring-2 focus:ring-violet-600/20 outline-none uppercase font-mono font-bold"
+              className="w-full p-3 rounded-xl border border-slate-300 focus:border-[#A044C3] focus:ring-2 focus:ring-[#A044C3]/20 outline-none uppercase font-mono font-bold"
             />
           </div>
           <div>
@@ -91,12 +116,12 @@ function AdminPanel() {
           <button
             type="submit"
             disabled={loading}
-            className={`w-full font-bold text-sm py-4 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 ${loading ? 'bg-slate-400 cursor-not-allowed text-white' : 'bg-violet-700 hover:bg-violet-800 text-yellow-400 shadow-violet-700/30'}`}
+            className={`w-full font-bold text-sm py-4 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 ${loading ? 'bg-slate-400 cursor-not-allowed text-white' : 'bg-[#A044C3] hover:opacity-90 text-[#FFBB1C] shadow-[#A044C3]/30'}`}
           >
             {loading ? <span className="animate-pulse">Syncing to Database...</span> : <><span>Log Sale to Ledger</span><Check className="w-5 h-5" /></>}
           </button>
         </form>
-        <button onClick={() => window.location.href = '/'} className="w-full mt-4 text-xs font-bold text-slate-500 hover:text-violet-800 text-center py-2">
+        <button onClick={() => window.location.href = '/'} className="w-full mt-4 text-xs font-bold text-slate-500 hover:text-[#A044C3] text-center py-2">
           Return to Storefront
         </button>
       </div>
@@ -1096,18 +1121,18 @@ export default function App() {
 
             <div className="space-y-3 mb-5">
               {hasShop10 && (
-                <div className="bg-violet-700 text-white rounded-2xl p-3.5 shadow-sm">
+                <div className="bg-[#A044C3] text-white rounded-2xl p-3.5 shadow-sm">
                   <div className="flex justify-between items-center pb-2 border-b border-white/20">
                     <div>
-                      <span className="text-[10px] font-extrabold tracking-wider text-yellow-300 uppercase block">SHOP 10 • GADGETS & TECH</span>
+                      <span className="text-[10px] font-extrabold tracking-wider text-[#FFBB1C] uppercase block">SHOP 10 • GADGETS & TECH</span>
                       <span className="text-xs text-white/90 font-medium">Bank: OPay</span>
                     </div>
-                    {isMixedCart && <span className="text-xs font-mono font-bold text-violet-900 bg-yellow-400 px-2 py-0.5 rounded">Due: ₦{shop10Total.toLocaleString()}</span>}
+                    {isMixedCart && <span className="text-xs font-mono font-bold text-[#A044C3] bg-[#FFBB1C] px-2 py-0.5 rounded">Due: ₦{shop10Total.toLocaleString()}</span>}
                   </div>
                   <div className="flex justify-between items-center mt-2.5">
                     <div>
                       <span className="text-[10px] text-white/80 block">Account Number</span>
-                      <button type="button" onClick={() => { navigator.clipboard.writeText(SHOP_ACCOUNTS.shop10.number); setCopiedShop10(true); setTimeout(() => setCopiedShop10(false), 2000); }} className="inline-flex items-center gap-1.5 font-mono text-base font-black text-white hover:text-yellow-300">
+                      <button type="button" onClick={() => { navigator.clipboard.writeText(SHOP_ACCOUNTS.shop10.number); setCopiedShop10(true); setTimeout(() => setCopiedShop10(false), 2000); }} className="inline-flex items-center gap-1.5 font-mono text-base font-black text-white hover:text-[#FFBB1C]">
                         <span>{SHOP_ACCOUNTS.shop10.number}</span><Copy className="w-3.5 h-3.5" />
                       </button>
                     </div>
@@ -1116,18 +1141,18 @@ export default function App() {
                 </div>
               )}
               {hasShop9 && (
-                <div className="bg-violet-700 text-white rounded-2xl p-3.5 shadow-sm">
+                <div className="bg-[#A044C3] text-white rounded-2xl p-3.5 shadow-sm">
                   <div className="flex justify-between items-center pb-2 border-b border-white/20">
                     <div>
-                      <span className="text-[10px] font-extrabold tracking-wider text-yellow-300 uppercase block">SHOP 9 • DAILY ESSENTIALS</span>
+                      <span className="text-[10px] font-extrabold tracking-wider text-[#FFBB1C] uppercase block">SHOP 9 • DAILY ESSENTIALS</span>
                       <span className="text-xs text-white/90 font-medium">Bank: OPay</span>
                     </div>
-                    {isMixedCart && <span className="text-xs font-mono font-bold text-violet-900 bg-yellow-400 px-2 py-0.5 rounded">Due: ₦{shop9Total.toLocaleString()}</span>}
+                    {isMixedCart && <span className="text-xs font-mono font-bold text-[#A044C3] bg-[#FFBB1C] px-2 py-0.5 rounded">Due: ₦{shop9Total.toLocaleString()}</span>}
                   </div>
                   <div className="flex justify-between items-center mt-2.5">
                     <div>
                       <span className="text-[10px] text-white/80 block">Account Number</span>
-                      <button type="button" onClick={() => { navigator.clipboard.writeText(SHOP_ACCOUNTS.shop9.number); setCopiedShop9(true); setTimeout(() => setCopiedShop9(false), 2000); }} className="inline-flex items-center gap-1.5 font-mono text-base font-black text-white hover:text-yellow-300">
+                      <button type="button" onClick={() => { navigator.clipboard.writeText(SHOP_ACCOUNTS.shop9.number); setCopiedShop9(true); setTimeout(() => setCopiedShop9(false), 2000); }} className="inline-flex items-center gap-1.5 font-mono text-base font-black text-white hover:text-[#FFBB1C]">
                         <span>{SHOP_ACCOUNTS.shop9.number}</span><Copy className="w-3.5 h-3.5" />
                       </button>
                     </div>
@@ -1140,9 +1165,16 @@ export default function App() {
                   <span className="text-xs font-bold text-slate-900 block">Grand Total Due</span>
                   <span className="text-[10px] text-slate-500">Includes ₦{deliveryFee.toLocaleString()} delivery</span>
                 </div>
-                <span className="text-lg font-black text-violet-600">₦{orderTotal.toLocaleString()}</span>
+                <span className="text-lg font-black text-[#A044C3]">₦{orderTotal.toLocaleString()}</span>
               </div>
             </div>
+
+            <div className="text-center mb-4 px-2">
+              <p className="text-[10px] font-medium text-slate-500 leading-relaxed">
+                By finalizing this order, you agree to our <button type="button" onClick={() => { setIsCheckoutOpen(false); setShowPolicyModal(true); }} className="text-[#A044C3] font-bold hover:underline">48-hour Option of Defect return policy</button>.
+              </p>
+            </div>
+
             <button type="button" onClick={handleFinalOrder} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm py-3 rounded-2xl shadow-lg transition-all flex items-center justify-center gap-2 active:scale-95">
               <span>I Have Transferred • Submit via WhatsApp</span><ExternalLink className="w-4 h-4" />
             </button>
@@ -1154,15 +1186,29 @@ export default function App() {
       {showAboutModal && (
         <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-lg w-full p-6 relative border border-slate-200 shadow-2xl">
-            <button onClick={() => setShowAboutModal(false)} className="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-colors"><X className="w-4 h-4" /></button>
-            <div className="flex justify-center mb-4 bg-violet-600 p-4 rounded-2xl"><img src="/logo.png" alt="Swiftwave" className="h-14 sm:h-16 w-auto object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; }} /></div>
-            <div className="flex items-center gap-2 mb-2"><ShieldCheck className="w-5 h-5 text-violet-600" /><h3 className="text-base font-bold text-slate-900">About Swiftwave Variety Mall</h3></div>
-            <p className="text-xs text-slate-600 leading-relaxed mb-4">Swiftwave is your modern everyday marketplace built for the way you actually live. Bringing together gadgets, home essentials, school supplies, phone accessories, beauty products, children's toys, and creator tools under one roof.</p>
-            <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-100 mb-4">
-              <div className="flex items-center justify-between"><span className="text-[11px] font-bold text-slate-900 uppercase tracking-wider">Corporate Registration</span><span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-full"><CheckCircle2 className="w-3 h-3" /> CAC Verified</span></div>
-              <p className="text-xs font-mono text-slate-700 mt-1.5 leading-relaxed"><span className="font-semibold text-slate-900">SWIFTWAVE VARIETY MALL LIMITED</span><br />RC: <span className="text-violet-600 font-bold">9468092</span> | TIN: 2622689087269</p>
+            <button onClick={() => setShowAboutModal(false)} className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white shadow-sm hover:bg-slate-100 text-slate-600 flex items-center justify-center transition-colors z-10"><X className="w-4 h-4" /></button>
+            
+            <div className="flex justify-center mb-6 bg-[#A044C3] p-6 rounded-2xl mt-2"><img src="/logo.png" alt="Swiftwave" className="h-16 w-auto object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; }} /></div>
+            
+            <div className="flex items-center gap-2 mb-3"><ShieldCheck className="w-5 h-5 text-[#A044C3]" /><h3 className="text-base font-bold text-slate-900">About Swiftwave Variety Mall</h3></div>
+            <p className="text-[13px] text-slate-600 leading-relaxed mb-6">Swiftwave is your modern everyday marketplace built for the way you actually live. Bringing together gadgets, home essentials, school supplies, phone accessories, beauty products, children's toys, and creator tools under one roof.</p>
+            
+            <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 mb-4">
+              <h4 className="text-[10px] font-bold text-slate-900 uppercase tracking-wider mb-3">Connect With Us</h4>
+              <div className="grid grid-cols-3 gap-2">
+                <a href={SOCIAL_LINKS.instagram} target="_blank" rel="noreferrer" className="bg-white border border-slate-200 rounded-lg py-2 flex items-center justify-center gap-1.5 text-xs font-semibold text-slate-700 hover:border-[#A044C3] hover:text-[#A044C3] transition-colors"><Instagram className="w-3.5 h-3.5 text-rose-500" /> Instagram</a>
+                <a href={SOCIAL_LINKS.tiktok} target="_blank" rel="noreferrer" className="bg-white border border-slate-200 rounded-lg py-2 flex items-center justify-center gap-1.5 text-xs font-semibold text-slate-700 hover:border-[#A044C3] hover:text-[#A044C3] transition-colors"><svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.99v8.29c.03 2.05-.72 4.17-2.18 5.62-1.74 1.79-4.34 2.5-6.75 1.95-2.61-.53-4.78-2.6-5.46-5.18-.8-2.91.43-6.19 3.02-7.66 1.48-.87 3.26-1.07 4.93-.68v4.11c-.93-.31-1.99-.25-2.87.21-1.09.56-1.74 1.77-1.64 3 .07 1.19.86 2.27 2 2.59 1.25.37 2.7-.1 3.42-1.13.38-.52.55-1.17.54-1.81V.02z" /></svg> TikTok</a>
+                <a href={SOCIAL_LINKS.facebook} target="_blank" rel="noreferrer" className="bg-white border border-slate-200 rounded-lg py-2 flex items-center justify-center gap-1.5 text-xs font-semibold text-slate-700 hover:border-[#A044C3] hover:text-[#A044C3] transition-colors"><Facebook className="w-3.5 h-3.5 text-blue-600" /> Facebook</a>
+              </div>
             </div>
-            <button onClick={() => setShowAboutModal(false)} className="w-full bg-slate-900 text-white font-bold text-xs py-2.5 rounded-xl hover:bg-slate-800 transition-colors">Back to Catalog</button>
+
+            <div className="p-4 bg-[#A044C3]/5 rounded-xl border border-[#A044C3]/20 mb-6">
+              <div className="flex items-center justify-between mb-2"><span className="text-[11px] font-bold text-slate-900 uppercase tracking-wider">Corporate Registration</span><span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-full"><CheckCircle2 className="w-3 h-3" /> CAC Verified</span></div>
+              <p className="text-xs font-mono text-slate-700 mb-4 leading-relaxed"><span className="font-semibold text-slate-900 font-sans">SWIFTWAVE VARIETY MALL LIMITED</span><br />RC: <span className="text-[#A044C3] font-bold">9468092</span> <span className="text-slate-300 mx-1">|</span> TIN: 2622689087269</p>
+              <a href="https://search.cac.gov.ng/home" target="_blank" rel="noreferrer" className="w-full bg-white border border-[#A044C3]/30 text-[#A044C3] font-bold text-xs py-2.5 rounded-lg flex items-center justify-center gap-2 hover:bg-[#A044C3] hover:text-[#FFBB1C] transition-colors"><ShieldCheck className="w-4 h-4" /> View Certificate of Incorporation <ExternalLink className="w-3 h-3" /></a>
+            </div>
+            
+            <button onClick={() => setShowAboutModal(false)} className="w-full bg-slate-900 text-white font-bold text-sm py-3 rounded-xl hover:bg-slate-800 transition-colors shadow-md">Back to Catalog</button>
           </div>
         </div>
       )}
