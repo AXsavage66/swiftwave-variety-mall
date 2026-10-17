@@ -1,35 +1,10 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import axios from 'axios';
-import { 
-  Search, 
-  ShoppingBag, 
-  ExternalLink, 
-  ShieldCheck, 
-  Sparkles, 
-  Video, 
-  X, 
-  CheckCircle2, 
-  ChevronRight, 
-  ChevronLeft, 
-  MapPin, 
-  Info, 
-  Plus, 
-  Minus, 
-  Trash2, 
-  Truck, 
-  Building2, 
-  Copy, 
-  Image as ImageIcon,
-  Maximize2,
-  PhoneCall,
-  Check,
-  Instagram,
-  Facebook,
-  MessageCircle,
-  Headphones,
-  Share,
-  Calculator,
-  Shield
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import {
+  Search, ShoppingBag, ExternalLink, ShieldCheck, Sparkles, Video, X,
+  CheckCircle2, ChevronRight, ChevronLeft, Info, Plus, Minus,
+  Trash2, Truck, Building2, Copy, Image as ImageIcon, Maximize2,
+  PhoneCall, Check, Instagram, Facebook, MessageCircle, Headphones,
+  Share, Calculator, Shield, Scale, ArrowDownCircle
 } from 'lucide-react';
 
 // ==========================================
@@ -44,29 +19,33 @@ function AdminPanel() {
   const handleLogSale = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!productId.trim()) return;
-    
+
     setLoading(true);
     setMessage({ text: '', type: '' });
-    
-    const API_URL = "https://script.google.com/macros/s/AKfycbzPx4RCKIubIJyKkHfdZuVjk_lNYyueQrRHJaDY7rDPWVTltpNlcGpLPq76ydXVjgwD7w/exec"; 
-    
+
+    const API_URL = "https://script.google.com/macros/s/AKfycbzPx4RCKIubIJyKkHfdZuVjk_lNYyueQrRHJaDY7rDPWVTltpNlcGpLPq76ydXVjgwD7w/exec";
+
     try {
-      const response = await axios.post(API_URL, {
-        productId: productId.trim(),
-        quantity: quantity
-      }, {
-        headers: { 'Content-Type': 'text/plain' }
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({
+          productId: productId.trim(),
+          quantity: quantity
+        })
       });
-      
-      if (response.data.status === 'success') {
-         setMessage({ text: `Success: ${quantity}x [${productId}] logged. Inventory updated.`, type: 'success' });
-         setProductId('');
-         setQuantity(1);
+
+      const data = await response.json();
+
+      if (data.status === 'success') {
+        setMessage({ text: `Success: ${quantity}x [${productId}] logged. Inventory updated.`, type: 'success' });
+        setProductId('');
+        setQuantity(1);
       } else {
-         setMessage({ text: "Error: " + response.data.message, type: 'error' });
+        setMessage({ text: "Error: " + data.message, type: 'error' });
       }
     } catch (err) {
-       setMessage({ text: "Network error communicating with Google Sheets database.", type: 'error' });
+      setMessage({ text: "Network error communicating with Google Sheets database.", type: 'error' });
     }
     setLoading(false);
   };
@@ -117,7 +96,7 @@ function AdminPanel() {
             {loading ? <span className="animate-pulse">Syncing to Database...</span> : <><span>Log Sale to Ledger</span><Check className="w-5 h-5" /></>}
           </button>
         </form>
-        <button onClick={() => window.location.href = '/'} className="w-full mt-4 text-xs font-bold text-slate-500 hover:text-slate-800 text-center py-2">
+        <button onClick={() => window.location.href = '/'} className="w-full mt-4 text-xs font-bold text-slate-500 hover:text-violet-800 text-center py-2">
           Return to Storefront
         </button>
       </div>
@@ -130,71 +109,37 @@ function AdminPanel() {
 // ==========================================
 export function formatDriveUrl(url: string): string {
   if (!url) return "https://images.unsplash.com/photo-1526738549149-8e07eca6c147?auto=format&fit=crop&w=600&q=80";
-  
   const match = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
-  if (match && match[1]) {
-    return `https://lh3.googleusercontent.com/d/${match[1]}=w800`;
-  }
-  
+  if (match && match[1]) return `https://lh3.googleusercontent.com/d/${match[1]}=w800`;
   const idMatch = url.match(/id=([a-zA-Z0-9_-]+)/);
-  if (idMatch && idMatch[1]) {
-    return `https://lh3.googleusercontent.com/d/${idMatch[1]}=w800`;
-  }
-  
+  if (idMatch && idMatch[1]) return `https://lh3.googleusercontent.com/d/${idMatch[1]}=w800`;
   return url.trim();
 }
 
 export function getVideoThumbnail(videoUrl?: string): string | null {
   if (!videoUrl) return null;
   const cleanUrl = videoUrl.trim();
-
   const driveMatch = cleanUrl.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) || cleanUrl.match(/id=([a-zA-Z0-9_-]+)/);
-  if (driveMatch && driveMatch[1]) {
-    return `https://lh3.googleusercontent.com/d/${driveMatch[1]}=w800`;
-  }
-
+  if (driveMatch && driveMatch[1]) return `https://lh3.googleusercontent.com/d/${driveMatch[1]}=w800`;
   const ytMatch = cleanUrl.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([a-zA-Z0-9_-]+)/);
-  if (ytMatch && ytMatch[1]) {
-    return `https://img.youtube.com/vi/${ytMatch[1]}/hqdefault.jpg`;
-  }
-
+  if (ytMatch && ytMatch[1]) return `https://img.youtube.com/vi/${ytMatch[1]}/hqdefault.jpg`;
   return null;
 }
 
 export function getVideoEmbed(url?: string): { type: 'iframe' | 'video'; embedUrl: string } | null {
   if (!url) return null;
   const cleanUrl = url.trim();
-
   const ytMatch = cleanUrl.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([a-zA-Z0-9_-]+)/);
-  if (ytMatch && ytMatch[1]) {
-    return {
-      type: 'iframe',
-      embedUrl: `https://www.youtube-nocookie.com/embed/${ytMatch[1]}?autoplay=1&rel=0`
-    };
-  }
-
+  if (ytMatch && ytMatch[1]) return { type: 'iframe', embedUrl: `https://www.youtube-nocookie.com/embed/${ytMatch[1]}?autoplay=1&rel=0` };
   const driveMatch = cleanUrl.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) || cleanUrl.match(/id=([a-zA-Z0-9_-]+)/);
-  if (driveMatch && driveMatch[1]) {
-    return {
-      type: 'iframe',
-      embedUrl: `https://drive.google.com/file/d/${driveMatch[1]}/preview`
-    };
-  }
-
-  if (cleanUrl.match(/\.(mp4|webm|ogg)$/i)) {
-    return {
-      type: 'video',
-      embedUrl: cleanUrl
-    };
-  }
-
+  if (driveMatch && driveMatch[1]) return { type: 'iframe', embedUrl: `https://drive.google.com/file/d/${driveMatch[1]}/preview` };
+  if (cleanUrl.match(/\.(mp4|webm|ogg)$/i)) return { type: 'video', embedUrl: cleanUrl };
   return null;
 }
 
 export function normalizeCategory(raw: string): string {
   if (!raw) return 'Gadgets';
   const s = raw.toLowerCase().trim();
-
   if (s.includes('phone') || s.includes('appliance') || s.includes('accessori') || s.includes('earphone') || s.includes('case')) return 'Phone Accessories';
   if (s.includes('gadget') || s.includes('power bank') || s.includes('tech') || s.includes('electronic')) return 'Gadgets';
   if (s.includes('school') || s.includes('stationer') || s.includes('book') || s.includes('pen')) return 'School Supplies';
@@ -205,8 +150,7 @@ export function normalizeCategory(raw: string): string {
   if (s.includes('bag') || s.includes('travel') || s.includes('backpack') || s.includes('luggage')) return 'Bags & Travel';
   if (s.includes('toy') || s.includes('child') || s.includes('kid') || s.includes('game') || s.includes('chess') || s.includes('rubik')) return "Children's Toys";
   if (s.includes('creator') || s.includes('tool') || s.includes('ring light') || s.includes('stream') || s.includes('stand') || s.includes('tripod')) return 'Creator Tools';
-
-  return 'Room Essentials'; 
+  return 'Room Essentials';
 }
 
 function parseCSVLine(text: string): string[] {
@@ -234,7 +178,7 @@ function parseCSVLine(text: string): string[] {
 }
 
 // ==========================================
-// 2. STORE CONFIGURATION & SOCIAL HANDLES
+// 2. STORE CONFIGURATION
 // ==========================================
 export interface Product {
   id: string;
@@ -255,35 +199,16 @@ export interface CartItem {
 }
 
 const CATEGORIES = [
-  'All',
-  'New In',
-  'Gadgets',
-  'Phone Accessories',
-  'Creator Tools',
-  'School Supplies',
-  'Kitchen & Dining',
-  'Room Essentials',
-  'Health & Fitness',
-  'Beauty & Care',
-  'Bags & Travel',
-  "Children's Toys"
+  'All', 'New In', 'Gadgets', 'Phone Accessories', 'Creator Tools',
+  'School Supplies', 'Kitchen & Dining', 'Room Essentials',
+  'Health & Fitness', 'Beauty & Care', 'Bags & Travel', "Children's Toys"
 ] as const;
 
-const GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1XysYSGvgDR9t70VSrIwdXsN3GwzOjFmLUOfgB2s8Xbo/gviz/tq?tqx=out:csv"; 
+const GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1XysYSGvgDR9t70VSrIwdXsN3GwzOjFmLUOfgB2s8Xbo/gviz/tq?tqx=out:csv";
 
 const SHOP_ACCOUNTS = {
-  shop9: {
-    title: "Shop 9: Daily Essentials & Home",
-    bank: "OPay",
-    number: "6551680741",
-    name: "SWIFTWAVE VARIETY MALL LIMITED",
-  },
-  shop10: {
-    title: "Shop 10: Gadgets & Tech Accessories",
-    bank: "OPay",
-    number: "6551791518",
-    name: "SWIFTWAVE VARIETY MALL LIMITED",
-  },
+  shop9: { title: "Shop 9: Daily Essentials", bank: "OPay", number: "6551680741", name: "SWIFTWAVE VARIETY MALL LIMITED" },
+  shop10: { title: "Shop 10: Gadgets & Tech", bank: "OPay", number: "6551791518", name: "SWIFTWAVE VARIETY MALL LIMITED" },
 };
 
 const SOCIAL_LINKS = {
@@ -300,25 +225,18 @@ const SUPPORT_REPS = [
 
 const MINNA_ZONES = [
   'Bosso (FUTMINNA Bosso Campus / Bosso Low-Cost / Mobil)',
-  'Chanchaga / Shiroro Road / College of Education (COE)',
+  'Chanchaga / Shiroro Road / COE',
   'Tunga (Commercial Hub / Market / Police HQ / GRA)',
-  'FUTMINNA Gidan Kwano (Main Campus / Main Gate)',
-  'Kpakungu / Western Bypass / Minna City Gate',
+  'FUTMINNA Gidan Kwano (Main Campus)',
+  'Kpakungu / Western Bypass',
   'Maitumbi / Old Airport Road',
-  'Dutsen Kura (Gwari & Hausa) / Kure Market',
+  'Dutsen Kura / Kure Market',
   'Other Location in Minna'
 ];
 
 const getProductShop = (category: string): 'shop9' | 'shop10' => {
   const cat = (category || '').toLowerCase();
-  if (
-    cat.includes('gadget') || 
-    cat.includes('phone') || 
-    cat.includes('creator') ||
-    cat.includes('electronic')
-  ) {
-    return 'shop10';
-  }
+  if (cat.includes('gadget') || cat.includes('phone') || cat.includes('creator') || cat.includes('electronic')) return 'shop10';
   return 'shop9';
 };
 
@@ -326,16 +244,19 @@ const getProductShop = (category: string): 'shop9' | 'shop10' => {
 // 3. MAIN COMPONENT
 // ==========================================
 export default function App() {
-  // HIDDEN ADMIN ROUTE INTERCEPTOR
   if (typeof window !== 'undefined' && window.location.pathname.startsWith('/haris-admin-desk')) {
     return <AdminPanel />;
   }
 
   const [products, setProducts] = useState<Product[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<string>('All');
-  const [searchQuery, setSearchQuery] = useState<string>('');
-  
-  // Media Modal & Lightbox States
+  const [loading, setLoading] = useState<boolean>(true);
+  const [isOffline, setIsOffline] = useState<boolean>(typeof navigator !== 'undefined' ? !navigator.onLine : false);
+
+  // --- STATE MEMORY & PAGINATION ---
+  const [selectedCategory, setSelectedCategory] = useState<string>(() => typeof window !== 'undefined' ? sessionStorage.getItem('sw_category') || 'All' : 'All');
+  const [searchQuery, setSearchQuery] = useState<string>(() => typeof window !== 'undefined' ? sessionStorage.getItem('sw_search') || '' : '');
+  const [displayLimit, setDisplayLimit] = useState<number>(48);
+
   const [activeModalProduct, setActiveModalProduct] = useState<Product | null>(null);
   const [activeImageIndex, setActiveImageIndex] = useState<number>(0);
   const [mediaViewMode, setMediaViewMode] = useState<'photos' | 'video'>('photos');
@@ -344,8 +265,7 @@ export default function App() {
 
   const [showAboutModal, setShowAboutModal] = useState<boolean>(false);
   const [showCertLightbox, setShowCertLightbox] = useState<boolean>(false);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [isOffline, setIsOffline] = useState<boolean>(typeof navigator !== 'undefined' ? !navigator.onLine : false);
+  const [showPolicyModal, setShowPolicyModal] = useState<boolean>(false);
 
   const [cart, setCart] = useState<CartItem[]>(() => {
     if (typeof window === 'undefined') return [];
@@ -353,10 +273,7 @@ export default function App() {
       const savedCart = localStorage.getItem('swiftwave_cart');
       if (!savedCart) return [];
       const parsed = JSON.parse(savedCart);
-      if (Array.isArray(parsed)) {
-        return parsed.filter((item: any) => item && item.product && typeof item.product.price === 'number');
-      }
-      return [];
+      return Array.isArray(parsed) ? parsed.filter((item: any) => item && item.product && typeof item.product.price === 'number') : [];
     } catch {
       return [];
     }
@@ -364,68 +281,54 @@ export default function App() {
 
   const [isCartOpen, setIsCartOpen] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-
-  const [isCheckoutOpen, setIsCheckoutOpen] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return false;
-    return localStorage.getItem('swiftwave_checkout_open') === 'true';
-  });
-
+  const [isCheckoutOpen, setIsCheckoutOpen] = useState<boolean>(() => typeof window !== 'undefined' ? localStorage.getItem('swiftwave_checkout_open') === 'true' : false);
   const [copiedShop9, setCopiedShop9] = useState<boolean>(false);
   const [copiedShop10, setCopiedShop10] = useState<boolean>(false);
   const [copiedOrderId, setCopiedOrderId] = useState<boolean>(false);
   const [removedItemsNotice, setRemovedItemsNotice] = useState<string[]>([]);
 
-  // PWA & iOS Install State
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showInstallBanner, setShowInstallBanner] = useState<boolean>(false);
   const [isIOS, setIsIOS] = useState<boolean>(false);
   const [isStandalone, setIsStandalone] = useState<boolean>(false);
 
-  const [selectedRepNumber, setSelectedRepNumber] = useState<string>(() => {
-    if (typeof window === 'undefined') return SUPPORT_REPS[0].number;
-    return localStorage.getItem('swiftwave_support_rep') || SUPPORT_REPS[0].number;
-  });
+  const [selectedRepNumber, setSelectedRepNumber] = useState<string>(() => typeof window !== 'undefined' ? localStorage.getItem('swiftwave_support_rep') || SUPPORT_REPS[0].number : SUPPORT_REPS[0].number);
+  const [orderId, setOrderId] = useState<string>(() => typeof window !== 'undefined' ? localStorage.getItem('swiftwave_order_id') || '' : '');
+  const [customerName, setCustomerName] = useState<string>(() => typeof window !== 'undefined' ? localStorage.getItem('swiftwave_cust_name') || '' : '');
+  const [customerPhone, setCustomerPhone] = useState<string>(() => typeof window !== 'undefined' ? localStorage.getItem('swiftwave_cust_phone') || '' : '');
+  const [deliveryMethod, setDeliveryMethod] = useState<'pickup' | 'minna' | 'nationwide'>(() => typeof window !== 'undefined' ? (localStorage.getItem('swiftwave_delivery_method') as any) || 'pickup' : 'pickup');
+  const [minnaCampusZone, setMinnaCampusZone] = useState<string>(() => typeof window !== 'undefined' ? localStorage.getItem('swiftwave_minna_zone') || MINNA_ZONES[0] : MINNA_ZONES[0]);
+  const [landmarkHostel, setLandmarkHostel] = useState<string>(() => typeof window !== 'undefined' ? localStorage.getItem('swiftwave_landmark') || '' : '');
+  const [deliveryAddress, setDeliveryAddress] = useState<string>(() => typeof window !== 'undefined' ? localStorage.getItem('swiftwave_deliv_address') || '' : '');
+  const [orderNotes, setOrderNotes] = useState<string>(() => typeof window !== 'undefined' ? localStorage.getItem('swiftwave_order_notes') || '' : '');
 
-  const [orderId, setOrderId] = useState<string>(() => {
-    if (typeof window === 'undefined') return '';
-    return localStorage.getItem('swiftwave_order_id') || '';
-  });
+  // Persist State Memory
+  useEffect(() => {
+    sessionStorage.setItem('sw_category', selectedCategory);
+    sessionStorage.setItem('sw_search', searchQuery);
+  }, [selectedCategory, searchQuery]);
 
-  const [customerName, setCustomerName] = useState<string>(() => {
-    if (typeof window === 'undefined') return '';
-    return localStorage.getItem('swiftwave_cust_name') || '';
-  });
+  // Track & Restore Scroll Position Visually
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === 'hidden') {
+        sessionStorage.setItem('sw_scroll', window.scrollY.toString());
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, []);
 
-  const [customerPhone, setCustomerPhone] = useState<string>(() => {
-    if (typeof window === 'undefined') return '';
-    return localStorage.getItem('swiftwave_cust_phone') || '';
-  });
+  useEffect(() => {
+    if (!loading && products.length > 0) {
+      const savedScroll = sessionStorage.getItem('sw_scroll');
+      if (savedScroll) {
+        setTimeout(() => window.scrollTo({ top: parseInt(savedScroll), behavior: 'instant' }), 100);
+      }
+    }
+  }, [loading, products.length]);
 
-  const [deliveryMethod, setDeliveryMethod] = useState<'pickup' | 'minna' | 'nationwide'>(() => {
-    if (typeof window === 'undefined') return 'pickup';
-    return (localStorage.getItem('swiftwave_delivery_method') as any) || 'pickup';
-  });
-
-  const [minnaCampusZone, setMinnaCampusZone] = useState<string>(() => {
-    if (typeof window === 'undefined') return MINNA_ZONES[0];
-    return localStorage.getItem('swiftwave_minna_zone') || MINNA_ZONES[0];
-  });
-
-  const [landmarkHostel, setLandmarkHostel] = useState<string>(() => {
-    if (typeof window === 'undefined') return '';
-    return localStorage.getItem('swiftwave_landmark') || '';
-  });
-
-  const [deliveryAddress, setDeliveryAddress] = useState<string>(() => {
-    if (typeof window === 'undefined') return '';
-    return localStorage.getItem('swiftwave_deliv_address') || '';
-  });
-
-  const [orderNotes, setOrderNotes] = useState<string>(() => {
-    if (typeof window === 'undefined') return '';
-    return localStorage.getItem('swiftwave_order_notes') || '';
-  });
-
+  // Local Storage Sync
   useEffect(() => {
     try {
       localStorage.setItem('swiftwave_cart', JSON.stringify(cart));
@@ -447,44 +350,25 @@ export default function App() {
   useEffect(() => {
     const handleOnline = () => setIsOffline(false);
     const handleOffline = () => setIsOffline(true);
-
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
-
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
+    return () => { window.removeEventListener('online', handleOnline); window.removeEventListener('offline', handleOffline); };
   }, []);
 
-  // iOS & Android PWA Install Logic
+  // iOS Install
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const ua = window.navigator.userAgent.toLowerCase();
-      const iosDevice = /iphone|ipad|ipod/.test(ua);
-      const isPWA = ('standalone' in window.navigator) && !!(window.navigator as any).standalone;
-      
-      setIsIOS(iosDevice);
-      setIsStandalone(isPWA);
-
+      setIsIOS(/iphone|ipad|ipod/.test(ua));
+      setIsStandalone(('standalone' in window.navigator) && !!(window.navigator as any).standalone);
       const handleBeforeInstall = (e: Event) => {
         e.preventDefault();
         setDeferredPrompt(e);
-        const dismissed = sessionStorage.getItem('swiftwave_install_dismissed');
-        if (!dismissed) {
-          setShowInstallBanner(true);
-        }
+        if (!sessionStorage.getItem('swiftwave_install_dismissed')) setShowInstallBanner(true);
       };
-
       window.addEventListener('beforeinstallprompt', handleBeforeInstall);
-      window.addEventListener('appinstalled', () => {
-        setShowInstallBanner(false);
-        setDeferredPrompt(null);
-      });
-
-      return () => {
-        window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
-      };
+      window.addEventListener('appinstalled', () => { setShowInstallBanner(false); setDeferredPrompt(null); });
+      return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
     }
   }, []);
 
@@ -492,603 +376,331 @@ export default function App() {
     if (!deferredPrompt) return;
     deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
-    if (outcome === 'accepted') {
-      setShowInstallBanner(false);
-      setDeferredPrompt(null);
-    }
+    if (outcome === 'accepted') { setShowInstallBanner(false); setDeferredPrompt(null); }
   };
+  const dismissInstallBanner = () => { setShowInstallBanner(false); sessionStorage.setItem('swiftwave_install_dismissed', 'true'); };
 
-  const dismissInstallBanner = () => {
-    setShowInstallBanner(false);
-    sessionStorage.setItem('swiftwave_install_dismissed', 'true');
-  };
+  // --- SILENT POLLING DATA FETCH ---
+  const fetchInventory = useCallback(async () => {
+    try {
+      const res = await fetch(GOOGLE_SHEET_CSV_URL);
+      const csvText = await res.text();
+      const rawLines = csvText.split('\n').filter(line => line.trim().length > 0);
+      if (rawLines.length < 2) return;
 
-  useEffect(() => {
-    fetch(GOOGLE_SHEET_CSV_URL)
-      .then((res) => res.text())
-      .then((csvText) => {
-        const rawLines = csvText.split('\n').filter(line => line.trim().length > 0);
-        const parsed: Product[] = [];
-        
-        for (let i = 1; i < rawLines.length; i++) {
-          const row = parseCSVLine(rawLines[i]);
-          if (!row[0] || !row[1]) continue;
+      const headers = parseCSVLine(rawLines[0]).map(h => h.toLowerCase().replace(/[^a-z]/g, ''));
+      const getIdx = (keywords: string[]) => headers.findIndex(h => keywords.some(k => h.includes(k.replace(/[^a-z]/g, ''))));
 
-          const clean = (val?: string) => (val || '').replace(/^["']|["']$/g, '').trim();
-          
-          const id = clean(row[0]) || `SW-${String(i).padStart(3, '0')}`;
-          const name = clean(row[1]);
-          const category = normalizeCategory(clean(row[2]));
-          
-          const sellStr = clean(row[3]);
-          const costStr = clean(row[4]);
-          const finalPriceStr = sellStr || costStr || '0';
-          const price = Number(finalPriceStr.replace(/[^0-9.-]+/g, '')) || 0;
+      const idx = {
+        id: getIdx(['id']),
+        name: getIdx(['name', 'product']),
+        category: getIdx(['category']),
+        costPrice: getIdx(['costprice', 'cost']),
+        sellingPrice: getIdx(['sellingprice', 'sell']),
+        stock: getIdx(['stockquantity', 'quantity']),
+        desc: getIdx(['description', 'desc']),
+        images: getIdx(['image']),
+        badge: getIdx(['badge', 'label']),
+        inStock: getIdx(['instock']),
+        video: getIdx(['video'])
+      };
 
-          const rawQuantity = clean(row[5]);
-          const parsedQty = rawQuantity !== '' && !isNaN(Number(rawQuantity)) ? Number(rawQuantity) : undefined;
-          const isExplicitlySoldOut = parsedQty !== undefined && parsedQty <= 0;
+      const parsed: Product[] = [];
 
-          const description = clean(row[6]);
+      for (let i = 1; i < rawLines.length; i++) {
+        const row = parseCSVLine(rawLines[i]);
+        const clean = (val?: string) => (val || '').replace(/^["']|["']$/g, '').trim();
 
-          const rawImagesStr = clean(row[7]);
-          const rawImages = rawImagesStr ? rawImagesStr.split(/[;,]/).map(u => clean(u)).filter(Boolean) : [];
-          
-          const badge = clean(row[8]) || undefined;
+        const id = idx.id > -1 ? clean(row[idx.id]) : `SW-${String(i).padStart(3, '0')}`;
+        const name = idx.name > -1 ? clean(row[idx.name]) : '';
+        if (!name) continue;
 
-          const inStockStr = clean(row[9]) ? clean(row[9]).toLowerCase() : 'true';
-          const in_stock = !isExplicitlySoldOut && (inStockStr === 'true' || inStockStr === 'yes');
+        const sellStr = idx.sellingPrice > -1 ? clean(row[idx.sellingPrice]) : '';
+        const costStr = idx.costPrice > -1 ? clean(row[idx.costPrice]) : '';
+        const finalPriceStr = sellStr || costStr || '0';
+        const price = Number(finalPriceStr.replace(/[^0-9.-]+/g, '')) || 0;
 
-          const rawVideo = clean(row[10]);
-          const videoThumbnail = getVideoThumbnail(rawVideo);
+        const rawQuantity = idx.stock > -1 ? clean(row[idx.stock]) : '';
+        const parsedQty = rawQuantity !== '' && !isNaN(Number(rawQuantity)) ? Number(rawQuantity) : undefined;
+        const isExplicitlySoldOut = parsedQty !== undefined && parsedQty <= 0;
 
-          const finalImages = rawImages.length > 0 
-            ? rawImages 
-            : videoThumbnail 
-              ? [videoThumbnail] 
-              : [""];
-
-          parsed.push({
-            id,
-            name,
-            category,
-            price,
-            description,
-            images: finalImages,
-            badge,
-            in_stock,
-            video: rawVideo || undefined,
-            stock_quantity: parsedQty,
-          });
+        let in_stock = !isExplicitlySoldOut;
+        if (idx.inStock > -1) {
+          const inStockVal = clean(row[idx.inStock]).toLowerCase();
+          in_stock = !isExplicitlySoldOut && (inStockVal === 'true' || inStockVal === 'yes');
         }
 
-        setProducts(parsed.reverse());
-      })
-      .catch((err) => console.error("Error loading inventory sheet:", err))
-      .finally(() => setLoading(false));
+        const rawImagesStr = idx.images > -1 ? clean(row[idx.images]) : '';
+        const rawImages = rawImagesStr ? rawImagesStr.split(/[;,]/).map(u => clean(u)).filter(Boolean) : [];
+        const rawVideo = idx.video > -1 ? clean(row[idx.video]) : '';
+        const videoThumbnail = getVideoThumbnail(rawVideo);
+        const finalImages = rawImages.length > 0 ? rawImages : videoThumbnail ? [videoThumbnail] : [""];
+
+        parsed.push({
+          id,
+          name,
+          category: normalizeCategory(idx.category > -1 ? clean(row[idx.category]) : ''),
+          price,
+          description: idx.desc > -1 ? clean(row[idx.desc]) : '',
+          images: finalImages,
+          badge: idx.badge > -1 ? clean(row[idx.badge]) : undefined,
+          in_stock,
+          video: rawVideo || undefined,
+          stock_quantity: parsedQty,
+        });
+      }
+      setProducts(parsed.reverse());
+    } catch (err) {
+      console.error("Error loading inventory sheet:", err);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
+  // Initial Fetch & Polling Setup
+  useEffect(() => {
+    fetchInventory();
+    const interval = setInterval(fetchInventory, 60000); // Silent update every 60s
+    return () => clearInterval(interval);
+  }, [fetchInventory]);
+
+  // Handle URL Product Opening
   useEffect(() => {
     if (products.length === 0) return;
-
     const params = new URLSearchParams(window.location.search);
     const productIdFromUrl = params.get('product') || sessionStorage.getItem('swiftwave_active_modal');
-
     if (productIdFromUrl && !activeModalProduct) {
       const matched = products.find((p) => p.id === productIdFromUrl);
-      if (matched) {
-        setActiveModalProduct(matched);
-        setActiveImageIndex(0);
-        setMediaViewMode('photos');
-      }
+      if (matched) { setActiveModalProduct(matched); setActiveImageIndex(0); setMediaViewMode('photos'); }
     }
   }, [products]);
 
   const openProductModal = (product: Product) => {
-    setActiveModalProduct(product);
-    setActiveImageIndex(0);
-    setMediaViewMode('photos');
-    setIsDescExpanded(false);
-
+    sessionStorage.setItem('sw_scroll', window.scrollY.toString());
+    setActiveModalProduct(product); setActiveImageIndex(0); setMediaViewMode('photos'); setIsDescExpanded(false);
     try {
-      const newUrl = `${window.location.pathname}?product=${encodeURIComponent(product.id)}`;
-      window.history.replaceState(null, '', newUrl);
+      window.history.replaceState(null, '', `${window.location.pathname}?product=${encodeURIComponent(product.id)}`);
       sessionStorage.setItem('swiftwave_active_modal', product.id);
-    } catch (e) {
-      console.error(e);
-    }
+    } catch (e) { console.error(e); }
   };
 
   const closeProductModal = () => {
     setActiveModalProduct(null);
-    try {
-      window.history.replaceState(null, '', window.location.pathname);
-      sessionStorage.removeItem('swiftwave_active_modal');
-    } catch (e) {
-      console.error(e);
-    }
+    try { window.history.replaceState(null, '', window.location.pathname); sessionStorage.removeItem('swiftwave_active_modal'); } catch (e) { console.error(e); }
   };
 
+  // Cart Stock Sync Verification
   useEffect(() => {
     if (products.length === 0) return;
-
     setCart((currentCart) => {
       if (currentCart.length === 0) return currentCart;
-
       const notices: string[] = [];
       const updatedCart: CartItem[] = [];
-
       currentCart.forEach((item) => {
         if (!item || !item.product) return;
         const liveProduct = products.find((p) => p.id === item.product.id);
-
         if (!liveProduct || !liveProduct.in_stock || (liveProduct.stock_quantity !== undefined && liveProduct.stock_quantity <= 0)) {
           notices.push(`"${item.product.name}" is now sold out and was removed.`);
         } else {
           let adjustedQty = item.quantity;
           if (liveProduct.stock_quantity !== undefined && item.quantity > liveProduct.stock_quantity) {
             adjustedQty = liveProduct.stock_quantity;
-            notices.push(
-              `"${liveProduct.name}" quantity adjusted from ${item.quantity} to ${liveProduct.stock_quantity} (max available).`
-            );
+            notices.push(`"${liveProduct.name}" quantity adjusted from ${item.quantity} to ${liveProduct.stock_quantity} (max available).`);
           }
-
-          updatedCart.push({
-            product: liveProduct,
-            quantity: adjustedQty,
-          });
+          updatedCart.push({ product: liveProduct, quantity: adjustedQty });
         }
       });
-
-      if (notices.length > 0) {
-        setRemovedItemsNotice(notices);
-      }
-
+      if (notices.length > 0) setRemovedItemsNotice(notices);
       return updatedCart;
     });
   }, [products]);
 
   const filteredProducts = useMemo(() => {
     if (!Array.isArray(products)) return [];
-    return products
-      .filter((p, index) => {
-        if (!p) return false;
-        const isAutoNew = index < 10 || (p.badge?.toLowerCase().includes('new') ?? false);
-        const pCategory = p.category || '';
-        const matchesCategory = 
-          selectedCategory === 'All' 
-            ? true 
-            : selectedCategory === 'New In'
-              ? isAutoNew
-              : pCategory.toLowerCase() === selectedCategory.toLowerCase();
 
-        const pName = p.name || '';
-        const pDesc = p.description || '';
-        const pId = p.id || '';
-        const q = searchQuery.toLowerCase().trim();
-        
-        const searchTokens = q.split(/\s+/).filter(Boolean);
-        const matchesSearch = searchTokens.length === 0 || searchTokens.every(token => 
-          pName.toLowerCase().includes(token) || 
-          pDesc.toLowerCase().includes(token) ||
-          pId.toLowerCase().includes(token)
-        );
+    // STRICT "NEW IN" LOGIC: Absolute 20 newest items overriding categories
+    if (selectedCategory === 'New In') {
+      return products.slice(0, 20).sort((a, b) => (a.in_stock === b.in_stock ? 0 : a.in_stock ? -1 : 1));
+    }
+
+    return products
+      .filter((p) => {
+        if (!p) return false;
+
+        // Multi-category support via description scanning
+        const matchesCategory = selectedCategory === 'All' ? true :
+          ((p.category || '').toLowerCase() === selectedCategory.toLowerCase() ||
+            (p.description || '').toLowerCase().includes(selectedCategory.toLowerCase()));
+
+        const searchTokens = searchQuery.toLowerCase().trim().split(/\s+/).filter(Boolean);
+        const matchesSearch = searchTokens.length === 0 || searchTokens.every(token =>
+          (p.name || '').toLowerCase().includes(token) ||
+          (p.description || '').toLowerCase().includes(token) ||
+          (p.id || '').toLowerCase().includes(token));
 
         return matchesCategory && matchesSearch;
       })
-      .sort((a, b) => {
-        if (a.in_stock === b.in_stock) return 0;
-        return a.in_stock ? -1 : 1;
-      });
+      .sort((a, b) => (a.in_stock === b.in_stock ? 0 : a.in_stock ? -1 : 1));
   }, [products, selectedCategory, searchQuery]);
+
+  // Pagination Slice
+  const paginatedProducts = useMemo(() => {
+    return filteredProducts.slice(0, displayLimit);
+  }, [filteredProducts, displayLimit]);
 
   const suggestedProducts = useMemo(() => {
     if (filteredProducts.length > 0 || !searchQuery) return [];
-    
     const q = searchQuery.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim();
     if (q.length < 3) return [];
-
-    // Extract the first 4 letters as a root to bypass typos at the end of the word
     const searchRoot = q.slice(0, 3);
-
-    return products.filter(p => {
-      const nameLower = p.name.toLowerCase();
-      const catLower = p.category.toLowerCase();
-      // Match the root against the product name or its category
-      return nameLower.includes(searchRoot) || catLower.includes(searchRoot);
-    }).slice(0, 4); 
+    return products.filter(p => p.name.toLowerCase().includes(searchRoot) || p.category.toLowerCase().includes(searchRoot)).slice(0, 4);
   }, [filteredProducts.length, searchQuery, products]);
 
   const relatedProducts = useMemo(() => {
     if (!activeModalProduct || products.length === 0) return [];
-
-    const stopWords = new Set([
-      'and', 'the', 'for', 'with', 'in', 'of', 'to', 'a', 'an', 'at', 
-      'by', 'from', 'on', 'is', 'it', 'or', 'as', 'are', 'be', 'this',
-      'that', 'your', 'original', 'high', 'quality', 'new', 'best', 'pro', 'plus'
-    ]);
-
-    const currentTokens = activeModalProduct.name
-      .toLowerCase()
-      .replace(/[^a-z0-9\s]/g, ' ')
-      .split(/\s+/)
-      .filter((w) => w.length > 2 && !stopWords.has(w));
-
+    const stopWords = new Set(['and', 'the', 'for', 'with', 'in', 'of', 'to', 'a', 'an', 'at', 'by', 'from', 'on', 'is', 'it', 'or', 'as', 'are', 'be', 'this', 'that', 'your', 'original', 'high', 'quality', 'new', 'best', 'pro', 'plus']);
+    const currentTokens = activeModalProduct.name.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter((w) => w.length > 2 && !stopWords.has(w));
     const scored = products
       .filter((p) => p.id !== activeModalProduct.id)
       .map((p) => {
         let score = 0;
-        const pNameLower = p.name.toLowerCase();
-        const pDescLower = (p.description || '').toLowerCase();
-
-        if (p.category.toLowerCase() === activeModalProduct.category.toLowerCase()) {
-          score += 3;
-        }
-
+        if (p.category.toLowerCase() === activeModalProduct.category.toLowerCase()) score += 3;
         currentTokens.forEach((token) => {
-          if (pNameLower.includes(token)) {
-            score += 7; 
-          } else if (pDescLower.includes(token)) {
-            score += 1.5;
-          }
+          if (p.name.toLowerCase().includes(token)) score += 7;
+          else if ((p.description || '').toLowerCase().includes(token)) score += 1.5;
         });
-
-        if (p.in_stock) {
-          score += 1;
-        }
-
+        if (p.in_stock) score += 1;
         return { product: p, score };
       });
-
-    const sorted = scored
-      .filter((item) => item.score > 0)
-      .sort((a, b) => {
-        if (b.score !== a.score) {
-          return b.score - a.score;
-        }
-        const diffA = Math.abs(a.product.price - activeModalProduct.price);
-        const diffB = Math.abs(b.product.price - activeModalProduct.price);
-        return diffA - diffB;
-      });
-
-    return sorted.slice(0, 4).map((item) => item.product);
+    return scored.filter((item) => item.score > 0).sort((a, b) => b.score !== a.score ? b.score - a.score : Math.abs(a.product.price - activeModalProduct.price) - Math.abs(b.product.price - activeModalProduct.price)).slice(0, 4).map((item) => item.product);
   }, [activeModalProduct, products]);
 
   const addToCart = (product: Product) => {
     setCart((prev) => {
       const existing = prev.find((item) => item?.product?.id === product.id);
-      const currentQty = existing ? existing.quantity : 0;
-      const maxStock = product.stock_quantity;
-
-      if (maxStock !== undefined && currentQty >= maxStock) {
-        return prev;
-      }
-
-      if (existing) {
-        return prev.map((item) => 
-          item.product.id === product.id 
-            ? { ...item, quantity: item.quantity + 1 } 
-            : item
-        );
-      }
+      if (product.stock_quantity !== undefined && (existing ? existing.quantity : 0) >= product.stock_quantity) return prev;
+      if (existing) return prev.map((item) => item.product.id === product.id ? { ...item, quantity: item.quantity + 1 } : item);
       return [...prev, { product, quantity: 1 }];
     });
-
     setToastMessage(`Added "${(product.name || '').slice(0, 26)}..." to cart`);
-    setTimeout(() => {
-      setToastMessage(null);
-    }, 3000);
+    setTimeout(() => setToastMessage(null), 3000);
   };
 
   const updateQuantity = (productId: string, delta: number) => {
-    setCart((prev) => 
-      prev
-        .map((item) => {
-          if (item?.product?.id === productId) {
-            const maxStock = item.product.stock_quantity;
-            const newQty = item.quantity + delta;
-
-            if (delta > 0 && maxStock !== undefined && item.quantity >= maxStock) {
-              return item;
-            }
-
-            return newQty > 0 ? { ...item, quantity: newQty } : null;
-          }
-          return item;
-        })
-        .filter(Boolean) as CartItem[]
-    );
+    setCart((prev) => prev.map((item) => {
+      if (item?.product?.id === productId) {
+        const newQty = item.quantity + delta;
+        if (delta > 0 && item.product.stock_quantity !== undefined && item.quantity >= item.product.stock_quantity) return item;
+        return newQty > 0 ? { ...item, quantity: newQty } : null;
+      }
+      return item;
+    }).filter(Boolean) as CartItem[]);
   };
 
-  const removeFromCart = (productId: string) => {
-    setCart((prev) => prev.filter((item) => item?.product?.id !== productId));
-  };
-
-  const cartSubtotal = useMemo(() => {
-    return cart.reduce((sum, item) => {
-      if (!item || !item.product || typeof item.product.price !== 'number') return sum;
-      return sum + item.product.price * (item.quantity || 1);
-    }, 0);
-  }, [cart]);
+  const removeFromCart = (productId: string) => setCart((prev) => prev.filter((item) => item?.product?.id !== productId));
+  const cartSubtotal = useMemo(() => cart.reduce((sum, item) => sum + ((item?.product?.price || 0) * (item?.quantity || 1)), 0), [cart]);
 
   const { shop9Items, shop10Items, shop9Total, shop10Total } = useMemo(() => {
-    const s9Items: CartItem[] = [];
-    const s10Items: CartItem[] = [];
-    let s9Sum = 0;
-    let s10Sum = 0;
-
+    const s9Items: CartItem[] = []; const s10Items: CartItem[] = [];
+    let s9Sum = 0; let s10Sum = 0;
     cart.forEach((item) => {
       if (!item || !item.product) return;
       const shop = getProductShop(item.product.category || '');
-      const qty = item.quantity || 1;
-      const price = item.product.price || 0;
-      if (shop === 'shop10') {
-        s10Items.push(item);
-        s10Sum += price * qty;
-      } else {
-        s9Items.push(item);
-        s9Sum += price * qty;
-      }
+      const val = (item.product.price || 0) * (item.quantity || 1);
+      if (shop === 'shop10') { s10Items.push(item); s10Sum += val; } else { s9Items.push(item); s9Sum += val; }
     });
-
-    return {
-      shop9Items: s9Items,
-      shop10Items: s10Items,
-      shop9Total: s9Sum,
-      shop10Total: s10Sum,
-    };
+    return { shop9Items: s9Items, shop10Items: s10Items, shop9Total: s9Sum, shop10Total: s10Sum };
   }, [cart]);
 
   const hasShop9 = shop9Items.length > 0;
   const hasShop10 = shop10Items.length > 0;
   const isMixedCart = hasShop9 && hasShop10;
-
-  const deliveryFee = useMemo(() => {
-    if (deliveryMethod === 'pickup') return 0;
-    if (deliveryMethod === 'minna') return 1500;
-    return 4500;
-  }, [deliveryMethod]);
-
+  const deliveryFee = useMemo(() => deliveryMethod === 'pickup' ? 0 : deliveryMethod === 'minna' ? 1500 : 4500, [deliveryMethod]);
   const orderTotal = cartSubtotal + deliveryFee;
   const totalCartCount = cart.reduce((sum, item) => sum + (item?.quantity || 0), 0);
 
   const openCheckout = () => {
-    if (!orderId) {
-      const randomSuffix = Math.floor(1000 + Math.random() * 9000);
-      setOrderId(`SW-${randomSuffix}`);
-    }
-    setIsCartOpen(false);
-    setIsCheckoutOpen(true);
+    if (!orderId) setOrderId(`SW-${Math.floor(1000 + Math.random() * 9000)}`);
+    setIsCartOpen(false); setIsCheckoutOpen(true);
   };
 
   const handleFinalOrder = () => {
-    if (!customerName.trim() || !customerPhone.trim()) {
-      alert("Please provide your full name and an active phone number for rider calls.");
-      return;
-    }
+    if (!customerName.trim() || !customerPhone.trim()) return alert("Please provide your full name and an active phone number for rider calls.");
+    if (deliveryMethod === 'minna' && !landmarkHostel.trim()) return alert("Please specify your delivery address, landmark, or campus drop-off point.");
+    if (deliveryMethod === 'nationwide' && !deliveryAddress.trim()) return alert("Please enter your delivery destination (state, city, street).");
 
-    if (deliveryMethod === 'minna' && !landmarkHostel.trim()) {
-      alert("Please specify your delivery address, landmark, or campus drop-off point.");
-      return;
-    }
+    const deliveryTitle = deliveryMethod === 'pickup' ? "Store Pickup @ ABH Plaza, Minna (FREE)" : deliveryMethod === 'minna' ? `Minna Local/Campus Dispatch (₦1,500) - [${minnaCampusZone}]` : "Nationwide Logistics Dispatch (₦4,500)";
 
-    if (deliveryMethod === 'nationwide' && !deliveryAddress.trim()) {
-      alert("Please enter your delivery destination (state, city, street).");
-      return;
-    }
+    let paymentBreakdownText = isMixedCart ? `*PAYMENT SPLIT INSTRUCTIONS:*\n- Shop 9 (Essentials Subtotal): ₦${shop9Total.toLocaleString()} -> Pay to OPay (${SHOP_ACCOUNTS.shop9.number})\n- Shop 10 (Gadgets Subtotal): ₦${shop10Total.toLocaleString()} -> Pay to OPay (${SHOP_ACCOUNTS.shop10.number})\n- Delivery Fee: ₦${deliveryFee.toLocaleString()} (Paid to either account)\n*TOTAL PAID:* ₦${orderTotal.toLocaleString()}` : `*PAYMENT ACCOUNT:*\nPaid into OPay (${hasShop10 ? SHOP_ACCOUNTS.shop10.number : SHOP_ACCOUNTS.shop9.number}) - ${hasShop10 ? 'Shop 10 Gadgets' : 'Shop 9 Daily Essentials'}\nAccount: ${SHOP_ACCOUNTS.shop9.name}\n*TOTAL PAID:* ₦${orderTotal.toLocaleString()}`;
+    let itemsSummary = isMixedCart ? `*SHOP 10 (GADGETS & TECH):*\n${shop10Items.map((item, idx) => `  ${idx + 1}. ${item.product.name} x${item.quantity} = ₦${(item.product.price * item.quantity).toLocaleString()}`).join('\n')}\n\n*SHOP 9 (DAILY ESSENTIALS):*\n${shop9Items.map((item, idx) => `  ${idx + 1}. ${item.product.name} x${item.quantity} = ₦${(item.product.price * item.quantity).toLocaleString()}`).join('\n')}` : cart.map((item, idx) => `${idx + 1}. ${item.product.name} (ID: ${item.product.id}) x${item.quantity} = ₦${(item.product.price * item.quantity).toLocaleString()}`).join('\n');
 
-    const deliveryTitle = 
-      deliveryMethod === 'pickup' 
-        ? "Store Pickup @ ABH Plaza, Minna (FREE)"
-        : deliveryMethod === 'minna'
-          ? `Minna Local/Campus Dispatch (₦1,500) - [${minnaCampusZone}]`
-          : "Nationwide Logistics Dispatch (₦4,500)";
-
-    let paymentBreakdownText = "";
-    if (isMixedCart) {
-      paymentBreakdownText = `*PAYMENT SPLIT INSTRUCTIONS:*
-- Shop 9 (Essentials Subtotal): ₦${shop9Total.toLocaleString()} -> Pay to OPay (${SHOP_ACCOUNTS.shop9.number})
-- Shop 10 (Gadgets Subtotal): ₦${shop10Total.toLocaleString()} -> Pay to OPay (${SHOP_ACCOUNTS.shop10.number})
-- Delivery Fee: ₦${deliveryFee.toLocaleString()} (Paid to either account)
-*TOTAL PAID:* ₦${orderTotal.toLocaleString()}`;
-    } else if (hasShop10) {
-      paymentBreakdownText = `*PAYMENT ACCOUNT:*
-Paid into OPay (${SHOP_ACCOUNTS.shop10.number}) - Shop 10 Gadgets
-Account: ${SHOP_ACCOUNTS.shop10.name}
-*TOTAL PAID:* ₦${orderTotal.toLocaleString()}`;
-    } else {
-      paymentBreakdownText = `*PAYMENT ACCOUNT:*
-Paid into OPay (${SHOP_ACCOUNTS.shop9.number}) - Shop 9 Daily Essentials
-Account: ${SHOP_ACCOUNTS.shop9.name}
-*TOTAL PAID:* ₦${orderTotal.toLocaleString()}`;
-    }
-
-    let itemsSummary = "";
-    if (isMixedCart) {
-      itemsSummary = `*SHOP 10 (GADGETS & TECH):*
-${shop10Items.map((item, idx) => `  ${idx + 1}. ${item.product.name} x${item.quantity} = ₦${(item.product.price * item.quantity).toLocaleString()}`).join('\n')}
-
-*SHOP 9 (DAILY ESSENTIALS):*
-${shop9Items.map((item, idx) => `  ${idx + 1}. ${item.product.name} x${item.quantity} = ₦${(item.product.price * item.quantity).toLocaleString()}`).join('\n')}`;
-    } else {
-      itemsSummary = cart.map((item, idx) => 
-        `${idx + 1}. ${item.product.name} (ID: ${item.product.id}) x${item.quantity} = ₦${(item.product.price * item.quantity).toLocaleString()}`
-      ).join('\n');
-    }
-
-    const message = `🛍️ *PAID ORDER VERIFICATION - SWIFTWAVE MALL*
-*Order Reference:* #${orderId}
-----------------------------------------
-*Customer Name:* ${customerName.trim()}
-*Calling Phone:* ${customerPhone.trim()}
-
-*Fulfillment:* ${deliveryTitle}
-${deliveryMethod === 'minna' ? `*Area/Zone:* ${minnaCampusZone}\n*Address/Landmark/Drop Point:* ${landmarkHostel.trim()}\n` : ''}${deliveryMethod === 'nationwide' ? `*Delivery Destination:* ${deliveryAddress.trim()}\n` : ''}${orderNotes.trim() ? `*Special Notes:* ${orderNotes.trim()}\n` : ''}
-*ITEMS ORDERED:*
-${itemsSummary}
-----------------------------------------
-*Subtotal:* ₦${cartSubtotal.toLocaleString()}
-*Delivery Fee:* ₦${deliveryFee.toLocaleString()}
-----------------------------------------
-${paymentBreakdownText}
-----------------------------------------
-*Transfer Remark Used:* ${orderId}
-*(Attached is my payment transfer receipt screenshot)*`;
-
+    const message = `🛍️ *PAID ORDER VERIFICATION - SWIFTWAVE MALL*\n*Order Reference:* #${orderId}\n----------------------------------------\n*Customer Name:* ${customerName.trim()}\n*Calling Phone:* ${customerPhone.trim()}\n\n*Fulfillment:* ${deliveryTitle}\n${deliveryMethod === 'minna' ? `*Area/Zone:* ${minnaCampusZone}\n*Address/Landmark/Drop Point:* ${landmarkHostel.trim()}\n` : ''}${deliveryMethod === 'nationwide' ? `*Delivery Destination:* ${deliveryAddress.trim()}\n` : ''}${orderNotes.trim() ? `*Special Notes:* ${orderNotes.trim()}\n` : ''}\n*ITEMS ORDERED:*\n${itemsSummary}\n----------------------------------------\n*Subtotal:* ₦${cartSubtotal.toLocaleString()}\n*Delivery Fee:* ₦${deliveryFee.toLocaleString()}\n----------------------------------------\n${paymentBreakdownText}\n----------------------------------------\n*Transfer Remark Used:* ${orderId}\n*(Attached is my payment transfer receipt screenshot)*`;
     window.open(`https://wa.me/${selectedRepNumber}?text=${encodeURIComponent(message)}`, '_blank');
-    
-    setCart([]);
-    setOrderId('');
-    setOrderNotes('');
-    setLandmarkHostel('');
-    setIsCheckoutOpen(false);
-    localStorage.removeItem('swiftwave_checkout_open');
-    localStorage.removeItem('swiftwave_order_id');
-    localStorage.removeItem('swiftwave_order_notes');
-    localStorage.removeItem('swiftwave_landmark');
+
+    setCart([]); setOrderId(''); setOrderNotes(''); setLandmarkHostel(''); setIsCheckoutOpen(false);
+    ['swiftwave_checkout_open', 'swiftwave_order_id', 'swiftwave_order_notes', 'swiftwave_landmark'].forEach(k => localStorage.removeItem(k));
   };
 
-  const activeVideoEmbed = useMemo(() => {
-    return activeModalProduct ? getVideoEmbed(activeModalProduct.video) : null;
-  }, [activeModalProduct]);
+  const activeVideoEmbed = useMemo(() => activeModalProduct ? getVideoEmbed(activeModalProduct.video) : null, [activeModalProduct]);
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans flex flex-col antialiased">
-      
-      {/* Offline Alert Strip */}
       {isOffline && (
         <div className="bg-amber-500 text-amber-950 text-xs py-1.5 px-4 font-bold text-center flex items-center justify-center gap-1.5 shadow-sm">
           <span>⚠ You are browsing offline. Showing saved inventory and catalog prices.</span>
         </div>
       )}
 
-      {/* Floating Add-to-Cart Toast */}
       {toastMessage && (
-        <aside 
-          aria-label="Cart Notification"
-          className="fixed bottom-20 sm:bottom-6 left-1/2 -translate-x-1/2 z-50 bg-slate-900/95 text-white backdrop-blur-md px-4 py-2.5 rounded-full shadow-2xl flex items-center gap-3 border border-violet-500/30 animate-bounce"
-        >
-          <div className="w-5 h-5 rounded-full bg-emerald-500 text-slate-950 flex items-center justify-center">
-            <Check className="w-3 h-3 stroke-[3]" />
-          </div>
+        <aside className="fixed bottom-20 sm:bottom-6 left-1/2 -translate-x-1/2 z-50 bg-slate-900/95 text-white backdrop-blur-md px-4 py-2.5 rounded-full shadow-2xl flex items-center gap-3 border border-violet-500/30 animate-bounce">
+          <div className="w-5 h-5 rounded-full bg-emerald-500 text-slate-950 flex items-center justify-center"><Check className="w-3 h-3 stroke-[3]" /></div>
           <span className="text-xs font-semibold">{toastMessage}</span>
-          <button
-            onClick={() => {
-              setToastMessage(null);
-              setIsCartOpen(true);
-            }}
-            className="text-xs font-bold text-yellow-400 hover:text-white underline underline-offset-2 ml-1"
-          >
-            View Cart
-          </button>
+          <button onClick={() => { setToastMessage(null); setIsCartOpen(true); }} className="text-xs font-bold text-yellow-400 hover:text-white underline underline-offset-2 ml-1">View Cart</button>
         </aside>
       )}
 
-      {/* Top Corporate Legal Badge Bar & Social Presence */}
-      <div className="bg-violet-700 text-violet-100 text-xs py-2 px-4 border-b border-violet-800">
+      {/* Top Corporate Legal Badge Bar */}
+      <div className="bg-violet-600 text-white text-xs py-2 px-4 border-b border-violet-700">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-2">
           <div className="flex items-center gap-2">
             <span className="inline-block w-2 h-2 rounded-full bg-yellow-400"></span>
             <span className="font-semibold text-white tracking-wide">SWIFTWAVE VARIETY MALL LIMITED</span>
-            <span className="hidden md:inline text-violet-300">|</span>
-            <span className="hidden md:inline font-mono text-yellow-200">RC: 9468092</span>
+            <span className="hidden md:inline text-white/50">|</span>
+            <span className="hidden md:inline font-mono text-yellow-300">RC: 9468092</span>
           </div>
-
-          <div className="flex items-center gap-4 text-violet-200">
-            <div className="flex items-center gap-2.5 pr-2 border-r border-violet-500">
-              <a 
-                href={SOCIAL_LINKS.instagram} 
-                target="_blank" 
-                rel="noreferrer" 
-                className="hover:text-yellow-400 transition-colors"
-                title="Follow on Instagram"
-              >
-                <Instagram className="w-3.5 h-3.5" />
+          <div className="flex items-center gap-4 text-white/90">
+            <div className="flex items-center gap-2.5 pr-2 border-r border-white/30">
+              <a href={SOCIAL_LINKS.instagram} target="_blank" rel="noreferrer" className="hover:text-yellow-400 transition-colors"><Instagram className="w-3.5 h-3.5" /></a>
+              <a href={SOCIAL_LINKS.tiktok} target="_blank" rel="noreferrer" className="hover:text-yellow-400 transition-colors flex items-center">
+                <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.99v8.29c.03 2.05-.72 4.17-2.18 5.62-1.74 1.79-4.34 2.5-6.75 1.95-2.61-.53-4.78-2.6-5.46-5.18-.8-2.91.43-6.19 3.02-7.66 1.48-.87 3.26-1.07 4.93-.68v4.11c-.93-.31-1.99-.25-2.87.21-1.09.56-1.74 1.77-1.64 3 .07 1.19.86 2.27 2 2.59 1.25.37 2.7-.1 3.42-1.13.38-.52.55-1.17.54-1.81V.02z" /></svg>
               </a>
-              <a 
-                href={SOCIAL_LINKS.tiktok} 
-                target="_blank" 
-                rel="noreferrer" 
-                className="hover:text-yellow-400 transition-colors flex items-center"
-                title="Follow on TikTok"
-              >
-                <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
-                  <path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.99v8.29c.03 2.05-.72 4.17-2.18 5.62-1.74 1.79-4.34 2.5-6.75 1.95-2.61-.53-4.78-2.6-5.46-5.18-.8-2.91.43-6.19 3.02-7.66 1.48-.87 3.26-1.07 4.93-.68v4.11c-.93-.31-1.99-.25-2.87.21-1.09.56-1.74 1.77-1.64 3 .07 1.19.86 2.27 2 2.59 1.25.37 2.7-.1 3.42-1.13.38-.52.55-1.17.54-1.81V.02z" />
-                </svg>
-              </a>
-              <a 
-                href={SOCIAL_LINKS.facebook} 
-                target="_blank" 
-                rel="noreferrer" 
-                className="hover:text-yellow-400 transition-colors"
-                title="Follow on Facebook"
-              >
-                <Facebook className="w-3.5 h-3.5" />
-              </a>
+              <a href={SOCIAL_LINKS.facebook} target="_blank" rel="noreferrer" className="hover:text-yellow-400 transition-colors"><Facebook className="w-3.5 h-3.5" /></a>
             </div>
-
-            <button 
-              onClick={() => setShowAboutModal(true)} 
-              className="hover:text-white underline underline-offset-2 flex items-center gap-1 text-xs transition-colors"
-            >
-              <Info className="w-3 h-3" /> About Brand
-            </button>
+            <button onClick={() => setShowAboutModal(true)} className="hover:text-yellow-400 underline underline-offset-2 flex items-center gap-1 text-xs transition-colors"><Info className="w-3 h-3" /> About Brand</button>
           </div>
         </div>
       </div>
 
-      {/* Main Navbar */}
       <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
           <div className="flex items-center justify-between gap-4">
-            
-            {/* Brand Logo */}
             <div className="flex items-center">
-              <img 
-                src="/logo.png" 
-                alt="Swiftwave Variety Mall" 
-                className="h-10 sm:h-12 w-auto max-w-[200px] sm:max-w-[250px] object-contain object-left cursor-pointer"
-                onClick={() => setSelectedCategory('All')}
-                onError={(e) => {
-                  e.currentTarget.style.display = 'none';
-                  if (e.currentTarget.nextElementSibling) {
-                    (e.currentTarget.nextElementSibling as HTMLElement).style.display = 'flex';
-                  }
-                }}
-              />
-              
-              <div className="hidden items-center gap-2">
-                <div className="w-10 h-10 rounded-xl bg-violet-600 flex items-center justify-center text-yellow-400 shadow-md font-black">
-                  S
-                </div>
+              <img src="/logo.png" alt="Swiftwave Variety Mall" className="h-10 sm:h-12 w-auto max-w-[200px] sm:max-w-[250px] object-contain object-left cursor-pointer" onClick={() => { setSearchQuery(''); setSelectedCategory('All'); setDisplayLimit(48); }} onError={(e) => { e.currentTarget.style.display = 'none'; if (e.currentTarget.nextElementSibling) { (e.currentTarget.nextElementSibling as HTMLElement).style.display = 'flex'; } }} />
+              <div className="hidden items-center gap-2 cursor-pointer" onClick={() => { setSearchQuery(''); setSelectedCategory('All'); setDisplayLimit(48); }}>
+                <div className="w-10 h-10 rounded-xl bg-violet-600 flex items-center justify-center text-yellow-400 shadow-md font-black">S</div>
                 <div>
-                  <h1 className="text-xl font-black tracking-tight text-slate-900 leading-none">
-                    SWIFT<span className="text-violet-600">WAVE</span>
-                  </h1>
-                  <p className="text-[10px] uppercase font-bold tracking-widest text-slate-400 mt-1">
-                    Variety Mall
-                  </p>
+                  <h1 className="text-xl font-black tracking-tight text-slate-900 leading-none">SWIFT<span className="text-violet-600">WAVE</span></h1>
+                  <p className="text-[10px] uppercase font-bold tracking-widest text-slate-400 mt-1">Variety Mall</p>
                 </div>
               </div>
             </div>
 
-            {/* Desktop Search */}
             <div className="flex-1 max-w-md relative hidden sm:block">
               <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                placeholder="Search products, gadgets, essentials..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-slate-100 hover:bg-slate-200/60 focus:bg-white text-sm rounded-full pl-10 pr-4 py-2 border border-transparent focus:border-violet-600 focus:ring-4 focus:ring-violet-600/10 transition-all outline-none"
-              />
+              <input type="text" placeholder="Search products, gadgets, essentials..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full bg-slate-100 hover:bg-slate-200/60 focus:bg-white text-sm rounded-full pl-10 pr-4 py-2 border border-transparent focus:border-violet-600 focus:ring-4 focus:ring-violet-600/10 transition-all outline-none" />
             </div>
 
-            {/* Cart Drawer Button */}
-            <button
-              onClick={() => setIsCartOpen(true)}
-              className="relative inline-flex items-center gap-2 bg-yellow-400 hover:bg-yellow-500 text-violet-900 text-xs sm:text-sm font-black px-4 py-2.5 rounded-full transition-all shadow-md active:scale-95"
-            >
+            <button onClick={() => setIsCartOpen(true)} className="relative inline-flex items-center gap-2 bg-yellow-400 hover:bg-yellow-500 text-violet-900 text-xs sm:text-sm font-black px-4 py-2.5 rounded-full transition-all shadow-md active:scale-95">
               <ShoppingBag className="w-4 h-4" />
               <span>Cart</span>
               {totalCartCount > 0 && (
@@ -1099,32 +711,16 @@ ${paymentBreakdownText}
             </button>
           </div>
 
-          {/* Mobile Search Bar */}
           <div className="mt-3 sm:hidden relative">
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              placeholder="Search products..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-slate-100 text-sm rounded-xl pl-9 pr-3 py-2 border border-transparent focus:border-violet-600 focus:bg-white transition-all outline-none"
-            />
+            <input type="text" placeholder="Search products..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full bg-slate-100 text-sm rounded-xl pl-9 pr-3 py-2 border border-transparent focus:border-violet-600 focus:bg-white transition-all outline-none" />
           </div>
 
-          {/* Category Filter Pills */}
           <nav className="flex items-center gap-2 overflow-x-auto no-scrollbar pt-3 pb-1">
             {CATEGORIES.map((cat) => {
               const active = selectedCategory === cat;
               return (
-                <button
-                  key={cat}
-                  onClick={() => setSelectedCategory(cat)}
-                  className={`text-xs font-bold px-4 py-2 rounded-full whitespace-nowrap transition-all duration-200 ${
-                    active
-                      ? 'bg-violet-700 text-yellow-400 shadow-sm'
-                      : 'bg-slate-100 text-slate-600 hover:bg-violet-50 hover:text-violet-900'
-                  }`}
-                >
+                <button key={cat} onClick={() => { setSelectedCategory(cat); setDisplayLimit(48); }} className={`text-xs font-bold px-4 py-2 rounded-full whitespace-nowrap transition-all duration-200 ${active ? 'bg-violet-600 text-yellow-400 shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-violet-100 hover:text-violet-700'}`}>
                   {cat}
                 </button>
               );
@@ -1133,11 +729,9 @@ ${paymentBreakdownText}
         </div>
       </header>
 
-      {/* Main Catalog */}
       <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
-        
-        {/* Brand Hero Banner - MATCHING LOGO COLORS */}
-        <section className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-violet-700 via-violet-600 to-[#b565e3] text-white p-6 sm:p-10 mb-8 shadow-xl border border-violet-500">
+        {/* Brand Hero Banner */}
+        <section className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-violet-600 via-violet-700 to-violet-800 text-white p-6 sm:p-10 mb-8 shadow-xl border border-violet-500">
           <div className="relative z-10 max-w-2xl">
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-yellow-400 text-violet-900 shadow-sm mb-3">
               <Sparkles className="w-3.5 h-3.5" />
@@ -1146,419 +740,203 @@ ${paymentBreakdownText}
             <h2 className="text-2xl sm:text-4xl font-extrabold tracking-tight leading-tight text-white">
               Everyday Essentials Built for the Way You Actually Live.
             </h2>
-            <p className="mt-2 text-sm sm:text-base text-violet-100 font-medium leading-relaxed">
+            <p className="mt-2 text-sm sm:text-base text-white/90 font-medium leading-relaxed">
               Order verified products directly from Shop 9 & 10, ABH Plaza, Minna with store pickup or swift dispatch.
             </p>
           </div>
-          <div className="absolute right-0 top-0 bottom-0 w-1/3 bg-radial from-violet-400/30 to-transparent pointer-events-none"></div>
+          <div className="absolute right-0 top-0 bottom-0 w-1/3 bg-radial from-white/10 to-transparent pointer-events-none"></div>
         </section>
 
-        {/* Filter Meta Header */}
         <div className="flex items-center justify-between mb-4">
-          <p className="text-xs uppercase tracking-wider font-bold text-slate-500">
-            Showing <span className="text-violet-900 font-black">{filteredProducts.length}</span> Products
-          </p>
-          {selectedCategory !== 'All' && (
-            <button 
-              onClick={() => setSelectedCategory('All')} 
-              className="text-xs font-semibold text-violet-700 hover:underline"
-            >
-              Clear filter
-            </button>
-          )}
+          <p className="text-xs uppercase tracking-wider font-bold text-slate-500">Showing <span className="text-violet-700 font-black">{filteredProducts.length}</span> Products</p>
+          {selectedCategory !== 'All' && <button onClick={() => { setSelectedCategory('All'); setDisplayLimit(48); }} className="text-xs font-semibold text-violet-600 hover:underline">Clear filter</button>}
         </div>
 
-        {/* Products Grid */}
         {loading ? (
           <div className="py-24 text-center">
-            <div className="inline-block w-8 h-8 border-4 border-violet-700 border-t-transparent rounded-full animate-spin"></div>
+            <div className="inline-block w-8 h-8 border-4 border-violet-600 border-t-transparent rounded-full animate-spin"></div>
             <p className="mt-3 text-sm text-slate-500 font-medium">Syncing live catalog from store inventory...</p>
           </div>
         ) : filteredProducts.length === 0 ? (
           <div className="bg-white rounded-2xl border border-slate-200 p-8 sm:p-12 text-center max-w-lg mx-auto my-12 shadow-sm">
-            <div className="w-12 h-12 bg-violet-50 text-violet-600 rounded-full flex items-center justify-center mx-auto mb-3">
-              <Search className="w-6 h-6" />
-            </div>
+            <div className="w-12 h-12 bg-violet-100 text-violet-600 rounded-full flex items-center justify-center mx-auto mb-3"><Search className="w-6 h-6" /></div>
             <h3 className="text-base font-bold text-slate-900">No exact match found</h3>
-            <p className="text-xs text-slate-500 mt-1 mb-6">
-              We couldn't find exactly "{searchQuery}". 
-            </p>
-
-            {/* Smart Product Suggestions */}
+            <p className="text-xs text-slate-500 mt-1 mb-6">We couldn't find exactly "{searchQuery}". </p>
             {suggestedProducts.length > 0 ? (
-              <div className="text-left bg-violet-50/50 rounded-xl p-4 border border-violet-100 mb-4">
-                <h4 className="text-xs font-bold text-violet-900 mb-3 flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-violet-600" /> Did you mean one of these?
-                </h4>
+              <div className="text-left bg-violet-50 rounded-xl p-4 border border-violet-100 mb-4">
+                <h4 className="text-xs font-bold text-violet-700 mb-3 flex items-center gap-1.5"><Sparkles className="w-3.5 h-3.5" /> Did you mean one of these?</h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {suggestedProducts.map(p => (
-                    <button
-                      key={p.id}
-                      onClick={() => openProductModal(p)}
-                      className="flex items-center gap-3 bg-white p-2 rounded-lg border border-violet-100 hover:border-violet-300 transition-colors text-left"
-                    >
+                    <button key={p.id} onClick={() => openProductModal(p)} className="flex items-center gap-3 bg-white p-2 rounded-lg border border-violet-100 hover:border-violet-300 transition-colors text-left">
                       <img src={formatDriveUrl(p.images?.[0] || '')} className="w-10 h-10 rounded-md object-cover bg-slate-50" alt="" />
                       <div className="min-w-0 flex-1">
                         <p className="text-[11px] font-bold text-slate-900 truncate">{p.name}</p>
-                        <p className="text-[10px] text-violet-700 font-bold mt-0.5">₦{p.price.toLocaleString()}</p>
+                        <p className="text-[10px] text-violet-600 font-bold mt-0.5">₦{p.price.toLocaleString()}</p>
                       </div>
                     </button>
                   ))}
                 </div>
               </div>
             ) : null}
-
-            {/* Empty State Recovery Categories */}
             <div className="text-left bg-slate-50 rounded-xl p-4 border border-slate-100">
               <h4 className="text-xs font-bold text-slate-700 mb-2">Explore Popular Categories:</h4>
               <div className="flex flex-wrap gap-2">
                 {['Gadgets', 'Phone Accessories', 'Kitchen & Dining', 'School Supplies'].map(cat => (
-                  <button
-                    key={cat}
-                    onClick={() => {
-                      setSearchQuery('');
-                      setSelectedCategory(cat);
-                    }}
-                    className="text-[11px] font-semibold bg-white border border-slate-200 text-violet-700 px-3 py-1.5 rounded-lg shadow-sm hover:border-violet-300 transition-colors"
-                  >
-                    {cat}
-                  </button>
+                  <button key={cat} onClick={() => { setSearchQuery(''); setSelectedCategory(cat); setDisplayLimit(48); }} className="text-[11px] font-semibold bg-white border border-slate-200 text-violet-600 px-3 py-1.5 rounded-lg shadow-sm hover:border-violet-300 transition-colors">{cat}</button>
                 ))}
               </div>
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
-            {filteredProducts.map((product) => {
-              const displayImage = formatDriveUrl(product.images?.[0] || '');
-              const inCartQty = cart.find((i) => i?.product?.id === product.id)?.quantity || 0;
-              const isMaxed = product.stock_quantity !== undefined && inCartQty >= product.stock_quantity;
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+              {paginatedProducts.map((product) => {
+                const displayImage = formatDriveUrl(product.images?.[0] || '');
+                const inCartQty = cart.find((i) => i?.product?.id === product.id)?.quantity || 0;
+                const isMaxed = product.stock_quantity !== undefined && inCartQty >= product.stock_quantity;
 
-              return (
-                <div
-                  key={product.id}
-                  className="group bg-white rounded-2xl border border-slate-200 hover:border-violet-400 hover:shadow-xl hover:shadow-violet-900/10 transition-all duration-300 flex flex-col overflow-hidden"
-                >
-                  <div 
-                    className="relative aspect-square w-full bg-slate-100 overflow-hidden cursor-pointer"
-                    onClick={() => openProductModal(product)}
-                  >
-                    <img
-                      src={displayImage}
-                      alt={product.name}
-                      className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
-                      loading="lazy"
-                    />
-
-                    {!product.in_stock && (
-                      <div className="absolute inset-0 bg-slate-950/65 backdrop-blur-[2px] flex items-center justify-center">
-                        <span className="bg-rose-600 text-white font-bold text-xs uppercase px-3 py-1 rounded-full shadow-lg">
-                          Sold Out
+                return (
+                  <div key={product.id} className="group bg-white rounded-2xl border border-slate-200 hover:border-violet-400 hover:shadow-xl hover:shadow-violet-900/10 transition-all duration-300 flex flex-col overflow-hidden">
+                    <div className="relative aspect-square w-full bg-slate-100 overflow-hidden cursor-pointer" onClick={() => openProductModal(product)}>
+                      <img src={displayImage} alt={product.name} className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500" loading="lazy" />
+                      {!product.in_stock && (
+                        <div className="absolute inset-0 bg-slate-950/65 backdrop-blur-[2px] flex items-center justify-center">
+                          <span className="bg-rose-600 text-white font-bold text-xs uppercase px-3 py-1 rounded-full shadow-lg">Sold Out</span>
+                        </div>
+                      )}
+                      {product.badge && <span className="absolute top-2.5 left-2.5 bg-violet-600 text-yellow-400 text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full shadow-md">{product.badge}</span>}
+                      {product.in_stock && product.stock_quantity !== undefined && product.stock_quantity > 0 && product.stock_quantity <= 5 && (
+                        <span className="absolute top-2.5 right-2.5 bg-rose-600 text-white text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-full shadow-md flex items-center gap-1 border border-rose-500">
+                          <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping"></span> 🔥 Almost Sold Out ({product.stock_quantity} left)
                         </span>
-                      </div>
-                    )}
-
-                    {product.badge && (
-                      <span className="absolute top-2.5 left-2.5 bg-violet-700 text-yellow-400 text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full shadow-md">
-                        {product.badge}
-                      </span>
-                    )}
-
-                    {/* Low Stock Warning Badge */}
-                    {product.in_stock && product.stock_quantity !== undefined && product.stock_quantity > 0 && product.stock_quantity <= 5 && (
-                      <span className="absolute top-2.5 right-2.5 bg-rose-600 text-white text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-full shadow-md flex items-center gap-1 border border-rose-500">
-                        <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping"></span>
-                        🔥 Almost Sold Out ({product.stock_quantity} left)
-                      </span>
-                    )}
-
-                    {product.video && (
-                      <span className="absolute bottom-2.5 right-2.5 bg-violet-950/80 backdrop-blur-md text-white px-2 py-1 rounded-full text-[10px] font-bold flex items-center gap-1 shadow-md">
-                        <Video className="w-3 h-3 text-violet-300" />
-                        <span>Video</span>
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="p-4 flex-1 flex flex-col justify-between">
-                    <div>
-                      <div className="flex items-center justify-between text-[11px] font-semibold text-slate-400 mb-1">
-                        <span className="text-violet-800 font-bold">{product.category}</span>
-                        <span className="font-mono text-slate-500">{product.id}</span>
-                      </div>
-
-                      <h3 
-                        onClick={() => openProductModal(product)}
-                        className="text-sm font-bold text-slate-900 line-clamp-2 hover:text-violet-700 cursor-pointer transition-colors"
-                      >
-                        {product.name}
-                      </h3>
-
-                      <p className="text-xs text-slate-500 line-clamp-2 mt-1.5 leading-relaxed">
-                        {product.description}
-                      </p>
-                    </div>
-
-                    <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
-                      <div>
-                        <span className="text-[10px] text-slate-400 block font-medium">Price</span>
-                        <span className="text-base font-black text-slate-900">
-                          ₦{product.price.toLocaleString()}
+                      )}
+                      {product.video && (
+                        <span className="absolute bottom-2.5 right-2.5 bg-slate-900/80 backdrop-blur-md text-white px-2 py-1 rounded-full text-[10px] font-bold flex items-center gap-1 shadow-md">
+                          <Video className="w-3 h-3 text-yellow-400" /><span>Video</span>
                         </span>
-                      </div>
-
-                      {product.in_stock ? (
-                        <button
-                          onClick={() => addToCart(product)}
-                          disabled={isMaxed}
-                          className={`inline-flex items-center gap-1.5 text-xs font-black px-3.5 py-2 rounded-xl transition-all ${
-                            isMaxed
-                              ? 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'
-                              : 'bg-yellow-400 hover:bg-yellow-500 text-violet-900 shadow-sm active:scale-95'
-                          }`}
-                        >
-                          <Plus className="w-3.5 h-3.5" />
-                          <span>{isMaxed ? 'Max in Cart' : 'Add'}</span>
-                        </button>
-                      ) : (
-                        <a
-                          href={`https://wa.me/${selectedRepNumber}?text=${encodeURIComponent(
-                            `Hello Swiftwave Mall, I noticed "${product.name}" (ID: ${product.id}) is sold out. Please notify me when it is back in stock!`
-                          )}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          onClick={(e) => e.stopPropagation()}
-                          className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-2 rounded-xl transition-all bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 shrink-0"
-                          title="Notify me when restocked via WhatsApp"
-                        >
-                          <span>Restock</span>
-                          <ExternalLink className="w-3 h-3" />
-                        </a>
                       )}
                     </div>
+                    <div className="p-4 flex-1 flex flex-col justify-between">
+                      <div>
+                        <div className="flex items-center justify-between text-[11px] font-semibold text-slate-400 mb-1">
+                          <span className="text-violet-700 font-bold truncate max-w-[120px]">{product.category}</span>
+                          <span className="font-mono text-slate-500">{product.id}</span>
+                        </div>
+                        <h3 onClick={() => openProductModal(product)} className="text-sm font-bold text-slate-900 line-clamp-2 hover:text-violet-600 cursor-pointer transition-colors">{product.name}</h3>
+                        <p className="text-xs text-slate-500 line-clamp-2 mt-1.5 leading-relaxed">{product.description}</p>
+                      </div>
+                      <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+                        <div>
+                          <span className="text-[10px] text-slate-400 block font-medium">Price</span>
+                          <span className="text-base font-black text-slate-900">₦{product.price.toLocaleString()}</span>
+                        </div>
+                        {product.in_stock ? (
+                          <button onClick={() => addToCart(product)} disabled={isMaxed} className={`inline-flex items-center gap-1.5 text-xs font-black px-3.5 py-2 rounded-xl transition-all ${isMaxed ? 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed' : 'bg-yellow-400 hover:bg-yellow-500 text-violet-900 shadow-sm active:scale-95'}`}>
+                            <Plus className="w-3.5 h-3.5" /><span>{isMaxed ? 'Max in Cart' : 'Add'}</span>
+                          </button>
+                        ) : (
+                          <a href={`https://wa.me/${selectedRepNumber}?text=${encodeURIComponent(`Hello Swiftwave Mall, I noticed "${product.name}" (ID: ${product.id}) is sold out. Please notify me when it is back in stock!\n\nReference Image: ${formatDriveUrl(product.images?.[0] || '')}`)}`} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-2 rounded-xl transition-all bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 shrink-0" title="Notify me when restocked via WhatsApp">
+                            <span>Restock</span><ExternalLink className="w-3 h-3" />
+                          </a>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+
+            {/* Pagination Load More */}
+            {filteredProducts.length > displayLimit && (
+              <div className="flex justify-center mt-10">
+                <button
+                  onClick={() => setDisplayLimit(prev => prev + 48)}
+                  className="bg-white border-2 border-violet-600 text-violet-600 hover:bg-violet-600 hover:text-white font-bold px-8 py-3 rounded-full transition-all shadow-sm flex items-center gap-2"
+                >
+                  <ArrowDownCircle className="w-5 h-5" />
+                  <span>Load More Products (Showing {displayLimit} of {filteredProducts.length})</span>
+                </button>
+              </div>
+            )}
+          </>
         )}
       </main>
 
       {/* Product Detail Modal */}
       {activeModalProduct && (
-        <div 
-          className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) closeProductModal();
-          }}
-        >
+        <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4" onClick={(e) => { if (e.target === e.currentTarget) closeProductModal(); }}>
           <div className="bg-white rounded-3xl max-w-2xl w-full overflow-hidden shadow-2xl relative border border-slate-200 flex flex-col max-h-[92vh]">
-            
             <div className="p-4 border-b border-slate-100 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="text-xs font-mono font-bold text-violet-700 bg-violet-50 px-2 py-0.5 rounded-md">
-                  {activeModalProduct.id}
-                </span>
+                <span className="text-xs font-mono font-bold text-violet-700 bg-violet-100 px-2 py-0.5 rounded-md">{activeModalProduct.id}</span>
                 <span className="text-xs text-slate-400">• {activeModalProduct.category}</span>
               </div>
-              <button
-                onClick={closeProductModal}
-                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-colors"
-              >
-                <X className="w-4 h-4" />
-              </button>
+              <button onClick={closeProductModal} className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-colors"><X className="w-4 h-4" /></button>
             </div>
-
             <div className="p-6 overflow-y-auto flex-1">
-              
               {activeModalProduct.video && (
                 <div className="flex items-center gap-2 mb-3">
-                  <button
-                    onClick={() => setMediaViewMode('photos')}
-                    className={`inline-flex items-center gap-1.5 text-xs font-bold px-3.5 py-1.5 rounded-full transition-all ${
-                      mediaViewMode === 'photos'
-                        ? 'bg-violet-700 text-yellow-400 shadow-sm'
-                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                    }`}
-                  >
-                    <ImageIcon className="w-3.5 h-3.5" />
-                    <span>Product Photos ({activeModalProduct.images?.length || 1})</span>
-                  </button>
-
-                  <button
-                    onClick={() => setMediaViewMode('video')}
-                    className={`inline-flex items-center gap-1.5 text-xs font-bold px-3.5 py-1.5 rounded-full transition-all ${
-                      mediaViewMode === 'video'
-                        ? 'bg-violet-700 text-yellow-400 shadow-sm'
-                        : 'bg-violet-50 text-violet-700 hover:bg-violet-100'
-                    }`}
-                  >
-                    <Video className="w-3.5 h-3.5" />
-                    <span>Watch Video Demo</span>
-                  </button>
+                  <button onClick={() => setMediaViewMode('photos')} className={`inline-flex items-center gap-1.5 text-xs font-bold px-3.5 py-1.5 rounded-full transition-all ${mediaViewMode === 'photos' ? 'bg-violet-600 text-yellow-400 shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}><ImageIcon className="w-3.5 h-3.5" /><span>Product Photos ({activeModalProduct.images?.length || 1})</span></button>
+                  <button onClick={() => setMediaViewMode('video')} className={`inline-flex items-center gap-1.5 text-xs font-bold px-3.5 py-1.5 rounded-full transition-all ${mediaViewMode === 'video' ? 'bg-violet-600 text-yellow-400 shadow-sm' : 'bg-violet-100 text-violet-600 hover:bg-violet-200'}`}><Video className="w-3.5 h-3.5" /><span>Watch Video Demo</span></button>
                 </div>
               )}
-
-              {/* Main Media Stage */}
               {mediaViewMode === 'video' && activeVideoEmbed ? (
                 <div className="mb-4">
                   <div className="relative w-full aspect-[4/3] sm:aspect-video rounded-2xl bg-black overflow-hidden shadow-md border border-slate-800 flex items-center justify-center">
-                    {activeVideoEmbed.type === 'iframe' ? (
-                      <iframe
-                        src={activeVideoEmbed.embedUrl}
-                        title={activeModalProduct.name}
-                        className="w-full h-full border-0"
-                        allow="fullscreen; accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                        allowFullScreen
-                      />
-                    ) : (
-                      <video 
-                        controls 
-                        playsInline 
-                        preload="auto" 
-                        className="w-full h-full object-contain"
-                      >
-                        <source src={activeVideoEmbed.embedUrl} type="video/mp4" />
-                        Your browser does not support HTML5 video.
-                      </video>
-                    )}
+                    {activeVideoEmbed.type === 'iframe' ? <iframe src={activeVideoEmbed.embedUrl} title={activeModalProduct.name} className="w-full h-full border-0" allow="fullscreen; accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen /> : <video controls playsInline className="w-full h-full object-contain"><source src={activeVideoEmbed.embedUrl} type="video/mp4" /></video>}
                   </div>
-                  
                   {activeModalProduct.video && (
                     <div className="mt-2.5 flex items-center justify-between text-xs text-slate-500">
                       <span>Store demonstration</span>
-                      <a
-                        href={activeModalProduct.video}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-violet-700 hover:text-violet-900 font-bold inline-flex items-center gap-1 bg-violet-50 hover:bg-violet-100 px-2.5 py-1 rounded-lg border border-violet-200 transition-colors"
-                      >
-                        <span>Open Original Link</span>
-                        <ExternalLink className="w-3 h-3" />
-                      </a>
+                      <a href={activeModalProduct.video} target="_blank" rel="noreferrer" className="text-violet-600 hover:text-violet-800 font-bold inline-flex items-center gap-1 bg-violet-100 hover:bg-violet-200 px-2.5 py-1 rounded-lg border border-violet-200 transition-colors"><span>Open Original Link</span><ExternalLink className="w-3 h-3" /></a>
                     </div>
                   )}
                 </div>
               ) : (
-                <div 
-                  className="relative aspect-video rounded-2xl bg-slate-100 overflow-hidden mb-4 group cursor-zoom-in"
-                  onClick={() => setIsLightboxOpen(true)}
-                  title="Click to view full image in high resolution"
-                >
-                  <img
-                    src={formatDriveUrl(activeModalProduct.images?.[activeImageIndex] || activeModalProduct.images?.[0] || '')}
-                    alt={activeModalProduct.name}
-                    className="w-full h-full object-contain"
-                  />
-
-                  <div className="absolute top-2.5 right-2.5 bg-slate-900/60 backdrop-blur-md text-white p-1.5 rounded-xl opacity-80 group-hover:opacity-100 transition-opacity">
-                    <Maximize2 className="w-4 h-4" />
-                  </div>
-
+                <div className="relative aspect-video rounded-2xl bg-slate-100 overflow-hidden mb-4 group cursor-zoom-in" onClick={() => setIsLightboxOpen(true)}>
+                  <img src={formatDriveUrl(activeModalProduct.images?.[activeImageIndex] || activeModalProduct.images?.[0] || '')} alt={activeModalProduct.name} className="w-full h-full object-contain" />
+                  <div className="absolute top-2.5 right-2.5 bg-slate-900/60 backdrop-blur-md text-white p-1.5 rounded-xl opacity-80 group-hover:opacity-100 transition-opacity"><Maximize2 className="w-4 h-4" /></div>
                   {activeModalProduct.images && activeModalProduct.images.length > 1 && (
                     <div className="absolute inset-0 flex items-center justify-between px-3 pointer-events-none">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setActiveImageIndex((prev) => (prev === 0 ? activeModalProduct.images.length - 1 : prev - 1));
-                        }}
-                        className="pointer-events-auto w-8 h-8 rounded-full bg-slate-950/70 hover:bg-slate-950 text-white flex items-center justify-center transition-all"
-                      >
-                        <ChevronLeft className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setActiveImageIndex((prev) => (prev === activeModalProduct.images.length - 1 ? 0 : prev + 1));
-                        }}
-                        className="pointer-events-auto w-8 h-8 rounded-full bg-slate-950/70 hover:bg-slate-950 text-white flex items-center justify-center transition-all"
-                      >
-                        <ChevronRight className="w-4 h-4" />
-                      </button>
+                      <button onClick={(e) => { e.stopPropagation(); setActiveImageIndex((prev) => (prev === 0 ? activeModalProduct.images.length - 1 : prev - 1)); }} className="pointer-events-auto w-8 h-8 rounded-full bg-slate-950/70 hover:bg-slate-950 text-white flex items-center justify-center transition-all"><ChevronLeft className="w-4 h-4" /></button>
+                      <button onClick={(e) => { e.stopPropagation(); setActiveImageIndex((prev) => (prev === activeModalProduct.images.length - 1 ? 0 : prev + 1)); }} className="pointer-events-auto w-8 h-8 rounded-full bg-slate-950/70 hover:bg-slate-950 text-white flex items-center justify-center transition-all"><ChevronRight className="w-4 h-4" /></button>
                     </div>
                   )}
                 </div>
               )}
-
-              {/* Photo Thumbnails */}
               {mediaViewMode === 'photos' && activeModalProduct.images && activeModalProduct.images.length > 1 && (
                 <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
                   {activeModalProduct.images.map((img, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => setActiveImageIndex(idx)}
-                      className={`w-14 h-14 rounded-lg overflow-hidden border-2 transition-all shrink-0 ${
-                        activeImageIndex === idx ? 'border-violet-600 scale-95' : 'border-slate-200 opacity-60'
-                      }`}
-                    >
-                      <img src={formatDriveUrl(img)} alt="" className="w-full h-full object-cover" />
-                    </button>
+                    <button key={idx} onClick={() => setActiveImageIndex(idx)} className={`w-14 h-14 rounded-lg overflow-hidden border-2 transition-all shrink-0 ${activeImageIndex === idx ? 'border-violet-600 scale-95' : 'border-slate-200 opacity-60'}`}><img src={formatDriveUrl(img)} alt="" className="w-full h-full object-cover" /></button>
                   ))}
                 </div>
               )}
-
               <div className="flex items-start justify-between gap-4">
                 <h2 className="text-lg font-bold text-slate-900 leading-snug">{activeModalProduct.name}</h2>
-                <div className="text-right shrink-0">
-                  <span className="text-xl font-black text-violet-900">
-                    ₦{activeModalProduct.price.toLocaleString()}
-                  </span>
-                </div>
+                <div className="text-right shrink-0"><span className="text-xl font-black text-violet-700">₦{activeModalProduct.price.toLocaleString()}</span></div>
               </div>
-
-              {/* Description with Inline Expand */}
               <div className="mt-4">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Specifications & Details</h4>
                 <div className="text-sm text-slate-600 mt-1.5 leading-relaxed">
-                  <p className="whitespace-pre-line inline">
-                    {isDescExpanded || activeModalProduct.description.length <= 150
-                      ? activeModalProduct.description
-                      : `${activeModalProduct.description.slice(0, 150)}...`}
-                  </p>
+                  <p className="whitespace-pre-line inline">{isDescExpanded || activeModalProduct.description.length <= 150 ? activeModalProduct.description : `${activeModalProduct.description.slice(0, 150)}...`}</p>
                   {activeModalProduct.description.length > 150 && (
-                    <button
-                      type="button"
-                      onClick={() => setIsDescExpanded(!isDescExpanded)}
-                      className="ml-1.5 text-violet-700 hover:text-violet-900 font-bold inline underline underline-offset-2 transition-colors text-xs"
-                    >
-                      {isDescExpanded ? 'Show less' : 'Read more'}
-                    </button>
+                    <button type="button" onClick={() => setIsDescExpanded(!isDescExpanded)} className="ml-1.5 text-violet-600 hover:underline font-bold inline underline-offset-2 transition-colors text-xs">{isDescExpanded ? 'Show less' : 'Read more'}</button>
                   )}
                 </div>
               </div>
-
-              {/* Smart Related Products Section */}
               {relatedProducts.length > 0 && (
                 <div className="mt-6 pt-5 border-t border-slate-100">
                   <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700">
-                      Similar & Related Products
-                    </h4>
-                    <span className="text-[10px] text-violet-700 font-semibold">Recommended for you</span>
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700">Similar & Related Products</h4>
+                    <span className="text-[10px] text-violet-600 font-semibold">Recommended for you</span>
                   </div>
-
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                     {relatedProducts.map((relProduct) => (
-                      <div
-                        key={relProduct.id}
-                        onClick={() => openProductModal(relProduct)}
-                        className="group cursor-pointer bg-slate-50 hover:bg-violet-50/50 p-2 rounded-xl border border-slate-200/80 hover:border-violet-400 transition-all flex flex-col justify-between"
-                      >
-                        <div className="aspect-square w-full rounded-lg overflow-hidden bg-white mb-2 border border-slate-100">
-                          <img
-                            src={formatDriveUrl(relProduct.images?.[0] || '')}
-                            alt={relProduct.name}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                            loading="lazy"
-                          />
-                        </div>
+                      <div key={relProduct.id} onClick={() => openProductModal(relProduct)} className="group cursor-pointer bg-slate-50 hover:bg-violet-50 p-2 rounded-xl border border-slate-200/80 hover:border-violet-300 transition-all flex flex-col justify-between">
+                        <div className="aspect-square w-full rounded-lg overflow-hidden bg-white mb-2 border border-slate-100"><img src={formatDriveUrl(relProduct.images?.[0] || '')} alt={relProduct.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" /></div>
                         <div>
-                          <p className="text-[11px] font-bold text-slate-900 line-clamp-1 group-hover:text-violet-700">
-                            {relProduct.name}
-                          </p>
-                          <p className="text-[11px] font-mono font-black text-violet-900 mt-0.5">
-                            ₦{relProduct.price.toLocaleString()}
-                          </p>
+                          <p className="text-[11px] font-bold text-slate-900 line-clamp-1 group-hover:text-violet-600">{relProduct.name}</p>
+                          <p className="text-[11px] font-mono font-black text-violet-700 mt-0.5">₦{relProduct.price.toLocaleString()}</p>
                         </div>
                       </div>
                     ))}
@@ -1566,114 +944,20 @@ ${paymentBreakdownText}
                 </div>
               )}
             </div>
-
-            {/* Modal Bottom Bar */}
             <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
               <div className="flex flex-col text-xs text-slate-500">
-                <div className="flex items-center gap-1.5">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                  <span>Verified Stock @ ABH Plaza</span>
-                </div>
-
+                <div className="flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-emerald-500" /><span>Verified Stock @ ABH Plaza</span></div>
                 {activeModalProduct.in_stock && activeModalProduct.stock_quantity !== undefined && activeModalProduct.stock_quantity <= 5 && activeModalProduct.stock_quantity > 0 && (
-                  <span className="text-[11px] font-bold text-rose-600 mt-0.5 flex items-center gap-1">
-                    🔥 High demand: Only {activeModalProduct.stock_quantity} left
-                  </span>
+                  <span className="text-[11px] font-bold text-rose-600 mt-0.5 flex items-center gap-1">🔥 High demand: Only {activeModalProduct.stock_quantity} left</span>
                 )}
               </div>
-
               {activeModalProduct.in_stock ? (
-                <button
-                  onClick={() => {
-                    addToCart(activeModalProduct);
-                    closeProductModal();
-                  }}
-                  className="inline-flex items-center gap-2 text-sm font-black px-6 py-2.5 rounded-xl shadow-md bg-yellow-400 hover:bg-yellow-500 text-violet-900 transition-all active:scale-95"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>Add to Cart</span>
-                </button>
+                <button onClick={() => { addToCart(activeModalProduct); closeProductModal(); }} className="inline-flex items-center gap-2 text-sm font-black px-6 py-2.5 rounded-xl shadow-md bg-yellow-400 hover:bg-yellow-500 text-violet-900 transition-all active:scale-95"><Plus className="w-4 h-4" /><span>Add to Cart</span></button>
               ) : (
-                <a
-                  href={`https://wa.me/${selectedRepNumber}?text=${encodeURIComponent(
-                    `Hello Swiftwave Mall, I saw that "${activeModalProduct.name}" (ID: ${activeModalProduct.id}) is currently sold out. When are you restocking it?`
-                  )}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-2 text-xs font-bold px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-600/20 transition-all"
-                >
-                  <span>Request Restock via WhatsApp</span>
-                  <ExternalLink className="w-3.5 h-3.5" />
-                </a>
+                <a href={`https://wa.me/${selectedRepNumber}?text=${encodeURIComponent(`Hello Swiftwave Mall, I saw that "${activeModalProduct.name}" (ID: ${activeModalProduct.id}) is currently sold out. When are you restocking it?\n\nReference Image: ${formatDriveUrl(activeModalProduct.images?.[0] || '')}`)}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-xs font-bold px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-md transition-all"><span>Request Restock via WhatsApp</span><ExternalLink className="w-3.5 h-3.5" /></a>
               )}
             </div>
           </div>
-        </div>
-      )}
-
-      {/* High-Resolution Lightbox Modal */}
-      {isLightboxOpen && activeModalProduct && (
-        <div 
-          className="fixed inset-0 z-[70] bg-slate-950/95 backdrop-blur-md flex flex-col justify-between p-4 sm:p-6"
-          onClick={() => setIsLightboxOpen(false)}
-        >
-          <div className="flex items-center justify-between text-white max-w-5xl mx-auto w-full" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center gap-3">
-              <span className="font-mono text-xs text-violet-300 font-bold bg-violet-900/60 px-2.5 py-1 rounded-lg border border-violet-700/50">
-                {activeImageIndex + 1} / {activeModalProduct.images?.length || 1}
-              </span>
-              <h4 className="text-xs sm:text-sm font-semibold truncate max-w-[200px] sm:max-w-md text-slate-200">
-                {activeModalProduct.name}
-              </h4>
-            </div>
-            <button
-              onClick={() => setIsLightboxOpen(false)}
-              className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-all"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-
-          <div className="relative flex-1 flex items-center justify-center max-w-5xl mx-auto w-full my-4" onClick={(e) => e.stopPropagation()}>
-            <img
-              src={formatDriveUrl(activeModalProduct.images?.[activeImageIndex] || activeModalProduct.images?.[0] || '')}
-              alt=""
-              className="max-h-[80vh] max-w-full object-contain rounded-2xl shadow-2xl select-none"
-            />
-
-            {activeModalProduct.images && activeModalProduct.images.length > 1 && (
-              <>
-                <button
-                  onClick={() => setActiveImageIndex((prev) => (prev === 0 ? activeModalProduct.images.length - 1 : prev - 1))}
-                  className="absolute left-2 sm:left-4 w-12 h-12 rounded-full bg-black/60 hover:bg-black/90 text-white flex items-center justify-center transition-all border border-white/10"
-                >
-                  <ChevronLeft className="w-6 h-6" />
-                </button>
-                <button
-                  onClick={() => setActiveImageIndex((prev) => (prev === activeModalProduct.images.length - 1 ? 0 : prev + 1))}
-                  className="absolute right-2 sm:right-4 w-12 h-12 rounded-full bg-black/60 hover:bg-black/90 text-white flex items-center justify-center transition-all border border-white/10"
-                >
-                  <ChevronRight className="w-6 h-6" />
-                </button>
-              </>
-            )}
-          </div>
-
-          {activeModalProduct.images && activeModalProduct.images.length > 1 && (
-            <div className="flex justify-center gap-2 max-w-md mx-auto overflow-x-auto py-2" onClick={(e) => e.stopPropagation()}>
-              {activeModalProduct.images.map((img, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => setActiveImageIndex(idx)}
-                  className={`w-12 h-12 rounded-lg overflow-hidden border-2 transition-all ${
-                    activeImageIndex === idx ? 'border-violet-500 scale-105' : 'border-white/20 opacity-50'
-                  }`}
-                >
-                  <img src={formatDriveUrl(img)} alt="" className="w-full h-full object-cover" />
-                </button>
-              ))}
-            </div>
-          )}
         </div>
       )}
 
@@ -1681,120 +965,56 @@ ${paymentBreakdownText}
       {isCartOpen && (
         <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex justify-end">
           <div className="bg-white w-full max-w-md h-full shadow-2xl flex flex-col justify-between">
-            <div className="p-4 border-b border-violet-100 bg-violet-50 flex items-center justify-between">
+            <div className="p-4 border-b border-violet-200 bg-violet-50 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <ShoppingBag className="w-5 h-5 text-violet-700" />
-                <h3 className="font-bold text-violet-950">Your Shopping Cart</h3>
-                <span className="text-xs bg-yellow-400 text-violet-900 font-black px-2 py-0.5 rounded-full">
-                  {totalCartCount}
-                </span>
+                <ShoppingBag className="w-5 h-5 text-violet-600" />
+                <h3 className="font-bold text-slate-900">Your Shopping Cart</h3>
+                <span className="text-xs bg-yellow-400 text-violet-900 font-black px-2 py-0.5 rounded-full">{totalCartCount}</span>
               </div>
-              <button 
-                onClick={() => setIsCartOpen(false)}
-                className="w-8 h-8 rounded-full bg-white hover:bg-slate-200 text-slate-600 flex items-center justify-center"
-              >
-                <X className="w-4 h-4" />
-              </button>
+              <button onClick={() => setIsCartOpen(false)} className="w-8 h-8 rounded-full bg-white hover:bg-slate-200 text-slate-600 flex items-center justify-center border border-slate-200"><X className="w-4 h-4" /></button>
             </div>
-
             <div className="flex-1 overflow-y-auto p-4 space-y-3">
               {removedItemsNotice.length > 0 && (
                 <div className="mb-3 p-3 bg-amber-50 border border-amber-200 rounded-2xl flex items-start justify-between gap-2 text-xs">
                   <div>
                     <span className="font-bold text-amber-950 block">Inventory Update</span>
-                    <ul className="list-disc list-inside mt-1 font-semibold text-amber-900 text-[11px] space-y-0.5">
-                      {removedItemsNotice.map((msg, i) => (
-                        <li key={i}>{msg}</li>
-                      ))}
-                    </ul>
+                    <ul className="list-disc list-inside mt-1 font-semibold text-amber-900 text-[11px] space-y-0.5">{removedItemsNotice.map((msg, i) => <li key={i}>{msg}</li>)}</ul>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setRemovedItemsNotice([])}
-                    className="text-amber-600 hover:text-amber-950 p-1 font-bold"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
+                  <button type="button" onClick={() => setRemovedItemsNotice([])} className="text-amber-600 hover:text-amber-950 p-1 font-bold"><X className="w-3.5 h-3.5" /></button>
                 </div>
               )}
-
               {cart.length === 0 ? (
                 <div className="text-center py-20 text-slate-400">
                   <ShoppingBag className="w-12 h-12 mx-auto stroke-[1.5] mb-2 opacity-40 text-violet-600" />
                   <p className="text-sm font-medium">Your cart is empty</p>
-                  <button
-                    onClick={() => setIsCartOpen(false)}
-                    className="mt-4 text-xs font-bold text-violet-700 hover:underline"
-                  >
-                    Browse products
-                  </button>
+                  <button onClick={() => setIsCartOpen(false)} className="mt-4 text-xs font-bold text-violet-600 hover:underline">Browse products</button>
                 </div>
               ) : (
                 cart.map(({ product, quantity }) => (
                   <div key={product.id} className="flex gap-3 p-3 bg-slate-50 rounded-2xl border border-slate-100 items-center">
-                    <img 
-                      src={formatDriveUrl(product.images?.[0] || '')} 
-                      alt="" 
-                      className="w-14 h-14 object-cover rounded-xl bg-white border border-slate-200" 
-                    />
+                    <img src={formatDriveUrl(product.images?.[0] || '')} alt="" className="w-14 h-14 object-cover rounded-xl bg-white border border-slate-200" />
                     <div className="flex-1 min-w-0">
                       <h4 className="text-xs font-bold text-slate-900 truncate">{product.name}</h4>
-                      <p className="text-xs font-mono font-semibold text-violet-700 mt-0.5">
-                        ₦{(product.price * quantity).toLocaleString()}
-                      </p>
-                      
+                      <p className="text-xs font-mono font-semibold text-violet-600 mt-0.5">₦{(product.price * quantity).toLocaleString()}</p>
                       <div className="flex items-center gap-2 mt-2">
-                        <button
-                          onClick={() => updateQuantity(product.id, -1)}
-                          className="w-6 h-6 rounded-md bg-white border border-slate-200 text-slate-600 flex items-center justify-center hover:bg-slate-100"
-                        >
-                          <Minus className="w-3 h-3" />
-                        </button>
+                        <button onClick={() => updateQuantity(product.id, -1)} className="w-6 h-6 rounded-md bg-white border border-slate-200 text-slate-600 flex items-center justify-center hover:bg-slate-100"><Minus className="w-3 h-3" /></button>
                         <span className="text-xs font-bold font-mono px-1">{quantity}</span>
-                        <button
-                          onClick={() => updateQuantity(product.id, 1)}
-                          disabled={product.stock_quantity !== undefined && quantity >= product.stock_quantity}
-                          className={`w-6 h-6 rounded-md border flex items-center justify-center transition-all ${
-                            product.stock_quantity !== undefined && quantity >= product.stock_quantity
-                              ? 'bg-slate-100 border-slate-200 text-slate-300 cursor-not-allowed'
-                              : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100 active:scale-95'
-                          }`}
-                        >
-                          <Plus className="w-3.5 h-3.5" />
-                        </button>
-
-                        {product.stock_quantity !== undefined && quantity >= product.stock_quantity && (
-                          <span className="text-[10px] text-amber-700 font-bold ml-1 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
-                            Max ({product.stock_quantity})
-                          </span>
-                        )}
+                        <button onClick={() => updateQuantity(product.id, 1)} disabled={product.stock_quantity !== undefined && quantity >= product.stock_quantity} className={`w-6 h-6 rounded-md border flex items-center justify-center transition-all ${product.stock_quantity !== undefined && quantity >= product.stock_quantity ? 'bg-slate-100 border-slate-200 text-slate-300 cursor-not-allowed' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100 active:scale-95'}`}><Plus className="w-3.5 h-3.5" /></button>
+                        {product.stock_quantity !== undefined && quantity >= product.stock_quantity && <span className="text-[10px] text-amber-700 font-bold ml-1 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">Max ({product.stock_quantity})</span>}
                       </div>
                     </div>
-
-                    <button
-                      onClick={() => removeFromCart(product.id)}
-                      className="text-slate-400 hover:text-rose-600 p-2"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    <button onClick={() => removeFromCart(product.id)} className="text-slate-400 hover:text-rose-600 p-2"><Trash2 className="w-4 h-4" /></button>
                   </div>
                 ))
               )}
             </div>
-
             {cart.length > 0 && (
               <div className="p-4 border-t border-slate-100 bg-slate-50 space-y-3">
                 <div className="flex justify-between items-center text-sm">
                   <span className="text-slate-500 font-medium">Subtotal</span>
                   <span className="font-black text-slate-900 text-base">₦{cartSubtotal.toLocaleString()}</span>
                 </div>
-                <button
-                  onClick={openCheckout}
-                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm py-3 rounded-2xl shadow-lg shadow-emerald-600/30 transition-all flex items-center justify-center gap-2 active:scale-95"
-                >
-                  <span>Proceed to Payment</span>
-                  <ChevronRight className="w-4 h-4" />
-                </button>
+                <button onClick={openCheckout} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm py-3 rounded-2xl shadow-lg shadow-emerald-600/30 transition-all flex items-center justify-center gap-2 active:scale-95"><span>Proceed to Payment</span><ChevronRight className="w-4 h-4" /></button>
               </div>
             )}
           </div>
@@ -1803,336 +1023,129 @@ ${paymentBreakdownText}
 
       {/* Checkout Modal */}
       {isCheckoutOpen && (
-        <div 
-          className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) {
-              setIsCheckoutOpen(false);
-            }
-          }}
-        >
+        <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4" onClick={(e) => { if (e.target === e.currentTarget) setIsCheckoutOpen(false); }}>
           <div className="bg-white rounded-3xl max-w-lg w-full max-h-[92vh] overflow-y-auto p-5 sm:p-6 relative border border-slate-200 shadow-2xl">
-            <button
-              onClick={() => setIsCheckoutOpen(false)}
-              className="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-colors"
-            >
-              <X className="w-4 h-4" />
-            </button>
-
-            {/* Order Reference Pill & Narration Copy */}
+            <button onClick={() => setIsCheckoutOpen(false)} className="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-colors"><X className="w-4 h-4" /></button>
             <div className="flex items-center justify-between mb-2 pr-8">
               <div className="flex items-center gap-1.5">
-                <span className="text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-violet-100 text-violet-900 font-mono">
-                  Order #{orderId}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    navigator.clipboard.writeText(orderId);
-                    setCopiedOrderId(true);
-                    setTimeout(() => setCopiedOrderId(false), 2000);
-                  }}
-                  className="inline-flex items-center gap-1 text-[10px] font-bold text-violet-700 hover:underline bg-violet-50 px-2 py-0.5 rounded"
-                  title="Copy Remark for Bank App"
-                >
-                  <Copy className="w-3 h-3" />
-                  <span>{copiedOrderId ? 'Copied!' : 'Copy Remark'}</span>
-                </button>
+                <span className="text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-violet-100 text-violet-900 font-mono">Order #{orderId}</span>
+                <button type="button" onClick={() => { navigator.clipboard.writeText(orderId); setCopiedOrderId(true); setTimeout(() => setCopiedOrderId(false), 2000); }} className="inline-flex items-center gap-1 text-[10px] font-bold text-violet-700 hover:underline bg-violet-50 px-2 py-0.5 rounded"><Copy className="w-3 h-3" /><span>{copiedOrderId ? 'Copied!' : 'Copy Remark'}</span></button>
               </div>
             </div>
-
             <h3 className="text-lg font-bold text-slate-900 mb-0.5">Checkout & Payment</h3>
-            <p className="text-xs text-slate-500 mb-4 leading-relaxed">
-              Copy the bank details below, transfer via your banking app, and return here to submit your receipt via WhatsApp.
-            </p>
+            <p className="text-xs text-slate-500 mb-4 leading-relaxed">Copy the bank details below, transfer via your app, and return here to submit receipt via WhatsApp.</p>
 
             <div className="space-y-3 mb-5">
-              
-              {/* WhatsApp Support Rep Selector */}
               <div>
                 <label className="text-xs font-bold text-slate-700 flex items-center justify-between mb-1.5">
-                  <span className="flex items-center gap-1">
-                    <Headphones className="w-3.5 h-3.5 text-violet-700" />
-                    <span>Send Order To WhatsApp Rep</span>
-                  </span>
-                  <span className="text-[10px] text-slate-400">Choose who to message</span>
+                  <span className="flex items-center gap-1"><Headphones className="w-3.5 h-3.5 text-violet-600" /><span>Send Order To WhatsApp Rep</span></span>
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                   {SUPPORT_REPS.map((rep) => (
-                    <button
-                      key={rep.id}
-                      type="button"
-                      onClick={() => setSelectedRepNumber(rep.number)}
-                      className={`p-2 rounded-xl border text-left transition-all ${
-                        selectedRepNumber === rep.number
-                          ? 'border-emerald-600 bg-emerald-50 text-emerald-950 font-bold shadow-sm'
-                          : 'border-slate-200 text-slate-600 hover:bg-slate-50'
-                      }`}
-                    >
+                    <button key={rep.id} type="button" onClick={() => setSelectedRepNumber(rep.number)} className={`p-2 rounded-xl border text-left transition-all ${selectedRepNumber === rep.number ? 'border-emerald-600 bg-emerald-50 text-emerald-950 font-bold shadow-sm' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
                       <span className="text-[11px] block font-semibold leading-tight">{rep.name}</span>
                       <span className="text-[10px] text-slate-500 font-mono mt-0.5 block">{rep.number}</span>
                     </button>
                   ))}
                 </div>
               </div>
-
               <div>
                 <label className="text-xs font-bold text-slate-700 block mb-1">Full Name</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Ibrahim Mukhtar"
-                  value={customerName}
-                  onChange={(e) => setCustomerName(e.target.value)}
-                  className="w-full text-xs p-2.5 rounded-xl border border-slate-200 focus:border-violet-600 outline-none"
-                />
+                <input type="text" placeholder="e.g. Ibrahim Mukhtar" value={customerName} onChange={(e) => setCustomerName(e.target.value)} className="w-full text-xs p-2.5 rounded-xl border border-slate-200 focus:border-violet-600 outline-none" />
               </div>
-
               <div>
-                <label className="text-xs font-bold text-slate-700 flex items-center justify-between mb-1">
-                  <span>Active Phone Number</span>
-                  <span className="text-[10px] font-normal text-slate-400">For rider direct voice calls</span>
-                </label>
+                <label className="text-xs font-bold text-slate-700 block mb-1">Active Phone Number</label>
                 <div className="relative">
                   <PhoneCall className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                  <input
-                    type="tel"
-                    placeholder="e.g. 08012345678"
-                    value={customerPhone}
-                    onChange={(e) => setCustomerPhone(e.target.value)}
-                    className="w-full text-xs pl-8 pr-3 py-2.5 rounded-xl border border-slate-200 focus:border-violet-600 outline-none"
-                  />
+                  <input type="tel" placeholder="e.g. 08012345678" value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} className="w-full text-xs pl-8 pr-3 py-2.5 rounded-xl border border-slate-200 focus:border-violet-600 outline-none" />
                 </div>
               </div>
-
               <div>
                 <label className="text-xs font-bold text-slate-700 block mb-1.5">Fulfillment Method</label>
                 <div className="grid grid-cols-3 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setDeliveryMethod('pickup')}
-                    className={`p-2 rounded-xl border text-center transition-all ${
-                      deliveryMethod === 'pickup'
-                        ? 'border-violet-600 bg-violet-50 text-violet-900 font-bold shadow-sm'
-                        : 'border-slate-200 text-slate-600'
-                    }`}
-                  >
-                    <Building2 className="w-4 h-4 mx-auto mb-1 text-violet-700" />
-                    <span className="text-[11px] block">Shop Pickup</span>
-                    <span className="text-[10px] text-emerald-600 font-bold">Free</span>
+                  <button type="button" onClick={() => setDeliveryMethod('pickup')} className={`p-2 rounded-xl border text-center transition-all ${deliveryMethod === 'pickup' ? 'border-violet-600 bg-violet-50 text-violet-800 font-bold shadow-sm' : 'border-slate-200 text-slate-600'}`}>
+                    <Building2 className="w-4 h-4 mx-auto mb-1 text-violet-600" /><span className="text-[11px] block">Shop Pickup</span><span className="text-[10px] text-emerald-600 font-bold">Free</span>
                   </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setDeliveryMethod('minna')}
-                    className={`p-2 rounded-xl border text-center transition-all ${
-                      deliveryMethod === 'minna'
-                        ? 'border-violet-600 bg-violet-50 text-violet-900 font-bold shadow-sm'
-                        : 'border-slate-200 text-slate-600'
-                    }`}
-                  >
-                    <Truck className="w-4 h-4 mx-auto mb-1 text-violet-700" />
-                    <span className="text-[11px] block">Minna Delivery</span>
-                    <span className="text-[10px] font-bold text-violet-900">₦1,500</span>
+                  <button type="button" onClick={() => setDeliveryMethod('minna')} className={`p-2 rounded-xl border text-center transition-all ${deliveryMethod === 'minna' ? 'border-violet-600 bg-violet-50 text-violet-800 font-bold shadow-sm' : 'border-slate-200 text-slate-600'}`}>
+                    <Truck className="w-4 h-4 mx-auto mb-1 text-violet-600" /><span className="text-[11px] block">Minna Delivery</span><span className="text-[10px] font-bold text-violet-700">₦1,500</span>
                   </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setDeliveryMethod('nationwide')}
-                    className={`p-2 rounded-xl border text-center transition-all ${
-                      deliveryMethod === 'nationwide'
-                        ? 'border-violet-600 bg-violet-50 text-violet-900 font-bold shadow-sm'
-                        : 'border-slate-200 text-slate-600'
-                    }`}
-                  >
-                    <Truck className="w-4 h-4 mx-auto mb-1 text-violet-700" />
-                    <span className="text-[11px] block">Nationwide</span>
-                    <span className="text-[10px] font-bold text-slate-600">₦4,500</span>
+                  <button type="button" onClick={() => setDeliveryMethod('nationwide')} className={`p-2 rounded-xl border text-center transition-all ${deliveryMethod === 'nationwide' ? 'border-violet-600 bg-violet-50 text-violet-800 font-bold shadow-sm' : 'border-slate-200 text-slate-600'}`}>
+                    <Truck className="w-4 h-4 mx-auto mb-1 text-violet-600" /><span className="text-[11px] block">Nationwide</span><span className="text-[10px] font-bold text-slate-600">₦4,500</span>
                   </button>
                 </div>
               </div>
-
-              {/* Minna Metropolitan & Campus Drop-Off Pickers */}
               {deliveryMethod === 'minna' && (
-                <div className="p-3 bg-violet-50/70 border border-violet-200 rounded-2xl space-y-2.5 animate-fade-in">
+                <div className="p-3 bg-violet-50/50 border border-violet-200 rounded-2xl space-y-2.5">
                   <div>
-                    <label className="text-[11px] font-bold text-violet-950 block mb-1">
-                      Minna Area / Hub
-                    </label>
-                    <select
-                      value={minnaCampusZone}
-                      onChange={(e) => setMinnaCampusZone(e.target.value)}
-                      className="w-full text-xs p-2 rounded-xl border border-violet-300 bg-white font-medium text-slate-800 focus:border-violet-600 outline-none"
-                    >
-                      {MINNA_ZONES.map((zone) => (
-                        <option key={zone} value={zone}>{zone}</option>
-                      ))}
+                    <label className="text-[11px] font-bold text-slate-900 block mb-1">Minna Area / Hub</label>
+                    <select value={minnaCampusZone} onChange={(e) => setMinnaCampusZone(e.target.value)} className="w-full text-xs p-2 rounded-xl border border-violet-300 bg-white font-medium text-slate-800 focus:border-violet-600 outline-none">
+                      {MINNA_ZONES.map((zone) => <option key={zone} value={zone}>{zone}</option>)}
                     </select>
                   </div>
-
                   <div>
-                    <label className="text-[11px] font-bold text-violet-950 block mb-1">
-                      Delivery Address / Drop-off Point / Landmark
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Bosso Low-Cost, Mobil, or Street Address in Tunga"
-                      value={landmarkHostel}
-                      onChange={(e) => setLandmarkHostel(e.target.value)}
-                      className="w-full text-xs p-2.5 rounded-xl border border-violet-300 bg-white text-slate-800 focus:border-violet-600 outline-none"
-                    />
-                    <p className="text-[10px] text-violet-700/80 mt-1">
-                      ℹ Campus and metropolitan dispatch riders meet customers at the designated drop-off landmark.
-                    </p>
+                    <label className="text-[11px] font-bold text-slate-900 block mb-1">Delivery Address / Drop-off Point / Landmark</label>
+                    <input type="text" placeholder="e.g. Bosso Low-Cost, Mobil" value={landmarkHostel} onChange={(e) => setLandmarkHostel(e.target.value)} className="w-full text-xs p-2.5 rounded-xl border border-violet-300 bg-white focus:border-violet-600 outline-none" />
                   </div>
                 </div>
               )}
-
-              {/* Nationwide Address Field */}
               {deliveryMethod === 'nationwide' && (
-                <div>
-                  <label className="text-xs font-bold text-slate-700 block mb-1">Delivery Destination (State, City, Street)</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Abuja FCT, Gwarinpa, 3rd Avenue, House 12"
-                    value={deliveryAddress}
-                    onChange={(e) => setDeliveryAddress(e.target.value)}
-                    className="w-full text-xs p-2.5 rounded-xl border border-slate-200 focus:border-violet-600 outline-none"
-                  />
-                </div>
+                <div><label className="text-xs font-bold text-slate-700 block mb-1">Delivery Destination (State, City, Street)</label><input type="text" placeholder="e.g. Abuja FCT, Gwarinpa" value={deliveryAddress} onChange={(e) => setDeliveryAddress(e.target.value)} className="w-full text-xs p-2.5 rounded-xl border border-slate-200 focus:border-violet-600 outline-none" /></div>
               )}
-
-              <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1">Order Notes / Color / Preference (Optional)</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Preferred color, or specific delivery instructions"
-                  value={orderNotes}
-                  onChange={(e) => setOrderNotes(e.target.value)}
-                  className="w-full text-xs p-2.5 rounded-xl border border-slate-200 focus:border-violet-600 outline-none"
-                />
-              </div>
+              <div><label className="text-xs font-bold text-slate-700 block mb-1">Order Notes (Optional)</label><input type="text" placeholder="e.g. Preferred color" value={orderNotes} onChange={(e) => setOrderNotes(e.target.value)} className="w-full text-xs p-2.5 rounded-xl border border-slate-200 focus:border-violet-600 outline-none" /></div>
             </div>
 
-            {/* Dynamic Bank Account Cards */}
             <div className="space-y-3 mb-5">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold tracking-wider text-violet-900 uppercase">
-                  {isMixedCart ? 'Transfer Payment by Store Department' : 'Official OPay Account Details'}
-                </span>
-                <span className="text-[10px] font-mono font-bold text-violet-700 bg-violet-50 px-1.5 py-0.5 rounded border border-violet-200">
-                  Remark: {orderId}
-                </span>
-              </div>
-
-              {/* Shop 10 Box */}
               {hasShop10 && (
-                <div className="bg-violet-800 text-white rounded-2xl p-3.5 border border-violet-900/60 shadow-sm">
-                  <div className="flex justify-between items-center pb-2 border-b border-violet-900/50">
+                <div className="bg-violet-700 text-white rounded-2xl p-3.5 shadow-sm">
+                  <div className="flex justify-between items-center pb-2 border-b border-white/20">
                     <div>
-                      <span className="text-[10px] font-extrabold tracking-wider text-yellow-300 uppercase block">
-                        SHOP 10 • GADGETS & TECH
-                      </span>
-                      <span className="text-xs text-violet-200 font-medium">Bank: OPay</span>
+                      <span className="text-[10px] font-extrabold tracking-wider text-yellow-300 uppercase block">SHOP 10 • GADGETS & TECH</span>
+                      <span className="text-xs text-white/90 font-medium">Bank: OPay</span>
                     </div>
-                    {isMixedCart && (
-                      <span className="text-xs font-mono font-bold text-violet-100 bg-violet-900/50 px-2 py-0.5 rounded">
-                        Due: ₦{shop10Total.toLocaleString()}
-                      </span>
-                    )}
+                    {isMixedCart && <span className="text-xs font-mono font-bold text-violet-900 bg-yellow-400 px-2 py-0.5 rounded">Due: ₦{shop10Total.toLocaleString()}</span>}
                   </div>
-
                   <div className="flex justify-between items-center mt-2.5">
                     <div>
-                      <span className="text-[10px] text-violet-300 block">Account Number</span>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          navigator.clipboard.writeText(SHOP_ACCOUNTS.shop10.number);
-                          setCopiedShop10(true);
-                          setTimeout(() => setCopiedShop10(false), 2000);
-                        }}
-                        className="inline-flex items-center gap-1.5 font-mono text-base font-black text-emerald-400 hover:underline"
-                      >
-                        <span>{SHOP_ACCOUNTS.shop10.number}</span>
-                        <Copy className="w-3.5 h-3.5" />
+                      <span className="text-[10px] text-white/80 block">Account Number</span>
+                      <button type="button" onClick={() => { navigator.clipboard.writeText(SHOP_ACCOUNTS.shop10.number); setCopiedShop10(true); setTimeout(() => setCopiedShop10(false), 2000); }} className="inline-flex items-center gap-1.5 font-mono text-base font-black text-white hover:text-yellow-300">
+                        <span>{SHOP_ACCOUNTS.shop10.number}</span><Copy className="w-3.5 h-3.5" />
                       </button>
                     </div>
-                    <span className="text-[10px] text-right font-semibold text-violet-300 max-w-[150px] leading-tight">
-                      SWIFTWAVE VARIETY MALL LIMITED
-                    </span>
+                    <span className="text-[10px] text-right font-semibold text-white/80 max-w-[150px] leading-tight">SWIFTWAVE VARIETY MALL LIMITED</span>
                   </div>
-                  {copiedShop10 && (
-                    <p className="text-[11px] text-emerald-400 font-bold mt-1">✓ Copied Shop 10 Account!</p>
-                  )}
                 </div>
               )}
-
-              {/* Shop 9 Box */}
               {hasShop9 && (
-                <div className="bg-violet-800 text-white rounded-2xl p-3.5 border border-violet-900/60 shadow-sm">
-                  <div className="flex justify-between items-center pb-2 border-b border-violet-900/50">
+                <div className="bg-violet-700 text-white rounded-2xl p-3.5 shadow-sm">
+                  <div className="flex justify-between items-center pb-2 border-b border-white/20">
                     <div>
-                      <span className="text-[10px] font-extrabold tracking-wider text-yellow-300 uppercase block">
-                        SHOP 9 • DAILY ESSENTIALS & HOME
-                      </span>
-                      <span className="text-xs text-violet-200 font-medium">Bank: OPay</span>
+                      <span className="text-[10px] font-extrabold tracking-wider text-yellow-300 uppercase block">SHOP 9 • DAILY ESSENTIALS</span>
+                      <span className="text-xs text-white/90 font-medium">Bank: OPay</span>
                     </div>
-                    {isMixedCart && (
-                      <span className="text-xs font-mono font-bold text-violet-100 bg-violet-900/50 px-2 py-0.5 rounded">
-                        Due: ₦{shop9Total.toLocaleString()}
-                      </span>
-                    )}
+                    {isMixedCart && <span className="text-xs font-mono font-bold text-violet-900 bg-yellow-400 px-2 py-0.5 rounded">Due: ₦{shop9Total.toLocaleString()}</span>}
                   </div>
-
                   <div className="flex justify-between items-center mt-2.5">
                     <div>
-                      <span className="text-[10px] text-violet-300 block">Account Number</span>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          navigator.clipboard.writeText(SHOP_ACCOUNTS.shop9.number);
-                          setCopiedShop9(true);
-                          setTimeout(() => setCopiedShop9(false), 2000);
-                        }}
-                        className="inline-flex items-center gap-1.5 font-mono text-base font-black text-amber-300 hover:underline"
-                      >
-                        <span>{SHOP_ACCOUNTS.shop9.number}</span>
-                        <Copy className="w-3.5 h-3.5" />
+                      <span className="text-[10px] text-white/80 block">Account Number</span>
+                      <button type="button" onClick={() => { navigator.clipboard.writeText(SHOP_ACCOUNTS.shop9.number); setCopiedShop9(true); setTimeout(() => setCopiedShop9(false), 2000); }} className="inline-flex items-center gap-1.5 font-mono text-base font-black text-white hover:text-yellow-300">
+                        <span>{SHOP_ACCOUNTS.shop9.number}</span><Copy className="w-3.5 h-3.5" />
                       </button>
                     </div>
-                    <span className="text-[10px] text-right font-semibold text-violet-300 max-w-[150px] leading-tight">
-                      SWIFTWAVE VARIETY MALL LIMITED
-                    </span>
+                    <span className="text-[10px] text-right font-semibold text-white/80 max-w-[150px] leading-tight">SWIFTWAVE VARIETY MALL LIMITED</span>
                   </div>
-                  {copiedShop9 && (
-                    <p className="text-[11px] text-amber-300 font-bold mt-1">✓ Copied Shop 9 Account!</p>
-                  )}
                 </div>
               )}
-
-              {/* Total & Summary Strip */}
-              <div className="p-3 bg-violet-50 rounded-2xl border border-violet-200 flex justify-between items-center">
+              <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 flex justify-between items-center">
                 <div>
-                  <span className="text-xs font-bold text-violet-950 block">Grand Total Due</span>
-                  <span className="text-[10px] text-violet-700">Includes ₦{deliveryFee.toLocaleString()} delivery</span>
+                  <span className="text-xs font-bold text-slate-900 block">Grand Total Due</span>
+                  <span className="text-[10px] text-slate-500">Includes ₦{deliveryFee.toLocaleString()} delivery</span>
                 </div>
-                <span className="text-lg font-black text-violet-950">
-                  ₦{orderTotal.toLocaleString()}
-                </span>
+                <span className="text-lg font-black text-violet-600">₦{orderTotal.toLocaleString()}</span>
               </div>
             </div>
-
-            <button
-              type="button"
-              onClick={handleFinalOrder}
-              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm py-3 rounded-2xl shadow-lg shadow-emerald-600/30 transition-all flex items-center justify-center gap-2 active:scale-95"
-            >
-              <span>I Have Transferred • Submit via WhatsApp</span>
-              <ExternalLink className="w-4 h-4" />
+            <button type="button" onClick={handleFinalOrder} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm py-3 rounded-2xl shadow-lg transition-all flex items-center justify-center gap-2 active:scale-95">
+              <span>I Have Transferred • Submit via WhatsApp</span><ExternalLink className="w-4 h-4" />
             </button>
-            <p className="text-[11px] text-slate-400 text-center mt-2 leading-relaxed">
-              Order routes to selected rep with reference <strong className="font-mono text-slate-600">#{orderId}</strong> for instant store confirmation.
-            </p>
           </div>
         </div>
       )}
@@ -2141,290 +1154,83 @@ ${paymentBreakdownText}
       {showAboutModal && (
         <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-lg w-full p-6 relative border border-slate-200 shadow-2xl">
-            <button
-              onClick={() => setShowAboutModal(false)}
-              className="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-colors"
-            >
-              <X className="w-4 h-4" />
-            </button>
-            
-            <div className="flex justify-center mb-4 bg-violet-600 p-4 rounded-2xl border border-violet-100">
-              <img 
-                src="/logo.png" 
-                alt="Swiftwave Variety Mall" 
-                className="h-14 sm:h-16 w-auto object-contain"
-                onError={(e) => {
-                  e.currentTarget.style.display = 'none';
-                }}
-              />
+            <button onClick={() => setShowAboutModal(false)} className="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-colors"><X className="w-4 h-4" /></button>
+            <div className="flex justify-center mb-4 bg-violet-600 p-4 rounded-2xl"><img src="/logo.png" alt="Swiftwave" className="h-14 sm:h-16 w-auto object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; }} /></div>
+            <div className="flex items-center gap-2 mb-2"><ShieldCheck className="w-5 h-5 text-violet-600" /><h3 className="text-base font-bold text-slate-900">About Swiftwave Variety Mall</h3></div>
+            <p className="text-xs text-slate-600 leading-relaxed mb-4">Swiftwave is your modern everyday marketplace built for the way you actually live. Bringing together gadgets, home essentials, school supplies, phone accessories, beauty products, children's toys, and creator tools under one roof.</p>
+            <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-100 mb-4">
+              <div className="flex items-center justify-between"><span className="text-[11px] font-bold text-slate-900 uppercase tracking-wider">Corporate Registration</span><span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-full"><CheckCircle2 className="w-3 h-3" /> CAC Verified</span></div>
+              <p className="text-xs font-mono text-slate-700 mt-1.5 leading-relaxed"><span className="font-semibold text-slate-900">SWIFTWAVE VARIETY MALL LIMITED</span><br />RC: <span className="text-violet-600 font-bold">9468092</span> | TIN: 2622689087269</p>
             </div>
-
-            <div className="flex items-center gap-2 mb-2">
-              <ShieldCheck className="w-5 h-5 text-violet-700" />
-              <h3 className="text-base font-bold text-slate-900">About Swiftwave Variety Mall</h3>
-            </div>
-            
-            <p className="text-xs text-slate-600 leading-relaxed mb-4">
-              Swiftwave is your modern everyday marketplace built for the way you actually live. Bringing together gadgets, home essentials, school supplies, phone accessories, beauty products, children's toys, and creator tools under one roof.
-            </p>
-
-            {/* Official Social Media Strip */}
-            <div className="mb-4 p-3 bg-slate-50 rounded-2xl border border-slate-100">
-              <span className="text-[11px] font-bold text-slate-900 uppercase tracking-wider block mb-2">Connect With Us</span>
-              <div className="flex items-center gap-2">
-                <a
-                  href={SOCIAL_LINKS.instagram}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex-1 inline-flex items-center justify-center gap-1.5 bg-white border border-slate-200 hover:border-violet-300 text-slate-700 hover:text-violet-700 py-2 rounded-xl text-xs font-bold transition-all shadow-sm"
-                >
-                  <Instagram className="w-3.5 h-3.5 text-pink-600" />
-                  <span>Instagram</span>
-                </a>
-                <a
-                  href={SOCIAL_LINKS.tiktok}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex-1 inline-flex items-center justify-center gap-1.5 bg-white border border-slate-200 hover:border-violet-300 text-slate-700 hover:text-violet-700 py-2 rounded-xl text-xs font-bold transition-all shadow-sm"
-                >
-                  <svg className="w-3.5 h-3.5 fill-current text-slate-900" viewBox="0 0 24 24">
-                    <path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.99v8.29c.03 2.05-.72 4.17-2.18 5.62-1.74 1.79-4.34 2.5-6.75 1.95-2.61-.53-4.78-2.6-5.46-5.18-.8-2.91.43-6.19 3.02-7.66 1.48-.87 3.26-1.07 4.93-.68v4.11c-.93-.31-1.99-.25-2.87.21-1.09.56-1.74 1.77-1.64 3 .07 1.19.86 2.27 2 2.59 1.25.37 2.7-.1 3.42-1.13.38-.52.55-1.17.54-1.81V.02z" />
-                  </svg>
-                  <span>TikTok</span>
-                </a>
-                <a
-                  href={SOCIAL_LINKS.facebook}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex-1 inline-flex items-center justify-center gap-1.5 bg-white border border-slate-200 hover:border-violet-300 text-slate-700 hover:text-violet-700 py-2 rounded-xl text-xs font-bold transition-all shadow-sm"
-                >
-                  <Facebook className="w-3.5 h-3.5" />
-                  <span>Facebook</span>
-                </a>
-              </div>
-            </div>
-
-            <div className="p-3.5 bg-violet-50/60 rounded-xl border border-violet-100 mb-4">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold text-violet-950 uppercase tracking-wider">
-                  Corporate Registration
-                </span>
-                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-full">
-                  <CheckCircle2 className="w-3 h-3" /> CAC Verified
-                </span>
-              </div>
-              
-              <p className="text-xs font-mono text-slate-700 mt-1.5 leading-relaxed">
-                <span className="font-semibold text-slate-900">SWIFTWAVE VARIETY MALL LIMITED</span><br />
-                RC: <span className="text-violet-700 font-bold">9468092</span> | TIN: 2622689087269
-              </p>
-
-              <button
-                onClick={() => setShowCertLightbox(true)}
-                className="mt-3 w-full bg-white hover:bg-violet-700 hover:text-white text-violet-700 border border-violet-200 hover:border-transparent font-bold text-xs py-2 px-3 rounded-lg transition-all flex items-center justify-center gap-1.5 shadow-sm shadow-violet-500/5"
-              >
-                <ShieldCheck className="w-3.5 h-3.5" />
-                <span>View Certificate of Incorporation</span>
-                <ExternalLink className="w-3 h-3 ml-0.5" />
-              </button>
-            </div>
-
-            <button
-              onClick={() => setShowAboutModal(false)}
-              className="w-full bg-slate-900 text-white font-bold text-xs py-2.5 rounded-xl hover:bg-slate-800 transition-colors"
-            >
-              Back to Catalog
-            </button>
+            <button onClick={() => setShowAboutModal(false)} className="w-full bg-slate-900 text-white font-bold text-xs py-2.5 rounded-xl hover:bg-slate-800 transition-colors">Back to Catalog</button>
           </div>
         </div>
       )}
 
-      {/* Official CAC Certificate Lightbox Modal */}
-      {showCertLightbox && (
-        <div 
-          className="fixed inset-0 z-[60] bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4"
-          onClick={() => setShowCertLightbox(false)}
-        >
-          <div 
-            className="bg-white rounded-2xl max-w-xl w-full p-4 relative shadow-2xl border border-slate-200 overflow-hidden max-h-[92vh] flex flex-col"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <div className="flex items-center gap-2">
-                <ShieldCheck className="w-5 h-5 text-emerald-600" />
-                <div>
-                  <h4 className="text-xs font-bold text-slate-900 leading-none">Federal Republic of Nigeria</h4>
-                  <p className="text-[10px] text-slate-500 font-mono mt-0.5">RC: 9468092 | Incorporated April 7, 2026</p>
-                </div>
+      {/* Shariah Compliance & T&C Modal */}
+      {showPolicyModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 relative border border-slate-200 shadow-2xl overflow-y-auto max-h-[90vh]">
+            <button onClick={() => setShowPolicyModal(false)} className="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-colors"><X className="w-4 h-4" /></button>
+            <div className="flex items-center gap-2 mb-4">
+              <Scale className="w-6 h-6 text-violet-600" />
+              <h3 className="text-lg font-bold text-slate-900">Store Policies & Returns</h3>
+            </div>
+            <div className="space-y-4 text-xs text-slate-600 leading-relaxed">
+              <div className="bg-violet-50 p-4 rounded-xl border border-violet-100">
+                <h4 className="font-bold text-violet-900 uppercase tracking-wider mb-1.5 text-[11px]">1. Payment & Fulfillment</h4>
+                <p>All sales are finalized upon the confirmation of payment receipt and physical or constructive delivery to the customer or their assigned rider. Nationwide deliveries require full payment prior to dispatch.</p>
               </div>
-              <button
-                onClick={() => setShowCertLightbox(false)}
-                className="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-colors"
-              >
-                <X className="w-4 h-4" />
-              </button>
+              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                <h4 className="font-bold text-slate-900 uppercase tracking-wider mb-1.5 text-[11px]">2. Option of Defect (Khiyar al-Ayb)</h4>
+                <p>We stand by our verified inventory. To ensure absolute transparency and fairness, we offer a strict <strong>48-hour return window</strong> exclusively for items sold with factory defects or dead-on-arrival status. Physical damage caused post-delivery is not covered.</p>
+              </div>
+              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                <h4 className="font-bold text-slate-900 uppercase tracking-wider mb-1.5 text-[11px]">3. Privacy Notice</h4>
+                <p>Your phone number and address are utilized strictly for order fulfillment and dispatch logistics. We do not sell or expose your personal data to third-party marketers.</p>
+              </div>
             </div>
-
-            <div className="flex-1 overflow-y-auto my-3 bg-slate-50 rounded-xl p-2 flex items-center justify-center">
-              <img
-                src="/cac-certificate.jpg"
-                alt="Swiftwave Variety Mall Limited CAC Certificate"
-                className="w-full max-h-[70vh] object-contain rounded-lg shadow-sm"
-              />
-            </div>
-
-            <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
-              <span>Issued under Companies and Allied Matters Act 2020</span>
-              <a
-                href="/cac-certificate.jpg"
-                target="_blank"
-                rel="noreferrer"
-                className="text-violet-700 hover:underline font-bold inline-flex items-center gap-1"
-              >
-                Open Original <ExternalLink className="w-3 h-3" />
-              </a>
-            </div>
+            <button onClick={() => setShowPolicyModal(false)} className="w-full mt-6 bg-slate-900 text-white font-bold text-xs py-2.5 rounded-xl hover:bg-slate-800 transition-colors">I Understand</button>
           </div>
         </div>
-      )}
-
-      {/* Floating Mobile Install App Banner */}
-      {(showInstallBanner || (isIOS && !isStandalone && !sessionStorage.getItem('swiftwave_install_dismissed'))) && (
-        <aside 
-          aria-label="Install App"
-          className="fixed bottom-4 left-4 right-4 sm:hidden z-40 bg-[#170a2c] text-white p-4 rounded-2xl border border-violet-800/80 shadow-2xl flex flex-col gap-3 animate-fade-in"
-        >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3 min-w-0">
-              <img
-                src="/logo.png"
-                alt="Swiftwave"
-                className="w-10 h-10 rounded-xl object-contain bg-white p-1 border border-violet-800 shrink-0"
-                onError={(e) => {
-                  (e.currentTarget as HTMLElement).style.display = 'none';
-                }}
-              />
-              <div className="min-w-0">
-                <h4 className="text-xs font-bold text-white truncate">Install Swiftwave App</h4>
-                <p className="text-[10px] text-violet-300 truncate">Faster browsing & instant access</p>
-              </div>
-            </div>
-            <button
-              onClick={dismissInstallBanner}
-              className="text-violet-400 hover:text-white p-1"
-              aria-label="Dismiss banner"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-
-          {isIOS ? (
-            <div className="bg-violet-900/50 p-2.5 rounded-xl text-[11px] text-violet-100 flex items-center gap-2 border border-violet-700/50">
-              <div className="bg-white text-black p-1 rounded inline-flex">
-                <Share className="w-4 h-4 text-violet-900" />
-              </div>
-              <span>Tap the <strong>Share</strong> button below, then select <strong>"Add to Home Screen"</strong> to install.</span>
-            </div>
-          ) : (
-            <button
-              onClick={handleInstallClick}
-              className="w-full bg-violet-600 hover:bg-violet-700 text-white font-bold text-xs px-3 py-2.5 rounded-xl transition-all shadow-md active:scale-95"
-            >
-              Install App Now
-            </button>
-          )}
-        </aside>
       )}
 
       {/* Footer */}
-      <footer className="bg-violet-900 text-violet-200/80 text-xs border-t border-violet-950 pt-10 pb-8 mt-auto">
+      <footer className="bg-violet-600 text-white/90 text-xs pt-10 pb-8 mt-auto border-t-4 border-yellow-400">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 pb-8 border-b border-violet-800">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 pb-8 border-b border-white/20">
             <div className="md:col-span-1">
-              <div className="mb-3">
-                <img 
-                  src="/logo.png" 
-                  alt="Swiftwave" 
-                  className="h-8 w-auto object-contain filter brightness-110"
-                  onError={(e) => {
-                    e.currentTarget.style.display = 'none';
-                  }}
-                />
-              </div>
-              <p className="text-violet-300/70 leading-relaxed text-xs">
-                Friendly, fast, and affordable. The one-stop shop that keeps everyday life moving.
-              </p>
+              <div className="mb-3"><img src="/logo.png" alt="Swiftwave" className="h-8 w-auto object-contain filter brightness-0 invert" onError={(e) => { e.currentTarget.style.display = 'none'; }} /></div>
+              <p className="text-white/80 leading-relaxed text-xs">Friendly, fast, and affordable. The one-stop shop that keeps everyday life moving.</p>
             </div>
-
             <div>
-              <h4 className="text-white font-bold text-xs uppercase tracking-wider mb-3">Customer Support</h4>
-              <ul className="space-y-2 text-violet-300/70">
+              <h4 className="text-yellow-400 font-bold text-xs uppercase tracking-wider mb-3">Customer Support</h4>
+              <ul className="space-y-2 text-white/80">
                 {SUPPORT_REPS.map((rep) => (
-                  <li key={rep.id}>
-                    <a 
-                      href={`https://wa.me/${rep.number}`} 
-                      target="_blank" 
-                      rel="noreferrer"
-                      className="hover:text-yellow-400 transition-colors flex items-center gap-1.5"
-                    >
-                      <MessageCircle className="w-3.5 h-3.5 text-yellow-400" />
-                      <span>{rep.name}</span>
-                    </a>
-                  </li>
+                  <li key={rep.id}><a href={`https://wa.me/${rep.number}`} target="_blank" rel="noreferrer" className="hover:text-yellow-400 transition-colors flex items-center gap-1.5"><MessageCircle className="w-3.5 h-3.5" /><span>{rep.name}</span></a></li>
                 ))}
               </ul>
             </div>
-
             <div>
-              <h4 className="text-white font-bold text-xs uppercase tracking-wider mb-3">Connect With Us</h4>
-              <div className="flex flex-col space-y-2 text-violet-300/70">
-                <a 
-                  href={SOCIAL_LINKS.instagram} 
-                  target="_blank" 
-                  rel="noreferrer"
-                  className="hover:text-yellow-400 transition-colors flex items-center gap-1.5"
-                >
-                  <Instagram className="w-3.5 h-3.5" />
-                  <span>Instagram</span>
-                </a>
-                <a 
-                  href={SOCIAL_LINKS.tiktok} 
-                  target="_blank" 
-                  rel="noreferrer"
-                  className="hover:text-yellow-400 transition-colors flex items-center gap-1.5"
-                >
-                  <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
-                    <path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.99v8.29c.03 2.05-.72 4.17-2.18 5.62-1.74 1.79-4.34 2.5-6.75 1.95-2.61-.53-4.78-2.6-5.46-5.18-.8-2.91.43-6.19 3.02-7.66 1.48-.87 3.26-1.07 4.93-.68v4.11c-.93-.31-1.99-.25-2.87.21-1.09.56-1.74 1.77-1.64 3 .07 1.19.86 2.27 2 2.59 1.25.37 2.7-.1 3.42-1.13.38-.52.55-1.17.54-1.81V.02z" />
-                  </svg>
-                  <span>TikTok</span>
-                </a>
-                <a 
-                  href={SOCIAL_LINKS.facebook} 
-                  target="_blank" 
-                  rel="noreferrer"
-                  className="hover:text-yellow-400 transition-colors flex items-center gap-1.5"
-                >
-                  <Facebook className="w-3.5 h-3.5" />
-                  <span>Facebook</span>
-                </a>
+              <h4 className="text-yellow-400 font-bold text-xs uppercase tracking-wider mb-3">Connect & Legal</h4>
+              <div className="flex flex-col space-y-2 text-white/80">
+                <a href={SOCIAL_LINKS.instagram} target="_blank" rel="noreferrer" className="hover:text-yellow-400 transition-colors flex items-center gap-1.5"><Instagram className="w-3.5 h-3.5" /><span>Instagram</span></a>
+                <a href={SOCIAL_LINKS.facebook} target="_blank" rel="noreferrer" className="hover:text-yellow-400 transition-colors flex items-center gap-1.5"><Facebook className="w-3.5 h-3.5" /><span>Facebook</span></a>
+                <button onClick={() => setShowPolicyModal(true)} className="hover:text-yellow-400 transition-colors flex items-center gap-1.5 mt-2"><Scale className="w-3.5 h-3.5" /><span>Store Policies & Returns</span></button>
               </div>
             </div>
-
             <div>
-              <h4 className="text-white font-bold text-xs uppercase tracking-wider mb-3">Store Location</h4>
-              <p className="leading-relaxed text-violet-300/70">
-                Shop 9 & 10, ABH Plaza,<br />
-                Bosso Road, Opposite Fire Service,<br />
-                Minna, Niger State.
-              </p>
+              <h4 className="text-yellow-400 font-bold text-xs uppercase tracking-wider mb-3">Store Location</h4>
+              <p className="leading-relaxed text-white/80">Shop 9 & 10, ABH Plaza,<br />Bosso Road, Opposite Fire Service,<br />Minna, Niger State.</p>
             </div>
           </div>
-
-          <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-violet-400/60">
+          <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-white/70">
             <p>© {new Date().getFullYear()} Swiftwave Variety Mall Limited. All rights reserved.</p>
-            <div className="flex items-center gap-2 text-violet-300">
-              <ShieldCheck className="w-4 h-4 text-yellow-400" />
-              <span>Certified CAC Registered Commercial Vendor</span>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-1.5 text-yellow-400"><ShieldCheck className="w-4 h-4" /><span>CAC Registered Vendor</span></div>
+              <div className="border-l border-white/20 pl-4">
+                <span className="text-white/60 font-medium">Engineered by <span className="font-bold text-white/90">Mukhtar</span></span>
+              </div>
             </div>
           </div>
         </div>
