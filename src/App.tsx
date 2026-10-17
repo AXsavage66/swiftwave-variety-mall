@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import axios from 'axios';
 import { 
   Search, 
   ShoppingBag, 
@@ -26,8 +27,103 @@ import {
   Facebook,
   MessageCircle,
   Headphones,
-  Share
+  Share,
+  Calculator,
+  Shield
 } from 'lucide-react';
+
+// ==========================================
+// 0. ADMIN SMART LEDGER UI (HIDDEN ROUTE)
+// ==========================================
+function AdminPanel() {
+  const [productId, setProductId] = useState('');
+  const [quantity, setQuantity] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState({ text: '', type: '' });
+
+  const handleLogSale = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!productId.trim()) return;
+    
+    setLoading(true);
+    setMessage({ text: '', type: '' });
+    
+    const API_URL = "https://script.google.com/macros/s/AKfycbzPx4RCKIubIJyKkHfdZuVjk_lNYyueQrRHJaDY7rDPWVTltpNlcGpLPq76ydXVjgwD7w/exec"; 
+    
+    try {
+      const response = await axios.post(API_URL, {
+        productId: productId.trim(),
+        quantity: quantity
+      }, {
+        headers: { 'Content-Type': 'text/plain' }
+      });
+      
+      if (response.data.status === 'success') {
+         setMessage({ text: `Success: ${quantity}x [${productId}] logged. Inventory updated.`, type: 'success' });
+         setProductId('');
+         setQuantity(1);
+      } else {
+         setMessage({ text: "Error: " + response.data.message, type: 'error' });
+      }
+    } catch (err) {
+       setMessage({ text: "Network error communicating with Google Sheets database.", type: 'error' });
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-100 flex flex-col items-center justify-center p-4">
+      <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl border border-slate-200">
+        <div className="flex justify-center mb-4">
+          <div className="w-16 h-16 bg-violet-100 text-violet-700 rounded-full flex items-center justify-center">
+            <Calculator className="w-8 h-8" />
+          </div>
+        </div>
+        <h2 className="text-2xl font-black text-center text-slate-900 mb-1">Store Admin Desk</h2>
+        <p className="text-sm text-center text-slate-500 mb-8 font-medium">Log Sales & Deduct Inventory</p>
+
+        {message.text && (
+          <div className={`p-4 rounded-xl mb-6 text-sm font-bold flex items-start gap-2 ${message.type === 'success' ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-rose-50 text-rose-800 border border-rose-200'}`}>
+            {message.type === 'success' ? <CheckCircle2 className="w-5 h-5 shrink-0" /> : <Shield className="w-5 h-5 shrink-0" />}
+            <span>{message.text}</span>
+          </div>
+        )}
+
+        <form onSubmit={handleLogSale} className="space-y-5">
+          <div>
+            <label className="text-xs font-bold text-slate-700 block mb-1.5 uppercase tracking-wider">Product ID</label>
+            <input
+              type="text"
+              required
+              placeholder="e.g. SW-001"
+              value={productId}
+              onChange={(e) => setProductId(e.target.value)}
+              className="w-full p-3 rounded-xl border border-slate-300 focus:border-violet-600 focus:ring-2 focus:ring-violet-600/20 outline-none uppercase font-mono font-bold"
+            />
+          </div>
+          <div>
+            <label className="text-xs font-bold text-slate-700 block mb-1.5 uppercase tracking-wider">Quantity Sold</label>
+            <div className="flex items-center gap-3">
+              <button type="button" onClick={() => setQuantity(Math.max(1, quantity - 1))} className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center hover:bg-slate-200 border border-slate-300"><Minus className="w-5 h-5 text-slate-700" /></button>
+              <input type="number" readOnly value={quantity} className="flex-1 text-center font-black text-xl p-2 rounded-xl border border-slate-300 outline-none" />
+              <button type="button" onClick={() => setQuantity(quantity + 1)} className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center hover:bg-slate-200 border border-slate-300"><Plus className="w-5 h-5 text-slate-700" /></button>
+            </div>
+          </div>
+          <button
+            type="submit"
+            disabled={loading}
+            className={`w-full font-bold text-sm py-4 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 ${loading ? 'bg-slate-400 cursor-not-allowed text-white' : 'bg-violet-700 hover:bg-violet-800 text-yellow-400 shadow-violet-700/30'}`}
+          >
+            {loading ? <span className="animate-pulse">Syncing to Database...</span> : <><span>Log Sale to Ledger</span><Check className="w-5 h-5" /></>}
+          </button>
+        </form>
+        <button onClick={() => window.location.href = '/'} className="w-full mt-4 text-xs font-bold text-slate-500 hover:text-slate-800 text-center py-2">
+          Return to Storefront
+        </button>
+      </div>
+    </div>
+  );
+}
 
 // ==========================================
 // 1. DATA FORMATTERS & EMBED RESOLVERS
@@ -230,6 +326,11 @@ const getProductShop = (category: string): 'shop9' | 'shop10' => {
 // 3. MAIN COMPONENT
 // ==========================================
 export default function App() {
+  // HIDDEN ADMIN ROUTE INTERCEPTOR
+  if (typeof window !== 'undefined' && window.location.pathname.startsWith('/haris-admin-desk')) {
+    return <AdminPanel />;
+  }
+
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -413,12 +514,32 @@ export default function App() {
           const row = parseCSVLine(rawLines[i]);
           if (!row[0] || !row[1]) continue;
 
-          const clean = (val: string) => (val || '').replace(/^["']|["']$/g, '').trim();
-          const rawImages = clean(row[5])
-            ? clean(row[5]).split(/[;,]/).map(u => clean(u)).filter(Boolean)
-            : [];
+          const clean = (val?: string) => (val || '').replace(/^["']|["']$/g, '').trim();
+          
+          const id = clean(row[0]) || `SW-${String(i).padStart(3, '0')}`;
+          const name = clean(row[1]);
+          const category = normalizeCategory(clean(row[2]));
+          
+          const sellStr = clean(row[3]);
+          const costStr = clean(row[4]);
+          const finalPriceStr = sellStr || costStr || '0';
+          const price = Number(finalPriceStr.replace(/[^0-9.-]+/g, '')) || 0;
 
-          const rawVideo = clean(row[8]);
+          const rawQuantity = clean(row[5]);
+          const parsedQty = rawQuantity !== '' && !isNaN(Number(rawQuantity)) ? Number(rawQuantity) : undefined;
+          const isExplicitlySoldOut = parsedQty !== undefined && parsedQty <= 0;
+
+          const description = clean(row[6]);
+
+          const rawImagesStr = clean(row[7]);
+          const rawImages = rawImagesStr ? rawImagesStr.split(/[;,]/).map(u => clean(u)).filter(Boolean) : [];
+          
+          const badge = clean(row[8]) || undefined;
+
+          const inStockStr = clean(row[9]) ? clean(row[9]).toLowerCase() : 'true';
+          const in_stock = !isExplicitlySoldOut && (inStockStr === 'true' || inStockStr === 'yes');
+
+          const rawVideo = clean(row[10]);
           const videoThumbnail = getVideoThumbnail(rawVideo);
 
           const finalImages = rawImages.length > 0 
@@ -427,22 +548,15 @@ export default function App() {
               ? [videoThumbnail] 
               : [""];
 
-          const rawQuantity = clean(row[9]);
-          const parsedQty = rawQuantity !== '' && !isNaN(Number(rawQuantity)) 
-            ? Number(rawQuantity) 
-            : undefined;
-
-          const isExplicitlySoldOut = parsedQty !== undefined && parsedQty <= 0;
-
           parsed.push({
-            id: clean(row[0]) || `SW-${String(i).padStart(3, '0')}`,
-            name: clean(row[1]),
-            category: normalizeCategory(clean(row[2])),
-            price: Number(clean(row[3]).replace(/[^0-9.-]+/g, '')) || 0,
-            description: clean(row[4]),
+            id,
+            name,
+            category,
+            price,
+            description,
             images: finalImages,
-            badge: clean(row[6]) || undefined,
-            in_stock: !isExplicitlySoldOut && (clean(row[7]).toLowerCase() === 'true' || clean(row[7]).toLowerCase() === 'yes'),
+            badge,
+            in_stock,
             video: rawVideo || undefined,
             stock_quantity: parsedQty,
           });
@@ -852,7 +966,7 @@ ${paymentBreakdownText}
       {toastMessage && (
         <aside 
           aria-label="Cart Notification"
-          className="fixed bottom-20 sm:bottom-6 left-1/2 -translate-x-1/2 z-50 bg-slate-900/95 text-white backdrop-blur-md px-4 py-2.5 rounded-full shadow-2xl flex items-center gap-3 border border-purple-500/30 animate-bounce"
+          className="fixed bottom-20 sm:bottom-6 left-1/2 -translate-x-1/2 z-50 bg-slate-900/95 text-white backdrop-blur-md px-4 py-2.5 rounded-full shadow-2xl flex items-center gap-3 border border-violet-500/30 animate-bounce"
         >
           <div className="w-5 h-5 rounded-full bg-emerald-500 text-slate-950 flex items-center justify-center">
             <Check className="w-3 h-3 stroke-[3]" />
@@ -863,7 +977,7 @@ ${paymentBreakdownText}
               setToastMessage(null);
               setIsCartOpen(true);
             }}
-            className="text-xs font-bold text-purple-300 hover:text-white underline underline-offset-2 ml-1"
+            className="text-xs font-bold text-yellow-400 hover:text-white underline underline-offset-2 ml-1"
           >
             View Cart
           </button>
@@ -871,22 +985,22 @@ ${paymentBreakdownText}
       )}
 
       {/* Top Corporate Legal Badge Bar & Social Presence */}
-      <div className="bg-[#170a2c] text-purple-200 text-xs py-2 px-4 border-b border-purple-950">
+      <div className="bg-violet-700 text-violet-100 text-xs py-2 px-4 border-b border-violet-800">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-2">
           <div className="flex items-center gap-2">
-            <span className="inline-block w-2 h-2 rounded-full bg-emerald-400"></span>
+            <span className="inline-block w-2 h-2 rounded-full bg-yellow-400"></span>
             <span className="font-semibold text-white tracking-wide">SWIFTWAVE VARIETY MALL LIMITED</span>
-            <span className="hidden md:inline text-purple-400/40">|</span>
-            <span className="hidden md:inline font-mono text-purple-300">RC: 9468092</span>
+            <span className="hidden md:inline text-violet-300">|</span>
+            <span className="hidden md:inline font-mono text-yellow-200">RC: 9468092</span>
           </div>
 
-          <div className="flex items-center gap-4 text-purple-300">
-            <div className="flex items-center gap-2.5 pr-2 border-r border-purple-900/80">
+          <div className="flex items-center gap-4 text-violet-200">
+            <div className="flex items-center gap-2.5 pr-2 border-r border-violet-500">
               <a 
                 href={SOCIAL_LINKS.instagram} 
                 target="_blank" 
                 rel="noreferrer" 
-                className="hover:text-white transition-colors"
+                className="hover:text-yellow-400 transition-colors"
                 title="Follow on Instagram"
               >
                 <Instagram className="w-3.5 h-3.5" />
@@ -895,7 +1009,7 @@ ${paymentBreakdownText}
                 href={SOCIAL_LINKS.tiktok} 
                 target="_blank" 
                 rel="noreferrer" 
-                className="hover:text-white transition-colors flex items-center"
+                className="hover:text-yellow-400 transition-colors flex items-center"
                 title="Follow on TikTok"
               >
                 <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
@@ -906,7 +1020,7 @@ ${paymentBreakdownText}
                 href={SOCIAL_LINKS.facebook} 
                 target="_blank" 
                 rel="noreferrer" 
-                className="hover:text-white transition-colors"
+                className="hover:text-yellow-400 transition-colors"
                 title="Follow on Facebook"
               >
                 <Facebook className="w-3.5 h-3.5" />
@@ -944,12 +1058,12 @@ ${paymentBreakdownText}
               />
               
               <div className="hidden items-center gap-2">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-purple-700 to-violet-600 flex items-center justify-center text-white shadow-md font-black">
+                <div className="w-10 h-10 rounded-xl bg-violet-600 flex items-center justify-center text-yellow-400 shadow-md font-black">
                   S
                 </div>
                 <div>
                   <h1 className="text-xl font-black tracking-tight text-slate-900 leading-none">
-                    SWIFT<span className="text-purple-600">WAVE</span>
+                    SWIFT<span className="text-violet-600">WAVE</span>
                   </h1>
                   <p className="text-[10px] uppercase font-bold tracking-widest text-slate-400 mt-1">
                     Variety Mall
@@ -966,19 +1080,19 @@ ${paymentBreakdownText}
                 placeholder="Search products, gadgets, essentials..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-slate-100 hover:bg-slate-200/60 focus:bg-white text-sm rounded-full pl-10 pr-4 py-2 border border-transparent focus:border-purple-600 focus:ring-4 focus:ring-purple-600/10 transition-all outline-none"
+                className="w-full bg-slate-100 hover:bg-slate-200/60 focus:bg-white text-sm rounded-full pl-10 pr-4 py-2 border border-transparent focus:border-violet-600 focus:ring-4 focus:ring-violet-600/10 transition-all outline-none"
               />
             </div>
 
             {/* Cart Drawer Button */}
             <button
               onClick={() => setIsCartOpen(true)}
-              className="relative inline-flex items-center gap-2 bg-purple-700 hover:bg-purple-800 text-white text-xs sm:text-sm font-semibold px-4 py-2.5 rounded-full transition-all shadow-md shadow-purple-700/20 active:scale-95"
+              className="relative inline-flex items-center gap-2 bg-yellow-400 hover:bg-yellow-500 text-violet-900 text-xs sm:text-sm font-black px-4 py-2.5 rounded-full transition-all shadow-md active:scale-95"
             >
               <ShoppingBag className="w-4 h-4" />
               <span>Cart</span>
               {totalCartCount > 0 && (
-                <span className="bg-emerald-500 text-white text-[11px] font-extrabold w-5 h-5 rounded-full flex items-center justify-center -ml-1 animate-pulse">
+                <span className="bg-rose-500 text-white text-[11px] font-extrabold w-5 h-5 rounded-full flex items-center justify-center -ml-1 shadow-sm">
                   {totalCartCount}
                 </span>
               )}
@@ -993,7 +1107,7 @@ ${paymentBreakdownText}
               placeholder="Search products..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-slate-100 text-sm rounded-xl pl-9 pr-3 py-2 border border-transparent focus:border-purple-600 focus:bg-white transition-all outline-none"
+              className="w-full bg-slate-100 text-sm rounded-xl pl-9 pr-3 py-2 border border-transparent focus:border-violet-600 focus:bg-white transition-all outline-none"
             />
           </div>
 
@@ -1005,10 +1119,10 @@ ${paymentBreakdownText}
                 <button
                   key={cat}
                   onClick={() => setSelectedCategory(cat)}
-                  className={`text-xs font-semibold px-4 py-2 rounded-full whitespace-nowrap transition-all duration-200 ${
+                  className={`text-xs font-bold px-4 py-2 rounded-full whitespace-nowrap transition-all duration-200 ${
                     active
-                      ? 'bg-purple-700 text-white shadow-sm shadow-purple-700/30'
-                      : 'bg-slate-100 text-slate-600 hover:bg-purple-50 hover:text-purple-900'
+                      ? 'bg-violet-700 text-yellow-400 shadow-sm'
+                      : 'bg-slate-100 text-slate-600 hover:bg-violet-50 hover:text-violet-900'
                   }`}
                 >
                   {cat}
@@ -1022,32 +1136,32 @@ ${paymentBreakdownText}
       {/* Main Catalog */}
       <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
         
-        {/* Brand Hero Banner */}
-        <section className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-purple-950 via-purple-900 to-indigo-950 text-white p-6 sm:p-10 mb-8 shadow-xl border border-purple-900/40">
+        {/* Brand Hero Banner - MATCHING LOGO COLORS */}
+        <section className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-violet-700 via-violet-600 to-[#b565e3] text-white p-6 sm:p-10 mb-8 shadow-xl border border-violet-500">
           <div className="relative z-10 max-w-2xl">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-white/10 text-purple-200 backdrop-blur-md mb-3 border border-white/15">
-              <Sparkles className="w-3.5 h-3.5 text-purple-300" />
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-yellow-400 text-violet-900 shadow-sm mb-3">
+              <Sparkles className="w-3.5 h-3.5" />
               Verified Retail Storefront
             </span>
-            <h2 className="text-2xl sm:text-4xl font-extrabold tracking-tight leading-tight">
+            <h2 className="text-2xl sm:text-4xl font-extrabold tracking-tight leading-tight text-white">
               Everyday Essentials Built for the Way You Actually Live.
             </h2>
-            <p className="mt-2 text-sm sm:text-base text-purple-100/90 font-normal leading-relaxed">
+            <p className="mt-2 text-sm sm:text-base text-violet-100 font-medium leading-relaxed">
               Order verified products directly from Shop 9 & 10, ABH Plaza, Minna with store pickup or swift dispatch.
             </p>
           </div>
-          <div className="absolute right-0 top-0 bottom-0 w-1/3 bg-radial from-purple-500/20 to-transparent pointer-events-none"></div>
+          <div className="absolute right-0 top-0 bottom-0 w-1/3 bg-radial from-violet-400/30 to-transparent pointer-events-none"></div>
         </section>
 
         {/* Filter Meta Header */}
         <div className="flex items-center justify-between mb-4">
           <p className="text-xs uppercase tracking-wider font-bold text-slate-500">
-            Showing <span className="text-purple-900 font-black">{filteredProducts.length}</span> Products
+            Showing <span className="text-violet-900 font-black">{filteredProducts.length}</span> Products
           </p>
           {selectedCategory !== 'All' && (
             <button 
               onClick={() => setSelectedCategory('All')} 
-              className="text-xs font-semibold text-purple-700 hover:underline"
+              className="text-xs font-semibold text-violet-700 hover:underline"
             >
               Clear filter
             </button>
@@ -1057,12 +1171,12 @@ ${paymentBreakdownText}
         {/* Products Grid */}
         {loading ? (
           <div className="py-24 text-center">
-            <div className="inline-block w-8 h-8 border-4 border-purple-700 border-t-transparent rounded-full animate-spin"></div>
+            <div className="inline-block w-8 h-8 border-4 border-violet-700 border-t-transparent rounded-full animate-spin"></div>
             <p className="mt-3 text-sm text-slate-500 font-medium">Syncing live catalog from store inventory...</p>
           </div>
         ) : filteredProducts.length === 0 ? (
           <div className="bg-white rounded-2xl border border-slate-200 p-8 sm:p-12 text-center max-w-lg mx-auto my-12 shadow-sm">
-            <div className="w-12 h-12 bg-purple-50 text-purple-600 rounded-full flex items-center justify-center mx-auto mb-3">
+            <div className="w-12 h-12 bg-violet-50 text-violet-600 rounded-full flex items-center justify-center mx-auto mb-3">
               <Search className="w-6 h-6" />
             </div>
             <h3 className="text-base font-bold text-slate-900">No exact match found</h3>
@@ -1072,21 +1186,21 @@ ${paymentBreakdownText}
 
             {/* Smart Product Suggestions */}
             {suggestedProducts.length > 0 ? (
-              <div className="text-left bg-purple-50/50 rounded-xl p-4 border border-purple-100 mb-4">
-                <h4 className="text-xs font-bold text-purple-900 mb-3 flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-purple-600" /> Did you mean one of these?
+              <div className="text-left bg-violet-50/50 rounded-xl p-4 border border-violet-100 mb-4">
+                <h4 className="text-xs font-bold text-violet-900 mb-3 flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-violet-600" /> Did you mean one of these?
                 </h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {suggestedProducts.map(p => (
                     <button
                       key={p.id}
                       onClick={() => openProductModal(p)}
-                      className="flex items-center gap-3 bg-white p-2 rounded-lg border border-purple-100 hover:border-purple-300 transition-colors text-left"
+                      className="flex items-center gap-3 bg-white p-2 rounded-lg border border-violet-100 hover:border-violet-300 transition-colors text-left"
                     >
                       <img src={formatDriveUrl(p.images?.[0] || '')} className="w-10 h-10 rounded-md object-cover bg-slate-50" alt="" />
                       <div className="min-w-0 flex-1">
                         <p className="text-[11px] font-bold text-slate-900 truncate">{p.name}</p>
-                        <p className="text-[10px] text-purple-700 font-bold mt-0.5">₦{p.price.toLocaleString()}</p>
+                        <p className="text-[10px] text-violet-700 font-bold mt-0.5">₦{p.price.toLocaleString()}</p>
                       </div>
                     </button>
                   ))}
@@ -1105,7 +1219,7 @@ ${paymentBreakdownText}
                       setSearchQuery('');
                       setSelectedCategory(cat);
                     }}
-                    className="text-[11px] font-semibold bg-white border border-slate-200 text-purple-700 px-3 py-1.5 rounded-lg shadow-sm hover:border-purple-300 transition-colors"
+                    className="text-[11px] font-semibold bg-white border border-slate-200 text-violet-700 px-3 py-1.5 rounded-lg shadow-sm hover:border-violet-300 transition-colors"
                   >
                     {cat}
                   </button>
@@ -1123,7 +1237,7 @@ ${paymentBreakdownText}
               return (
                 <div
                   key={product.id}
-                  className="group bg-white rounded-2xl border border-slate-200 hover:border-purple-300 hover:shadow-xl hover:shadow-purple-950/5 transition-all duration-300 flex flex-col overflow-hidden"
+                  className="group bg-white rounded-2xl border border-slate-200 hover:border-violet-400 hover:shadow-xl hover:shadow-violet-900/10 transition-all duration-300 flex flex-col overflow-hidden"
                 >
                   <div 
                     className="relative aspect-square w-full bg-slate-100 overflow-hidden cursor-pointer"
@@ -1145,7 +1259,7 @@ ${paymentBreakdownText}
                     )}
 
                     {product.badge && (
-                      <span className="absolute top-2.5 left-2.5 bg-purple-700 text-white text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full shadow-md">
+                      <span className="absolute top-2.5 left-2.5 bg-violet-700 text-yellow-400 text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full shadow-md">
                         {product.badge}
                       </span>
                     )}
@@ -1159,8 +1273,8 @@ ${paymentBreakdownText}
                     )}
 
                     {product.video && (
-                      <span className="absolute bottom-2.5 right-2.5 bg-purple-950/80 backdrop-blur-md text-white px-2 py-1 rounded-full text-[10px] font-bold flex items-center gap-1 shadow-md">
-                        <Video className="w-3 h-3 text-purple-300" />
+                      <span className="absolute bottom-2.5 right-2.5 bg-violet-950/80 backdrop-blur-md text-white px-2 py-1 rounded-full text-[10px] font-bold flex items-center gap-1 shadow-md">
+                        <Video className="w-3 h-3 text-violet-300" />
                         <span>Video</span>
                       </span>
                     )}
@@ -1169,13 +1283,13 @@ ${paymentBreakdownText}
                   <div className="p-4 flex-1 flex flex-col justify-between">
                     <div>
                       <div className="flex items-center justify-between text-[11px] font-semibold text-slate-400 mb-1">
-                        <span className="text-purple-800 font-bold">{product.category}</span>
+                        <span className="text-violet-800 font-bold">{product.category}</span>
                         <span className="font-mono text-slate-500">{product.id}</span>
                       </div>
 
                       <h3 
                         onClick={() => openProductModal(product)}
-                        className="text-sm font-bold text-slate-900 line-clamp-2 hover:text-purple-700 cursor-pointer transition-colors"
+                        className="text-sm font-bold text-slate-900 line-clamp-2 hover:text-violet-700 cursor-pointer transition-colors"
                       >
                         {product.name}
                       </h3>
@@ -1197,10 +1311,10 @@ ${paymentBreakdownText}
                         <button
                           onClick={() => addToCart(product)}
                           disabled={isMaxed}
-                          className={`inline-flex items-center gap-1.5 text-xs font-bold px-3.5 py-2 rounded-xl transition-all ${
+                          className={`inline-flex items-center gap-1.5 text-xs font-black px-3.5 py-2 rounded-xl transition-all ${
                             isMaxed
                               ? 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'
-                              : 'bg-purple-700 hover:bg-purple-800 text-white shadow-sm shadow-purple-700/30 active:scale-95'
+                              : 'bg-yellow-400 hover:bg-yellow-500 text-violet-900 shadow-sm active:scale-95'
                           }`}
                         >
                           <Plus className="w-3.5 h-3.5" />
@@ -1214,7 +1328,7 @@ ${paymentBreakdownText}
                           target="_blank"
                           rel="noreferrer"
                           onClick={(e) => e.stopPropagation()}
-                          className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-2 rounded-xl transition-all bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 hover:border-emerald-300 active:scale-95 shrink-0"
+                          className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-2 rounded-xl transition-all bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 shrink-0"
                           title="Notify me when restocked via WhatsApp"
                         >
                           <span>Restock</span>
@@ -1242,7 +1356,7 @@ ${paymentBreakdownText}
             
             <div className="p-4 border-b border-slate-100 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="text-xs font-mono font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-md">
+                <span className="text-xs font-mono font-bold text-violet-700 bg-violet-50 px-2 py-0.5 rounded-md">
                   {activeModalProduct.id}
                 </span>
                 <span className="text-xs text-slate-400">• {activeModalProduct.category}</span>
@@ -1263,7 +1377,7 @@ ${paymentBreakdownText}
                     onClick={() => setMediaViewMode('photos')}
                     className={`inline-flex items-center gap-1.5 text-xs font-bold px-3.5 py-1.5 rounded-full transition-all ${
                       mediaViewMode === 'photos'
-                        ? 'bg-purple-700 text-white shadow-sm'
+                        ? 'bg-violet-700 text-yellow-400 shadow-sm'
                         : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                     }`}
                   >
@@ -1275,8 +1389,8 @@ ${paymentBreakdownText}
                     onClick={() => setMediaViewMode('video')}
                     className={`inline-flex items-center gap-1.5 text-xs font-bold px-3.5 py-1.5 rounded-full transition-all ${
                       mediaViewMode === 'video'
-                        ? 'bg-purple-700 text-white shadow-sm'
-                        : 'bg-purple-50 text-purple-700 hover:bg-purple-100'
+                        ? 'bg-violet-700 text-yellow-400 shadow-sm'
+                        : 'bg-violet-50 text-violet-700 hover:bg-violet-100'
                     }`}
                   >
                     <Video className="w-3.5 h-3.5" />
@@ -1317,7 +1431,7 @@ ${paymentBreakdownText}
                         href={activeModalProduct.video}
                         target="_blank"
                         rel="noreferrer"
-                        className="text-purple-700 hover:text-purple-900 font-bold inline-flex items-center gap-1 bg-purple-50 hover:bg-purple-100 px-2.5 py-1 rounded-lg border border-purple-200 transition-colors"
+                        className="text-violet-700 hover:text-violet-900 font-bold inline-flex items-center gap-1 bg-violet-50 hover:bg-violet-100 px-2.5 py-1 rounded-lg border border-violet-200 transition-colors"
                       >
                         <span>Open Original Link</span>
                         <ExternalLink className="w-3 h-3" />
@@ -1374,7 +1488,7 @@ ${paymentBreakdownText}
                       key={idx}
                       onClick={() => setActiveImageIndex(idx)}
                       className={`w-14 h-14 rounded-lg overflow-hidden border-2 transition-all shrink-0 ${
-                        activeImageIndex === idx ? 'border-purple-600 scale-95' : 'border-slate-200 opacity-60'
+                        activeImageIndex === idx ? 'border-violet-600 scale-95' : 'border-slate-200 opacity-60'
                       }`}
                     >
                       <img src={formatDriveUrl(img)} alt="" className="w-full h-full object-cover" />
@@ -1386,7 +1500,7 @@ ${paymentBreakdownText}
               <div className="flex items-start justify-between gap-4">
                 <h2 className="text-lg font-bold text-slate-900 leading-snug">{activeModalProduct.name}</h2>
                 <div className="text-right shrink-0">
-                  <span className="text-xl font-black text-purple-900">
+                  <span className="text-xl font-black text-violet-900">
                     ₦{activeModalProduct.price.toLocaleString()}
                   </span>
                 </div>
@@ -1405,7 +1519,7 @@ ${paymentBreakdownText}
                     <button
                       type="button"
                       onClick={() => setIsDescExpanded(!isDescExpanded)}
-                      className="ml-1.5 text-purple-700 hover:text-purple-900 font-bold inline underline underline-offset-2 transition-colors text-xs"
+                      className="ml-1.5 text-violet-700 hover:text-violet-900 font-bold inline underline underline-offset-2 transition-colors text-xs"
                     >
                       {isDescExpanded ? 'Show less' : 'Read more'}
                     </button>
@@ -1420,7 +1534,7 @@ ${paymentBreakdownText}
                     <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700">
                       Similar & Related Products
                     </h4>
-                    <span className="text-[10px] text-purple-700 font-semibold">Recommended for you</span>
+                    <span className="text-[10px] text-violet-700 font-semibold">Recommended for you</span>
                   </div>
 
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
@@ -1428,7 +1542,7 @@ ${paymentBreakdownText}
                       <div
                         key={relProduct.id}
                         onClick={() => openProductModal(relProduct)}
-                        className="group cursor-pointer bg-slate-50 hover:bg-purple-50/50 p-2 rounded-xl border border-slate-200/80 hover:border-purple-300 transition-all flex flex-col justify-between"
+                        className="group cursor-pointer bg-slate-50 hover:bg-violet-50/50 p-2 rounded-xl border border-slate-200/80 hover:border-violet-400 transition-all flex flex-col justify-between"
                       >
                         <div className="aspect-square w-full rounded-lg overflow-hidden bg-white mb-2 border border-slate-100">
                           <img
@@ -1439,10 +1553,10 @@ ${paymentBreakdownText}
                           />
                         </div>
                         <div>
-                          <p className="text-[11px] font-bold text-slate-900 line-clamp-1 group-hover:text-purple-700">
+                          <p className="text-[11px] font-bold text-slate-900 line-clamp-1 group-hover:text-violet-700">
                             {relProduct.name}
                           </p>
-                          <p className="text-[11px] font-mono font-black text-purple-900 mt-0.5">
+                          <p className="text-[11px] font-mono font-black text-violet-900 mt-0.5">
                             ₦{relProduct.price.toLocaleString()}
                           </p>
                         </div>
@@ -1474,7 +1588,7 @@ ${paymentBreakdownText}
                     addToCart(activeModalProduct);
                     closeProductModal();
                   }}
-                  className="inline-flex items-center gap-2 text-sm font-bold px-6 py-2.5 rounded-xl shadow-md bg-purple-700 hover:bg-purple-800 text-white shadow-purple-700/30 transition-all active:scale-95"
+                  className="inline-flex items-center gap-2 text-sm font-black px-6 py-2.5 rounded-xl shadow-md bg-yellow-400 hover:bg-yellow-500 text-violet-900 transition-all active:scale-95"
                 >
                   <Plus className="w-4 h-4" />
                   <span>Add to Cart</span>
@@ -1505,7 +1619,7 @@ ${paymentBreakdownText}
         >
           <div className="flex items-center justify-between text-white max-w-5xl mx-auto w-full" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center gap-3">
-              <span className="font-mono text-xs text-purple-300 font-bold bg-purple-900/60 px-2.5 py-1 rounded-lg border border-purple-700/50">
+              <span className="font-mono text-xs text-violet-300 font-bold bg-violet-900/60 px-2.5 py-1 rounded-lg border border-violet-700/50">
                 {activeImageIndex + 1} / {activeModalProduct.images?.length || 1}
               </span>
               <h4 className="text-xs sm:text-sm font-semibold truncate max-w-[200px] sm:max-w-md text-slate-200">
@@ -1552,7 +1666,7 @@ ${paymentBreakdownText}
                   key={idx}
                   onClick={() => setActiveImageIndex(idx)}
                   className={`w-12 h-12 rounded-lg overflow-hidden border-2 transition-all ${
-                    activeImageIndex === idx ? 'border-purple-500 scale-105' : 'border-white/20 opacity-50'
+                    activeImageIndex === idx ? 'border-violet-500 scale-105' : 'border-white/20 opacity-50'
                   }`}
                 >
                   <img src={formatDriveUrl(img)} alt="" className="w-full h-full object-cover" />
@@ -1567,17 +1681,17 @@ ${paymentBreakdownText}
       {isCartOpen && (
         <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex justify-end">
           <div className="bg-white w-full max-w-md h-full shadow-2xl flex flex-col justify-between">
-            <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+            <div className="p-4 border-b border-violet-100 bg-violet-50 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <ShoppingBag className="w-5 h-5 text-purple-700" />
-                <h3 className="font-bold text-slate-900">Your Shopping Cart</h3>
-                <span className="text-xs bg-purple-50 text-purple-700 font-bold px-2 py-0.5 rounded-full">
+                <ShoppingBag className="w-5 h-5 text-violet-700" />
+                <h3 className="font-bold text-violet-950">Your Shopping Cart</h3>
+                <span className="text-xs bg-yellow-400 text-violet-900 font-black px-2 py-0.5 rounded-full">
                   {totalCartCount}
                 </span>
               </div>
               <button 
                 onClick={() => setIsCartOpen(false)}
-                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center"
+                className="w-8 h-8 rounded-full bg-white hover:bg-slate-200 text-slate-600 flex items-center justify-center"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -1606,11 +1720,11 @@ ${paymentBreakdownText}
 
               {cart.length === 0 ? (
                 <div className="text-center py-20 text-slate-400">
-                  <ShoppingBag className="w-12 h-12 mx-auto stroke-[1.5] mb-2 opacity-40 text-purple-600" />
+                  <ShoppingBag className="w-12 h-12 mx-auto stroke-[1.5] mb-2 opacity-40 text-violet-600" />
                   <p className="text-sm font-medium">Your cart is empty</p>
                   <button
                     onClick={() => setIsCartOpen(false)}
-                    className="mt-4 text-xs font-bold text-purple-700 hover:underline"
+                    className="mt-4 text-xs font-bold text-violet-700 hover:underline"
                   >
                     Browse products
                   </button>
@@ -1625,7 +1739,7 @@ ${paymentBreakdownText}
                     />
                     <div className="flex-1 min-w-0">
                       <h4 className="text-xs font-bold text-slate-900 truncate">{product.name}</h4>
-                      <p className="text-xs font-mono font-semibold text-purple-700 mt-0.5">
+                      <p className="text-xs font-mono font-semibold text-violet-700 mt-0.5">
                         ₦{(product.price * quantity).toLocaleString()}
                       </p>
                       
@@ -1708,7 +1822,7 @@ ${paymentBreakdownText}
             {/* Order Reference Pill & Narration Copy */}
             <div className="flex items-center justify-between mb-2 pr-8">
               <div className="flex items-center gap-1.5">
-                <span className="text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-purple-100 text-purple-900 font-mono">
+                <span className="text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-violet-100 text-violet-900 font-mono">
                   Order #{orderId}
                 </span>
                 <button
@@ -1718,7 +1832,7 @@ ${paymentBreakdownText}
                     setCopiedOrderId(true);
                     setTimeout(() => setCopiedOrderId(false), 2000);
                   }}
-                  className="inline-flex items-center gap-1 text-[10px] font-bold text-purple-700 hover:underline bg-purple-50 px-2 py-0.5 rounded"
+                  className="inline-flex items-center gap-1 text-[10px] font-bold text-violet-700 hover:underline bg-violet-50 px-2 py-0.5 rounded"
                   title="Copy Remark for Bank App"
                 >
                   <Copy className="w-3 h-3" />
@@ -1738,7 +1852,7 @@ ${paymentBreakdownText}
               <div>
                 <label className="text-xs font-bold text-slate-700 flex items-center justify-between mb-1.5">
                   <span className="flex items-center gap-1">
-                    <Headphones className="w-3.5 h-3.5 text-purple-700" />
+                    <Headphones className="w-3.5 h-3.5 text-violet-700" />
                     <span>Send Order To WhatsApp Rep</span>
                   </span>
                   <span className="text-[10px] text-slate-400">Choose who to message</span>
@@ -1769,7 +1883,7 @@ ${paymentBreakdownText}
                   placeholder="e.g. Ibrahim Mukhtar"
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value)}
-                  className="w-full text-xs p-2.5 rounded-xl border border-slate-200 focus:border-purple-600 outline-none"
+                  className="w-full text-xs p-2.5 rounded-xl border border-slate-200 focus:border-violet-600 outline-none"
                 />
               </div>
 
@@ -1785,7 +1899,7 @@ ${paymentBreakdownText}
                     placeholder="e.g. 08012345678"
                     value={customerPhone}
                     onChange={(e) => setCustomerPhone(e.target.value)}
-                    className="w-full text-xs pl-8 pr-3 py-2.5 rounded-xl border border-slate-200 focus:border-purple-600 outline-none"
+                    className="w-full text-xs pl-8 pr-3 py-2.5 rounded-xl border border-slate-200 focus:border-violet-600 outline-none"
                   />
                 </div>
               </div>
@@ -1798,11 +1912,11 @@ ${paymentBreakdownText}
                     onClick={() => setDeliveryMethod('pickup')}
                     className={`p-2 rounded-xl border text-center transition-all ${
                       deliveryMethod === 'pickup'
-                        ? 'border-purple-600 bg-purple-50 text-purple-900 font-bold shadow-sm'
+                        ? 'border-violet-600 bg-violet-50 text-violet-900 font-bold shadow-sm'
                         : 'border-slate-200 text-slate-600'
                     }`}
                   >
-                    <Building2 className="w-4 h-4 mx-auto mb-1 text-purple-700" />
+                    <Building2 className="w-4 h-4 mx-auto mb-1 text-violet-700" />
                     <span className="text-[11px] block">Shop Pickup</span>
                     <span className="text-[10px] text-emerald-600 font-bold">Free</span>
                   </button>
@@ -1812,13 +1926,13 @@ ${paymentBreakdownText}
                     onClick={() => setDeliveryMethod('minna')}
                     className={`p-2 rounded-xl border text-center transition-all ${
                       deliveryMethod === 'minna'
-                        ? 'border-purple-600 bg-purple-50 text-purple-900 font-bold shadow-sm'
+                        ? 'border-violet-600 bg-violet-50 text-violet-900 font-bold shadow-sm'
                         : 'border-slate-200 text-slate-600'
                     }`}
                   >
-                    <Truck className="w-4 h-4 mx-auto mb-1 text-purple-700" />
+                    <Truck className="w-4 h-4 mx-auto mb-1 text-violet-700" />
                     <span className="text-[11px] block">Minna Delivery</span>
-                    <span className="text-[10px] font-bold text-purple-900">₦1,500</span>
+                    <span className="text-[10px] font-bold text-violet-900">₦1,500</span>
                   </button>
 
                   <button
@@ -1826,11 +1940,11 @@ ${paymentBreakdownText}
                     onClick={() => setDeliveryMethod('nationwide')}
                     className={`p-2 rounded-xl border text-center transition-all ${
                       deliveryMethod === 'nationwide'
-                        ? 'border-purple-600 bg-purple-50 text-purple-900 font-bold shadow-sm'
+                        ? 'border-violet-600 bg-violet-50 text-violet-900 font-bold shadow-sm'
                         : 'border-slate-200 text-slate-600'
                     }`}
                   >
-                    <Truck className="w-4 h-4 mx-auto mb-1 text-purple-700" />
+                    <Truck className="w-4 h-4 mx-auto mb-1 text-violet-700" />
                     <span className="text-[11px] block">Nationwide</span>
                     <span className="text-[10px] font-bold text-slate-600">₦4,500</span>
                   </button>
@@ -1839,15 +1953,15 @@ ${paymentBreakdownText}
 
               {/* Minna Metropolitan & Campus Drop-Off Pickers */}
               {deliveryMethod === 'minna' && (
-                <div className="p-3 bg-purple-50/70 border border-purple-200 rounded-2xl space-y-2.5 animate-fade-in">
+                <div className="p-3 bg-violet-50/70 border border-violet-200 rounded-2xl space-y-2.5 animate-fade-in">
                   <div>
-                    <label className="text-[11px] font-bold text-purple-950 block mb-1">
+                    <label className="text-[11px] font-bold text-violet-950 block mb-1">
                       Minna Area / Hub
                     </label>
                     <select
                       value={minnaCampusZone}
                       onChange={(e) => setMinnaCampusZone(e.target.value)}
-                      className="w-full text-xs p-2 rounded-xl border border-purple-300 bg-white font-medium text-slate-800 focus:border-purple-600 outline-none"
+                      className="w-full text-xs p-2 rounded-xl border border-violet-300 bg-white font-medium text-slate-800 focus:border-violet-600 outline-none"
                     >
                       {MINNA_ZONES.map((zone) => (
                         <option key={zone} value={zone}>{zone}</option>
@@ -1856,7 +1970,7 @@ ${paymentBreakdownText}
                   </div>
 
                   <div>
-                    <label className="text-[11px] font-bold text-purple-950 block mb-1">
+                    <label className="text-[11px] font-bold text-violet-950 block mb-1">
                       Delivery Address / Drop-off Point / Landmark
                     </label>
                     <input
@@ -1864,9 +1978,9 @@ ${paymentBreakdownText}
                       placeholder="e.g. Bosso Low-Cost, Mobil, or Street Address in Tunga"
                       value={landmarkHostel}
                       onChange={(e) => setLandmarkHostel(e.target.value)}
-                      className="w-full text-xs p-2.5 rounded-xl border border-purple-300 bg-white text-slate-800 focus:border-purple-600 outline-none"
+                      className="w-full text-xs p-2.5 rounded-xl border border-violet-300 bg-white text-slate-800 focus:border-violet-600 outline-none"
                     />
-                    <p className="text-[10px] text-purple-700/80 mt-1">
+                    <p className="text-[10px] text-violet-700/80 mt-1">
                       ℹ Campus and metropolitan dispatch riders meet customers at the designated drop-off landmark.
                     </p>
                   </div>
@@ -1882,7 +1996,7 @@ ${paymentBreakdownText}
                     placeholder="e.g. Abuja FCT, Gwarinpa, 3rd Avenue, House 12"
                     value={deliveryAddress}
                     onChange={(e) => setDeliveryAddress(e.target.value)}
-                    className="w-full text-xs p-2.5 rounded-xl border border-slate-200 focus:border-purple-600 outline-none"
+                    className="w-full text-xs p-2.5 rounded-xl border border-slate-200 focus:border-violet-600 outline-none"
                   />
                 </div>
               )}
@@ -1894,7 +2008,7 @@ ${paymentBreakdownText}
                   placeholder="e.g. Preferred color, or specific delivery instructions"
                   value={orderNotes}
                   onChange={(e) => setOrderNotes(e.target.value)}
-                  className="w-full text-xs p-2.5 rounded-xl border border-slate-200 focus:border-purple-600 outline-none"
+                  className="w-full text-xs p-2.5 rounded-xl border border-slate-200 focus:border-violet-600 outline-none"
                 />
               </div>
             </div>
@@ -1902,26 +2016,26 @@ ${paymentBreakdownText}
             {/* Dynamic Bank Account Cards */}
             <div className="space-y-3 mb-5">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold tracking-wider text-purple-900 uppercase">
+                <span className="text-[10px] font-bold tracking-wider text-violet-900 uppercase">
                   {isMixedCart ? 'Transfer Payment by Store Department' : 'Official OPay Account Details'}
                 </span>
-                <span className="text-[10px] font-mono font-bold text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded border border-purple-200">
+                <span className="text-[10px] font-mono font-bold text-violet-700 bg-violet-50 px-1.5 py-0.5 rounded border border-violet-200">
                   Remark: {orderId}
                 </span>
               </div>
 
               {/* Shop 10 Box */}
               {hasShop10 && (
-                <div className="bg-[#170a2c] text-white rounded-2xl p-3.5 border border-purple-900/60 shadow-sm">
-                  <div className="flex justify-between items-center pb-2 border-b border-purple-950">
+                <div className="bg-violet-800 text-white rounded-2xl p-3.5 border border-violet-900/60 shadow-sm">
+                  <div className="flex justify-between items-center pb-2 border-b border-violet-900/50">
                     <div>
-                      <span className="text-[10px] font-extrabold tracking-wider text-emerald-400 uppercase block">
+                      <span className="text-[10px] font-extrabold tracking-wider text-yellow-300 uppercase block">
                         SHOP 10 • GADGETS & TECH
                       </span>
-                      <span className="text-xs text-purple-200 font-medium">Bank: OPay</span>
+                      <span className="text-xs text-violet-200 font-medium">Bank: OPay</span>
                     </div>
                     {isMixedCart && (
-                      <span className="text-xs font-mono font-bold text-purple-200 bg-purple-900/50 px-2 py-0.5 rounded">
+                      <span className="text-xs font-mono font-bold text-violet-100 bg-violet-900/50 px-2 py-0.5 rounded">
                         Due: ₦{shop10Total.toLocaleString()}
                       </span>
                     )}
@@ -1929,7 +2043,7 @@ ${paymentBreakdownText}
 
                   <div className="flex justify-between items-center mt-2.5">
                     <div>
-                      <span className="text-[10px] text-purple-300 block">Account Number</span>
+                      <span className="text-[10px] text-violet-300 block">Account Number</span>
                       <button
                         type="button"
                         onClick={() => {
@@ -1943,7 +2057,7 @@ ${paymentBreakdownText}
                         <Copy className="w-3.5 h-3.5" />
                       </button>
                     </div>
-                    <span className="text-[10px] text-right font-semibold text-purple-300 max-w-[150px] leading-tight">
+                    <span className="text-[10px] text-right font-semibold text-violet-300 max-w-[150px] leading-tight">
                       SWIFTWAVE VARIETY MALL LIMITED
                     </span>
                   </div>
@@ -1955,16 +2069,16 @@ ${paymentBreakdownText}
 
               {/* Shop 9 Box */}
               {hasShop9 && (
-                <div className="bg-[#170a2c] text-white rounded-2xl p-3.5 border border-purple-900/60 shadow-sm">
-                  <div className="flex justify-between items-center pb-2 border-b border-purple-950">
+                <div className="bg-violet-800 text-white rounded-2xl p-3.5 border border-violet-900/60 shadow-sm">
+                  <div className="flex justify-between items-center pb-2 border-b border-violet-900/50">
                     <div>
-                      <span className="text-[10px] font-extrabold tracking-wider text-amber-400 uppercase block">
+                      <span className="text-[10px] font-extrabold tracking-wider text-yellow-300 uppercase block">
                         SHOP 9 • DAILY ESSENTIALS & HOME
                       </span>
-                      <span className="text-xs text-purple-200 font-medium">Bank: OPay</span>
+                      <span className="text-xs text-violet-200 font-medium">Bank: OPay</span>
                     </div>
                     {isMixedCart && (
-                      <span className="text-xs font-mono font-bold text-purple-200 bg-purple-900/50 px-2 py-0.5 rounded">
+                      <span className="text-xs font-mono font-bold text-violet-100 bg-violet-900/50 px-2 py-0.5 rounded">
                         Due: ₦{shop9Total.toLocaleString()}
                       </span>
                     )}
@@ -1972,7 +2086,7 @@ ${paymentBreakdownText}
 
                   <div className="flex justify-between items-center mt-2.5">
                     <div>
-                      <span className="text-[10px] text-purple-300 block">Account Number</span>
+                      <span className="text-[10px] text-violet-300 block">Account Number</span>
                       <button
                         type="button"
                         onClick={() => {
@@ -1986,7 +2100,7 @@ ${paymentBreakdownText}
                         <Copy className="w-3.5 h-3.5" />
                       </button>
                     </div>
-                    <span className="text-[10px] text-right font-semibold text-purple-300 max-w-[150px] leading-tight">
+                    <span className="text-[10px] text-right font-semibold text-violet-300 max-w-[150px] leading-tight">
                       SWIFTWAVE VARIETY MALL LIMITED
                     </span>
                   </div>
@@ -1997,12 +2111,12 @@ ${paymentBreakdownText}
               )}
 
               {/* Total & Summary Strip */}
-              <div className="p-3 bg-purple-50 rounded-2xl border border-purple-200 flex justify-between items-center">
+              <div className="p-3 bg-violet-50 rounded-2xl border border-violet-200 flex justify-between items-center">
                 <div>
-                  <span className="text-xs font-bold text-purple-950 block">Grand Total Due</span>
-                  <span className="text-[10px] text-purple-700">Includes ₦{deliveryFee.toLocaleString()} delivery</span>
+                  <span className="text-xs font-bold text-violet-950 block">Grand Total Due</span>
+                  <span className="text-[10px] text-violet-700">Includes ₦{deliveryFee.toLocaleString()} delivery</span>
                 </div>
-                <span className="text-lg font-black text-purple-950">
+                <span className="text-lg font-black text-violet-950">
                   ₦{orderTotal.toLocaleString()}
                 </span>
               </div>
@@ -2034,7 +2148,7 @@ ${paymentBreakdownText}
               <X className="w-4 h-4" />
             </button>
             
-            <div className="flex justify-center mb-4 bg-purple-50/60 p-4 rounded-2xl border border-purple-100">
+            <div className="flex justify-center mb-4 bg-violet-600 p-4 rounded-2xl border border-violet-100">
               <img 
                 src="/logo.png" 
                 alt="Swiftwave Variety Mall" 
@@ -2046,7 +2160,7 @@ ${paymentBreakdownText}
             </div>
 
             <div className="flex items-center gap-2 mb-2">
-              <ShieldCheck className="w-5 h-5 text-purple-700" />
+              <ShieldCheck className="w-5 h-5 text-violet-700" />
               <h3 className="text-base font-bold text-slate-900">About Swiftwave Variety Mall</h3>
             </div>
             
@@ -2062,7 +2176,7 @@ ${paymentBreakdownText}
                   href={SOCIAL_LINKS.instagram}
                   target="_blank"
                   rel="noreferrer"
-                  className="flex-1 inline-flex items-center justify-center gap-1.5 bg-white border border-slate-200 hover:border-purple-300 text-slate-700 hover:text-purple-700 py-2 rounded-xl text-xs font-bold transition-all shadow-sm"
+                  className="flex-1 inline-flex items-center justify-center gap-1.5 bg-white border border-slate-200 hover:border-violet-300 text-slate-700 hover:text-violet-700 py-2 rounded-xl text-xs font-bold transition-all shadow-sm"
                 >
                   <Instagram className="w-3.5 h-3.5 text-pink-600" />
                   <span>Instagram</span>
@@ -2071,7 +2185,7 @@ ${paymentBreakdownText}
                   href={SOCIAL_LINKS.tiktok}
                   target="_blank"
                   rel="noreferrer"
-                  className="flex-1 inline-flex items-center justify-center gap-1.5 bg-white border border-slate-200 hover:border-purple-300 text-slate-700 hover:text-purple-700 py-2 rounded-xl text-xs font-bold transition-all shadow-sm"
+                  className="flex-1 inline-flex items-center justify-center gap-1.5 bg-white border border-slate-200 hover:border-violet-300 text-slate-700 hover:text-violet-700 py-2 rounded-xl text-xs font-bold transition-all shadow-sm"
                 >
                   <svg className="w-3.5 h-3.5 fill-current text-slate-900" viewBox="0 0 24 24">
                     <path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.99v8.29c.03 2.05-.72 4.17-2.18 5.62-1.74 1.79-4.34 2.5-6.75 1.95-2.61-.53-4.78-2.6-5.46-5.18-.8-2.91.43-6.19 3.02-7.66 1.48-.87 3.26-1.07 4.93-.68v4.11c-.93-.31-1.99-.25-2.87.21-1.09.56-1.74 1.77-1.64 3 .07 1.19.86 2.27 2 2.59 1.25.37 2.7-.1 3.42-1.13.38-.52.55-1.17.54-1.81V.02z" />
@@ -2082,7 +2196,7 @@ ${paymentBreakdownText}
                   href={SOCIAL_LINKS.facebook}
                   target="_blank"
                   rel="noreferrer"
-                  className="flex-1 inline-flex items-center justify-center gap-1.5 bg-white border border-slate-200 hover:border-purple-300 text-slate-700 hover:text-purple-700 py-2 rounded-xl text-xs font-bold transition-all shadow-sm"
+                  className="flex-1 inline-flex items-center justify-center gap-1.5 bg-white border border-slate-200 hover:border-violet-300 text-slate-700 hover:text-violet-700 py-2 rounded-xl text-xs font-bold transition-all shadow-sm"
                 >
                   <Facebook className="w-3.5 h-3.5" />
                   <span>Facebook</span>
@@ -2090,9 +2204,9 @@ ${paymentBreakdownText}
               </div>
             </div>
 
-            <div className="p-3.5 bg-purple-50/60 rounded-xl border border-purple-100 mb-4">
+            <div className="p-3.5 bg-violet-50/60 rounded-xl border border-violet-100 mb-4">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold text-purple-950 uppercase tracking-wider">
+                <span className="text-[11px] font-bold text-violet-950 uppercase tracking-wider">
                   Corporate Registration
                 </span>
                 <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-full">
@@ -2102,12 +2216,12 @@ ${paymentBreakdownText}
               
               <p className="text-xs font-mono text-slate-700 mt-1.5 leading-relaxed">
                 <span className="font-semibold text-slate-900">SWIFTWAVE VARIETY MALL LIMITED</span><br />
-                RC: <span className="text-purple-700 font-bold">9468092</span> | TIN: 2622689087269
+                RC: <span className="text-violet-700 font-bold">9468092</span> | TIN: 2622689087269
               </p>
 
               <button
                 onClick={() => setShowCertLightbox(true)}
-                className="mt-3 w-full bg-white hover:bg-purple-700 hover:text-white text-purple-700 border border-purple-200 hover:border-transparent font-bold text-xs py-2 px-3 rounded-lg transition-all flex items-center justify-center gap-1.5 shadow-sm shadow-purple-500/5"
+                className="mt-3 w-full bg-white hover:bg-violet-700 hover:text-white text-violet-700 border border-violet-200 hover:border-transparent font-bold text-xs py-2 px-3 rounded-lg transition-all flex items-center justify-center gap-1.5 shadow-sm shadow-violet-500/5"
               >
                 <ShieldCheck className="w-3.5 h-3.5" />
                 <span>View Certificate of Incorporation</span>
@@ -2165,7 +2279,7 @@ ${paymentBreakdownText}
                 href="/cac-certificate.jpg"
                 target="_blank"
                 rel="noreferrer"
-                className="text-purple-700 hover:underline font-bold inline-flex items-center gap-1"
+                className="text-violet-700 hover:underline font-bold inline-flex items-center gap-1"
               >
                 Open Original <ExternalLink className="w-3 h-3" />
               </a>
@@ -2178,26 +2292,26 @@ ${paymentBreakdownText}
       {(showInstallBanner || (isIOS && !isStandalone && !sessionStorage.getItem('swiftwave_install_dismissed'))) && (
         <aside 
           aria-label="Install App"
-          className="fixed bottom-4 left-4 right-4 sm:hidden z-40 bg-[#170a2c] text-white p-4 rounded-2xl border border-purple-800/80 shadow-2xl flex flex-col gap-3 animate-fade-in"
+          className="fixed bottom-4 left-4 right-4 sm:hidden z-40 bg-[#170a2c] text-white p-4 rounded-2xl border border-violet-800/80 shadow-2xl flex flex-col gap-3 animate-fade-in"
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3 min-w-0">
               <img
                 src="/logo.png"
                 alt="Swiftwave"
-                className="w-10 h-10 rounded-xl object-contain bg-white p-1 border border-purple-800 shrink-0"
+                className="w-10 h-10 rounded-xl object-contain bg-white p-1 border border-violet-800 shrink-0"
                 onError={(e) => {
                   (e.currentTarget as HTMLElement).style.display = 'none';
                 }}
               />
               <div className="min-w-0">
                 <h4 className="text-xs font-bold text-white truncate">Install Swiftwave App</h4>
-                <p className="text-[10px] text-purple-300 truncate">Faster browsing & instant access</p>
+                <p className="text-[10px] text-violet-300 truncate">Faster browsing & instant access</p>
               </div>
             </div>
             <button
               onClick={dismissInstallBanner}
-              className="text-purple-400 hover:text-white p-1"
+              className="text-violet-400 hover:text-white p-1"
               aria-label="Dismiss banner"
             >
               <X className="w-4 h-4" />
@@ -2205,16 +2319,16 @@ ${paymentBreakdownText}
           </div>
 
           {isIOS ? (
-            <div className="bg-purple-900/50 p-2.5 rounded-xl text-[11px] text-purple-100 flex items-center gap-2 border border-purple-700/50">
+            <div className="bg-violet-900/50 p-2.5 rounded-xl text-[11px] text-violet-100 flex items-center gap-2 border border-violet-700/50">
               <div className="bg-white text-black p-1 rounded inline-flex">
-                <Share className="w-4 h-4 text-purple-900" />
+                <Share className="w-4 h-4 text-violet-900" />
               </div>
               <span>Tap the <strong>Share</strong> button below, then select <strong>"Add to Home Screen"</strong> to install.</span>
             </div>
           ) : (
             <button
               onClick={handleInstallClick}
-              className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs px-3 py-2.5 rounded-xl transition-all shadow-md active:scale-95"
+              className="w-full bg-violet-600 hover:bg-violet-700 text-white font-bold text-xs px-3 py-2.5 rounded-xl transition-all shadow-md active:scale-95"
             >
               Install App Now
             </button>
@@ -2223,9 +2337,9 @@ ${paymentBreakdownText}
       )}
 
       {/* Footer */}
-      <footer className="bg-[#120722] text-purple-200/80 text-xs border-t border-purple-950 pt-10 pb-8 mt-auto">
+      <footer className="bg-violet-900 text-violet-200/80 text-xs border-t border-violet-950 pt-10 pb-8 mt-auto">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 pb-8 border-b border-purple-950">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 pb-8 border-b border-violet-800">
             <div className="md:col-span-1">
               <div className="mb-3">
                 <img 
@@ -2237,23 +2351,23 @@ ${paymentBreakdownText}
                   }}
                 />
               </div>
-              <p className="text-purple-300/70 leading-relaxed text-xs">
+              <p className="text-violet-300/70 leading-relaxed text-xs">
                 Friendly, fast, and affordable. The one-stop shop that keeps everyday life moving.
               </p>
             </div>
 
             <div>
               <h4 className="text-white font-bold text-xs uppercase tracking-wider mb-3">Customer Support</h4>
-              <ul className="space-y-2 text-purple-300/70">
+              <ul className="space-y-2 text-violet-300/70">
                 {SUPPORT_REPS.map((rep) => (
                   <li key={rep.id}>
                     <a 
                       href={`https://wa.me/${rep.number}`} 
                       target="_blank" 
                       rel="noreferrer"
-                      className="hover:text-emerald-400 transition-colors flex items-center gap-1.5"
+                      className="hover:text-yellow-400 transition-colors flex items-center gap-1.5"
                     >
-                      <MessageCircle className="w-3.5 h-3.5 text-emerald-400" />
+                      <MessageCircle className="w-3.5 h-3.5 text-yellow-400" />
                       <span>{rep.name}</span>
                     </a>
                   </li>
@@ -2263,12 +2377,12 @@ ${paymentBreakdownText}
 
             <div>
               <h4 className="text-white font-bold text-xs uppercase tracking-wider mb-3">Connect With Us</h4>
-              <div className="flex flex-col space-y-2 text-purple-300/70">
+              <div className="flex flex-col space-y-2 text-violet-300/70">
                 <a 
                   href={SOCIAL_LINKS.instagram} 
                   target="_blank" 
                   rel="noreferrer"
-                  className="hover:text-pink-400 transition-colors flex items-center gap-1.5"
+                  className="hover:text-yellow-400 transition-colors flex items-center gap-1.5"
                 >
                   <Instagram className="w-3.5 h-3.5" />
                   <span>Instagram</span>
@@ -2277,7 +2391,7 @@ ${paymentBreakdownText}
                   href={SOCIAL_LINKS.tiktok} 
                   target="_blank" 
                   rel="noreferrer"
-                  className="hover:text-white transition-colors flex items-center gap-1.5"
+                  className="hover:text-yellow-400 transition-colors flex items-center gap-1.5"
                 >
                   <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
                     <path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.99v8.29c.03 2.05-.72 4.17-2.18 5.62-1.74 1.79-4.34 2.5-6.75 1.95-2.61-.53-4.78-2.6-5.46-5.18-.8-2.91.43-6.19 3.02-7.66 1.48-.87 3.26-1.07 4.93-.68v4.11c-.93-.31-1.99-.25-2.87.21-1.09.56-1.74 1.77-1.64 3 .07 1.19.86 2.27 2 2.59 1.25.37 2.7-.1 3.42-1.13.38-.52.55-1.17.54-1.81V.02z" />
@@ -2288,7 +2402,7 @@ ${paymentBreakdownText}
                   href={SOCIAL_LINKS.facebook} 
                   target="_blank" 
                   rel="noreferrer"
-                  className="hover:text-blue-400 transition-colors flex items-center gap-1.5"
+                  className="hover:text-yellow-400 transition-colors flex items-center gap-1.5"
                 >
                   <Facebook className="w-3.5 h-3.5" />
                   <span>Facebook</span>
@@ -2298,7 +2412,7 @@ ${paymentBreakdownText}
 
             <div>
               <h4 className="text-white font-bold text-xs uppercase tracking-wider mb-3">Store Location</h4>
-              <p className="leading-relaxed text-purple-300/70">
+              <p className="leading-relaxed text-violet-300/70">
                 Shop 9 & 10, ABH Plaza,<br />
                 Bosso Road, Opposite Fire Service,<br />
                 Minna, Niger State.
@@ -2306,10 +2420,10 @@ ${paymentBreakdownText}
             </div>
           </div>
 
-          <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-purple-400/60">
+          <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-violet-400/60">
             <p>© {new Date().getFullYear()} Swiftwave Variety Mall Limited. All rights reserved.</p>
-            <div className="flex items-center gap-2 text-purple-300">
-              <ShieldCheck className="w-4 h-4 text-emerald-400" />
+            <div className="flex items-center gap-2 text-violet-300">
+              <ShieldCheck className="w-4 h-4 text-yellow-400" />
               <span>Certified CAC Registered Commercial Vendor</span>
             </div>
           </div>
