@@ -24,7 +24,7 @@ function AdminPanel() {
   const [products, setProducts] = useState<{id: string, name: string}[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
 
-  // UPDATE THIS SECURE PIN BEFORE YOU DEPLOY
+  // UPDATE THIS SECURE PIN TO MATCH THE GOOGLE SHEET BEFORE YOU DEPLOY
   const ADMIN_PIN = "1275"; 
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -70,7 +70,7 @@ function AdminPanel() {
       } 
     }
 
-    if (!finalId.trim()) return;
+    if (!finalId || !finalId.trim()) return;
 
     setLoading(true);
     setMessage({ text: '', type: '' });
@@ -163,11 +163,11 @@ function AdminPanel() {
                           setDisplayValue(p.name);
                           setShowDropdown(false); 
                         }}
-                        className="p-3 hover:bg-violet-50 cursor-pointer border-b border-slate-100 last:border-0"
+                        className="p-3 hover:bg-[#A044C3]/10 cursor-pointer border-b border-slate-100 last:border-0"
                      >
                         <div className="flex justify-between items-center">
                            <span className="text-sm font-bold text-slate-900 truncate pr-2">{p.name}</span>
-                           <span className="text-xs font-mono font-black text-[#A044C3] bg-violet-100 px-2 py-0.5 rounded">{p.id}</span>
+                           <span className="text-xs font-mono font-black text-[#A044C3] bg-[#A044C3]/10 px-2 py-0.5 rounded">{p.id}</span>
                         </div>
                      </div>
                   ))}
@@ -784,35 +784,35 @@ export default function App() {
       )}
 
       {toastMessage && (
-        <aside className="fixed bottom-20 sm:bottom-6 left-1/2 -translate-x-1/2 z-50 bg-slate-900/95 text-white backdrop-blur-md px-4 py-2.5 rounded-full shadow-2xl flex items-center gap-3 border border-violet-500/30 animate-bounce">
+        <aside className="fixed bottom-20 sm:bottom-6 left-1/2 -translate-x-1/2 z-50 bg-slate-900/95 text-white backdrop-blur-md px-4 py-2.5 rounded-full shadow-2xl flex items-center gap-3 border border-[#A044C3]/30 animate-bounce">
           <div className="w-5 h-5 rounded-full bg-emerald-500 text-slate-950 flex items-center justify-center">
             <Check className="w-3 h-3 stroke-[3]" />
           </div>
           <span className="text-xs font-semibold">{toastMessage}</span>
-          <button onClick={() => { setToastMessage(null); setIsCartOpen(true); }} className="text-xs font-bold text-yellow-400 hover:text-white underline underline-offset-2 ml-1">
+          <button onClick={() => { setToastMessage(null); setIsCartOpen(true); }} className="text-xs font-bold text-[#FFBB1C] hover:text-white underline underline-offset-2 ml-1">
             View Cart
           </button>
         </aside>
       )}
 
       {/* Top Corporate Legal Badge Bar */}
-      <div className="bg-violet-600 text-white text-xs py-2 px-4 border-b border-violet-700">
+      <div className="bg-[#A044C3] text-white text-xs py-2 px-4 border-b border-[#A044C3]">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-2">
           <div className="flex items-center gap-2">
-            <span className="inline-block w-2 h-2 rounded-full bg-yellow-400"></span>
+            <span className="inline-block w-2 h-2 rounded-full bg-[#FFBB1C]"></span>
             <span className="font-semibold text-white tracking-wide">SWIFTWAVE VARIETY MALL LIMITED</span>
             <span className="hidden md:inline text-white/50">|</span>
-            <span className="hidden md:inline font-mono text-yellow-300">RC: 9468092</span>
+            <span className="hidden md:inline font-mono text-[#FFBB1C]">RC: 9468092</span>
           </div>
           <div className="flex items-center gap-4 text-white/90">
             <div className="flex items-center gap-2.5 pr-2 border-r border-white/30">
-              <a href={SOCIAL_LINKS.instagram} target="_blank" rel="noreferrer" className="hover:text-yellow-400 transition-colors"><Instagram className="w-3.5 h-3.5" /></a>
-              <a href={SOCIAL_LINKS.tiktok} target="_blank" rel="noreferrer" className="hover:text-yellow-400 transition-colors flex items-center">
+              <a href={SOCIAL_LINKS.instagram} target="_blank" rel="noreferrer" className="hover:text-[#FFBB1C] transition-colors"><Instagram className="w-3.5 h-3.5" /></a>
+              <a href={SOCIAL_LINKS.tiktok} target="_blank" rel="noreferrer" className="hover:text-[#FFBB1C] transition-colors flex items-center">
                 <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.99v8.29c.03 2.05-.72 4.17-2.18 5.62-1.74 1.79-4.34 2.5-6.75 1.95-2.61-.53-4.78-2.6-5.46-5.18-.8-2.91.43-6.19 3.02-7.66 1.48-.87 3.26-1.07 4.93-.68v4.11c-.93-.31-1.99-.25-2.87.21-1.09.56-1.74 1.77-1.64 3 .07 1.19.86 2.27 2 2.59 1.25.37 2.7-.1 3.42-1.13.38-.52.55-1.17.54-1.81V.02z" /></svg>
               </a>
-              <a href={SOCIAL_LINKS.facebook} target="_blank" rel="noreferrer" className="hover:text-yellow-400 transition-colors"><Facebook className="w-3.5 h-3.5" /></a>
+              <a href={SOCIAL_LINKS.facebook} target="_blank" rel="noreferrer" className="hover:text-[#FFBB1C] transition-colors"><Facebook className="w-3.5 h-3.5" /></a>
             </div>
-            <button onClick={() => setShowAboutModal(true)} className="hover:text-yellow-400 underline underline-offset-2 flex items-center gap-1 text-xs transition-colors"><Info className="w-3 h-3" /> About Brand</button>
+            <button onClick={() => setShowAboutModal(true)} className="hover:text-[#FFBB1C] underline underline-offset-2 flex items-center gap-1 text-xs transition-colors"><Info className="w-3 h-3" /> About Brand</button>
           </div>
         </div>
       </div>
@@ -823,9 +823,9 @@ export default function App() {
             <div className="flex items-center">
               <img src="/logo.png" alt="Swiftwave Variety Mall" className="h-10 sm:h-12 w-auto max-w-[200px] sm:max-w-[250px] object-contain object-left cursor-pointer" onClick={() => { setSearchQuery(''); setSelectedCategory('All'); setDisplayLimit(48); }} onError={(e) => { e.currentTarget.style.display = 'none'; if (e.currentTarget.nextElementSibling) { (e.currentTarget.nextElementSibling as HTMLElement).style.display = 'flex'; } }} />
               <div className="hidden items-center gap-2 cursor-pointer" onClick={() => { setSearchQuery(''); setSelectedCategory('All'); setDisplayLimit(48); }}>
-                <div className="w-10 h-10 rounded-xl bg-violet-600 flex items-center justify-center text-yellow-400 shadow-md font-black">S</div>
+                <div className="w-10 h-10 rounded-xl bg-[#A044C3] flex items-center justify-center text-[#FFBB1C] shadow-md font-black">S</div>
                 <div>
-                  <h1 className="text-xl font-black tracking-tight text-slate-900 leading-none">SWIFT<span className="text-violet-600">WAVE</span></h1>
+                  <h1 className="text-xl font-black tracking-tight text-slate-900 leading-none">SWIFT<span className="text-[#A044C3]">WAVE</span></h1>
                   <p className="text-[10px] uppercase font-bold tracking-widest text-slate-400 mt-1">Variety Mall</p>
                 </div>
               </div>
@@ -833,10 +833,10 @@ export default function App() {
 
             <div className="flex-1 max-w-md relative hidden sm:block">
               <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-              <input type="text" placeholder="Search products, gadgets, essentials..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full bg-slate-100 hover:bg-slate-200/60 focus:bg-white text-sm rounded-full pl-10 pr-4 py-2 border border-transparent focus:border-violet-600 focus:ring-4 focus:ring-violet-600/10 transition-all outline-none" />
+              <input type="text" placeholder="Search products, gadgets, essentials..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full bg-slate-100 hover:bg-slate-200/60 focus:bg-white text-sm rounded-full pl-10 pr-4 py-2 border border-transparent focus:border-[#A044C3] focus:ring-4 focus:ring-[#A044C3]/10 transition-all outline-none" />
             </div>
 
-            <button onClick={() => setIsCartOpen(true)} className="relative inline-flex items-center gap-2 bg-yellow-400 hover:bg-yellow-500 text-violet-900 text-xs sm:text-sm font-black px-4 py-2.5 rounded-full transition-all shadow-md active:scale-95">
+            <button onClick={() => setIsCartOpen(true)} className="relative inline-flex items-center gap-2 bg-[#FFBB1C] hover:opacity-90 text-violet-900 text-xs sm:text-sm font-black px-4 py-2.5 rounded-full transition-all shadow-md active:scale-95">
               <ShoppingBag className="w-4 h-4" />
               <span>Cart</span>
               {totalCartCount > 0 && (
@@ -849,14 +849,14 @@ export default function App() {
 
           <div className="mt-3 sm:hidden relative">
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-            <input type="text" placeholder="Search products..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full bg-slate-100 text-sm rounded-xl pl-9 pr-3 py-2 border border-transparent focus:border-violet-600 focus:bg-white transition-all outline-none" />
+            <input type="text" placeholder="Search products..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full bg-slate-100 text-sm rounded-xl pl-9 pr-3 py-2 border border-transparent focus:border-[#A044C3] focus:bg-white transition-all outline-none" />
           </div>
 
           <nav className="flex items-center gap-2 overflow-x-auto no-scrollbar pt-3 pb-1">
             {CATEGORIES.map((cat) => {
               const active = selectedCategory === cat;
               return (
-                <button key={cat} onClick={() => { setSelectedCategory(cat); setDisplayLimit(48); }} className={`text-xs font-bold px-4 py-2 rounded-full whitespace-nowrap transition-all duration-200 ${active ? 'bg-violet-600 text-yellow-400 shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-violet-100 hover:text-violet-700'}`}>
+                <button key={cat} onClick={() => { setSelectedCategory(cat); setDisplayLimit(48); }} className={`text-xs font-bold px-4 py-2 rounded-full whitespace-nowrap transition-all duration-200 ${active ? 'bg-[#A044C3] text-[#FFBB1C] shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-[#A044C3]/10 hover:text-[#A044C3]'}`}>
                   {cat}
                 </button>
               );
@@ -867,9 +867,9 @@ export default function App() {
 
       <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
         {/* Brand Hero Banner */}
-        <section className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-violet-600 via-violet-700 to-violet-800 text-white p-6 sm:p-10 mb-8 shadow-xl border border-violet-500">
+        <section className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#A044C3] via-[#8A36A8] to-violet-900 text-white p-6 sm:p-10 mb-8 shadow-xl border border-[#A044C3]">
           <div className="relative z-10 max-w-2xl">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-yellow-400 text-violet-900 shadow-sm mb-3">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-[#FFBB1C] text-violet-900 shadow-sm mb-3">
               <Sparkles className="w-3.5 h-3.5" />
               Verified Retail Storefront
             </span>
@@ -884,32 +884,32 @@ export default function App() {
         </section>
 
         <div className="flex items-center justify-between mb-4">
-          <p className="text-xs uppercase tracking-wider font-bold text-slate-500">Showing <span className="text-violet-700 font-black">{filteredProducts.length}</span> Products</p>
-          {selectedCategory !== 'All' && <button onClick={() => { setSelectedCategory('All'); setDisplayLimit(48); }} className="text-xs font-semibold text-violet-600 hover:underline">Clear filter</button>}
+          <p className="text-xs uppercase tracking-wider font-bold text-slate-500">Showing <span className="text-[#A044C3] font-black">{filteredProducts.length}</span> Products</p>
+          {selectedCategory !== 'All' && <button onClick={() => { setSelectedCategory('All'); setDisplayLimit(48); }} className="text-xs font-semibold text-[#A044C3] hover:underline">Clear filter</button>}
         </div>
 
         {loading ? (
           <div className="py-24 text-center">
-            <div className="inline-block w-8 h-8 border-4 border-violet-600 border-t-transparent rounded-full animate-spin"></div>
+            <div className="inline-block w-8 h-8 border-4 border-[#A044C3] border-t-transparent rounded-full animate-spin"></div>
             <p className="mt-3 text-sm text-slate-500 font-medium">Syncing live catalog from store inventory...</p>
           </div>
         ) : filteredProducts.length === 0 ? (
           <div className="bg-white rounded-2xl border border-slate-200 p-8 sm:p-12 text-center max-w-lg mx-auto my-12 shadow-sm">
-            <div className="w-12 h-12 bg-violet-100 text-violet-600 rounded-full flex items-center justify-center mx-auto mb-3">
+            <div className="w-12 h-12 bg-[#A044C3]/10 text-[#A044C3] rounded-full flex items-center justify-center mx-auto mb-3">
               <Search className="w-6 h-6" />
             </div>
             <h3 className="text-base font-bold text-slate-900">No exact match found</h3>
             <p className="text-xs text-slate-500 mt-1 mb-6">We couldn't find exactly "{searchQuery}". </p>
             {suggestedProducts.length > 0 ? (
               <div className="text-left bg-violet-50 rounded-xl p-4 border border-violet-100 mb-4">
-                <h4 className="text-xs font-bold text-violet-700 mb-3 flex items-center gap-1.5"><Sparkles className="w-3.5 h-3.5" /> Did you mean one of these?</h4>
+                <h4 className="text-xs font-bold text-[#A044C3] mb-3 flex items-center gap-1.5"><Sparkles className="w-3.5 h-3.5" /> Did you mean one of these?</h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {suggestedProducts.map(p => (
-                    <button key={p.id} onClick={() => openProductModal(p)} className="flex items-center gap-3 bg-white p-2 rounded-lg border border-violet-100 hover:border-violet-300 transition-colors text-left">
+                    <button key={p.id} onClick={() => openProductModal(p)} className="flex items-center gap-3 bg-white p-2 rounded-lg border border-violet-100 hover:border-[#A044C3]/40 transition-colors text-left">
                       <img src={formatDriveUrl(p.images?.[0] || '')} className="w-10 h-10 rounded-md object-cover bg-slate-50" alt="" />
                       <div className="min-w-0 flex-1">
                         <p className="text-[11px] font-bold text-slate-900 truncate">{p.name}</p>
-                        <p className="text-[10px] text-violet-600 font-bold mt-0.5">₦{p.price.toLocaleString()}</p>
+                        <p className="text-[10px] text-[#A044C3] font-bold mt-0.5">₦{p.price.toLocaleString()}</p>
                       </div>
                     </button>
                   ))}
@@ -920,7 +920,7 @@ export default function App() {
               <h4 className="text-xs font-bold text-slate-700 mb-2">Explore Popular Categories:</h4>
               <div className="flex flex-wrap gap-2">
                 {['Gadgets', 'Phone Accessories', 'Kitchen & Dining', 'School Supplies'].map(cat => (
-                  <button key={cat} onClick={() => { setSearchQuery(''); setSelectedCategory(cat); setDisplayLimit(48); }} className="text-[11px] font-semibold bg-white border border-slate-200 text-violet-600 px-3 py-1.5 rounded-lg shadow-sm hover:border-violet-300 transition-colors">{cat}</button>
+                  <button key={cat} onClick={() => { setSearchQuery(''); setSelectedCategory(cat); setDisplayLimit(48); }} className="text-[11px] font-semibold bg-white border border-slate-200 text-[#A044C3] px-3 py-1.5 rounded-lg shadow-sm hover:border-[#A044C3]/40 transition-colors">{cat}</button>
                 ))}
               </div>
             </div>
@@ -934,7 +934,7 @@ export default function App() {
                 const isMaxed = product.stock_quantity !== undefined && inCartQty >= product.stock_quantity;
 
                 return (
-                  <div key={product.id} className="group bg-white rounded-2xl border border-slate-200 hover:border-violet-400 hover:shadow-xl hover:shadow-violet-900/10 transition-all duration-300 flex flex-col overflow-hidden">
+                  <div key={product.id} className="group bg-white rounded-2xl border border-slate-200 hover:border-[#A044C3]/40 hover:shadow-xl hover:shadow-[#A044C3]/10 transition-all duration-300 flex flex-col overflow-hidden">
                     <div className="relative aspect-square w-full bg-slate-100 overflow-hidden cursor-pointer" onClick={() => openProductModal(product)}>
                       <img src={displayImage} alt={product.name} className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500" loading="lazy" />
                       {!product.in_stock && (
@@ -942,7 +942,7 @@ export default function App() {
                           <span className="bg-rose-600 text-white font-bold text-xs uppercase px-3 py-1 rounded-full shadow-lg">Sold Out</span>
                         </div>
                       )}
-                      {product.badge && <span className="absolute top-2.5 left-2.5 bg-violet-600 text-yellow-400 text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full shadow-md">{product.badge}</span>}
+                      {product.badge && <span className="absolute top-2.5 left-2.5 bg-[#A044C3] text-[#FFBB1C] text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full shadow-md">{product.badge}</span>}
                       {product.in_stock && product.stock_quantity !== undefined && product.stock_quantity > 0 && product.stock_quantity <= 5 && (
                         <span className="absolute top-2.5 right-2.5 bg-rose-600 text-white text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-full shadow-md flex items-center gap-1 border border-rose-500">
                           <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping"></span> 🔥 Almost Sold Out ({product.stock_quantity} left)
@@ -950,17 +950,17 @@ export default function App() {
                       )}
                       {product.video && (
                         <span className="absolute bottom-2.5 right-2.5 bg-slate-900/80 backdrop-blur-md text-white px-2 py-1 rounded-full text-[10px] font-bold flex items-center gap-1 shadow-md">
-                          <Video className="w-3 h-3 text-yellow-400" /><span>Video</span>
+                          <Video className="w-3 h-3 text-[#FFBB1C]" /><span>Video</span>
                         </span>
                       )}
                     </div>
                     <div className="p-4 flex-1 flex flex-col justify-between">
                       <div>
                         <div className="flex items-center justify-between text-[11px] font-semibold text-slate-400 mb-1">
-                          <span className="text-violet-700 font-bold truncate max-w-[120px]">{product.category}</span>
+                          <span className="text-[#A044C3] font-bold truncate max-w-[120px]">{product.category}</span>
                           <span className="font-mono text-slate-500">{product.id}</span>
                         </div>
-                        <h3 onClick={() => openProductModal(product)} className="text-sm font-bold text-slate-900 line-clamp-2 hover:text-violet-600 cursor-pointer transition-colors">{product.name}</h3>
+                        <h3 onClick={() => openProductModal(product)} className="text-sm font-bold text-slate-900 line-clamp-2 hover:text-[#A044C3] cursor-pointer transition-colors">{product.name}</h3>
                         <p className="text-xs text-slate-500 line-clamp-2 mt-1.5 leading-relaxed">{product.description}</p>
                       </div>
                       <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
@@ -969,7 +969,7 @@ export default function App() {
                           <span className="text-base font-black text-slate-900">₦{product.price.toLocaleString()}</span>
                         </div>
                         {product.in_stock ? (
-                          <button onClick={() => addToCart(product)} disabled={isMaxed} className={`inline-flex items-center gap-1.5 text-xs font-black px-3.5 py-2 rounded-xl transition-all ${isMaxed ? 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed' : 'bg-yellow-400 hover:bg-yellow-500 text-violet-900 shadow-sm active:scale-95'}`}>
+                          <button onClick={() => addToCart(product)} disabled={isMaxed} className={`inline-flex items-center gap-1.5 text-xs font-black px-3.5 py-2 rounded-xl transition-all ${isMaxed ? 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed' : 'bg-[#FFBB1C] hover:opacity-90 text-violet-900 shadow-sm active:scale-95'}`}>
                             <Plus className="w-3.5 h-3.5" /><span>{isMaxed ? 'Max in Cart' : 'Add'}</span>
                           </button>
                         ) : (
@@ -989,7 +989,7 @@ export default function App() {
               <div className="flex justify-center mt-10">
                 <button
                   onClick={() => setDisplayLimit(prev => prev + 48)}
-                  className="bg-white border-2 border-violet-600 text-violet-600 hover:bg-violet-600 hover:text-white font-bold px-8 py-3 rounded-full transition-all shadow-sm flex items-center gap-2"
+                  className="bg-white border-2 border-[#A044C3] text-[#A044C3] hover:bg-[#A044C3] hover:text-[#FFBB1C] font-bold px-8 py-3 rounded-full transition-all shadow-sm flex items-center gap-2"
                 >
                   <ArrowDownCircle className="w-5 h-5" />
                   <span>Load More Products (Showing {displayLimit} of {filteredProducts.length})</span>
@@ -1006,7 +1006,7 @@ export default function App() {
           <div className="bg-white rounded-3xl max-w-2xl w-full overflow-hidden shadow-2xl relative border border-slate-200 flex flex-col max-h-[92vh]">
             <div className="p-4 border-b border-slate-100 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="text-xs font-mono font-bold text-violet-700 bg-violet-100 px-2 py-0.5 rounded-md">{activeModalProduct.id}</span>
+                <span className="text-xs font-mono font-bold text-[#A044C3] bg-[#A044C3]/10 px-2 py-0.5 rounded-md">{activeModalProduct.id}</span>
                 <span className="text-xs text-slate-400">• {activeModalProduct.category}</span>
               </div>
               <button onClick={closeProductModal} className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-colors">
@@ -1016,8 +1016,8 @@ export default function App() {
             <div className="p-6 overflow-y-auto flex-1">
               {activeModalProduct.video && (
                 <div className="flex items-center gap-2 mb-3">
-                  <button onClick={() => setMediaViewMode('photos')} className={`inline-flex items-center gap-1.5 text-xs font-bold px-3.5 py-1.5 rounded-full transition-all ${mediaViewMode === 'photos' ? 'bg-violet-600 text-yellow-400 shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}><ImageIcon className="w-3.5 h-3.5" /><span>Product Photos ({activeModalProduct.images?.length || 1})</span></button>
-                  <button onClick={() => setMediaViewMode('video')} className={`inline-flex items-center gap-1.5 text-xs font-bold px-3.5 py-1.5 rounded-full transition-all ${mediaViewMode === 'video' ? 'bg-violet-600 text-yellow-400 shadow-sm' : 'bg-violet-100 text-violet-600 hover:bg-violet-200'}`}><Video className="w-3.5 h-3.5" /><span>Watch Video Demo</span></button>
+                  <button onClick={() => setMediaViewMode('photos')} className={`inline-flex items-center gap-1.5 text-xs font-bold px-3.5 py-1.5 rounded-full transition-all ${mediaViewMode === 'photos' ? 'bg-[#A044C3] text-[#FFBB1C] shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}><ImageIcon className="w-3.5 h-3.5" /><span>Product Photos ({activeModalProduct.images?.length || 1})</span></button>
+                  <button onClick={() => setMediaViewMode('video')} className={`inline-flex items-center gap-1.5 text-xs font-bold px-3.5 py-1.5 rounded-full transition-all ${mediaViewMode === 'video' ? 'bg-[#A044C3] text-[#FFBB1C] shadow-sm' : 'bg-[#A044C3]/10 text-[#A044C3] hover:bg-[#A044C3]/20'}`}><Video className="w-3.5 h-3.5" /><span>Watch Video Demo</span></button>
                 </div>
               )}
               {mediaViewMode === 'video' && activeVideoEmbed ? (
@@ -1028,7 +1028,7 @@ export default function App() {
                   {activeModalProduct.video && (
                     <div className="mt-2.5 flex items-center justify-between text-xs text-slate-500">
                       <span>Store demonstration</span>
-                      <a href={activeModalProduct.video} target="_blank" rel="noreferrer" className="text-violet-600 hover:text-violet-800 font-bold inline-flex items-center gap-1 bg-violet-100 hover:bg-violet-200 px-2.5 py-1 rounded-lg border border-violet-200 transition-colors"><span>Open Original Link</span><ExternalLink className="w-3 h-3" /></a>
+                      <a href={activeModalProduct.video} target="_blank" rel="noreferrer" className="text-[#A044C3] hover:text-[#8A36A8] font-bold inline-flex items-center gap-1 bg-[#A044C3]/10 hover:bg-[#A044C3]/20 px-2.5 py-1 rounded-lg border border-[#A044C3]/20 transition-colors"><span>Open Original Link</span><ExternalLink className="w-3 h-3" /></a>
                     </div>
                   )}
                 </div>
@@ -1047,20 +1047,20 @@ export default function App() {
               {mediaViewMode === 'photos' && activeModalProduct.images && activeModalProduct.images.length > 1 && (
                 <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
                   {activeModalProduct.images.map((img, idx) => (
-                    <button key={idx} onClick={() => setActiveImageIndex(idx)} className={`w-14 h-14 rounded-lg overflow-hidden border-2 transition-all shrink-0 ${activeImageIndex === idx ? 'border-violet-600 scale-95' : 'border-slate-200 opacity-60'}`}><img src={formatDriveUrl(img)} alt="" className="w-full h-full object-cover" /></button>
+                    <button key={idx} onClick={() => setActiveImageIndex(idx)} className={`w-14 h-14 rounded-lg overflow-hidden border-2 transition-all shrink-0 ${activeImageIndex === idx ? 'border-[#A044C3] scale-95' : 'border-slate-200 opacity-60'}`}><img src={formatDriveUrl(img)} alt="" className="w-full h-full object-cover" /></button>
                   ))}
                 </div>
               )}
               <div className="flex items-start justify-between gap-4">
                 <h2 className="text-lg font-bold text-slate-900 leading-snug">{activeModalProduct.name}</h2>
-                <div className="text-right shrink-0"><span className="text-xl font-black text-violet-700">₦{activeModalProduct.price.toLocaleString()}</span></div>
+                <div className="text-right shrink-0"><span className="text-xl font-black text-[#A044C3]">₦{activeModalProduct.price.toLocaleString()}</span></div>
               </div>
               <div className="mt-4">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Specifications & Details</h4>
                 <div className="text-sm text-slate-600 mt-1.5 leading-relaxed">
                   <p className="whitespace-pre-line inline">{isDescExpanded || activeModalProduct.description.length <= 150 ? activeModalProduct.description : `${activeModalProduct.description.slice(0, 150)}...`}</p>
                   {activeModalProduct.description.length > 150 && (
-                    <button type="button" onClick={() => setIsDescExpanded(!isDescExpanded)} className="ml-1.5 text-violet-600 hover:underline font-bold inline underline-offset-2 transition-colors text-xs">{isDescExpanded ? 'Show less' : 'Read more'}</button>
+                    <button type="button" onClick={() => setIsDescExpanded(!isDescExpanded)} className="ml-1.5 text-[#A044C3] hover:underline font-bold inline underline-offset-2 transition-colors text-xs">{isDescExpanded ? 'Show less' : 'Read more'}</button>
                   )}
                 </div>
               </div>
@@ -1068,15 +1068,15 @@ export default function App() {
                 <div className="mt-6 pt-5 border-t border-slate-100">
                   <div className="flex items-center justify-between mb-3">
                     <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700">Similar & Related Products</h4>
-                    <span className="text-[10px] text-violet-600 font-semibold">Recommended for you</span>
+                    <span className="text-[10px] text-[#A044C3] font-semibold">Recommended for you</span>
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                     {relatedProducts.map((relProduct) => (
-                      <div key={relProduct.id} onClick={() => openProductModal(relProduct)} className="group cursor-pointer bg-slate-50 hover:bg-violet-50 p-2 rounded-xl border border-slate-200/80 hover:border-violet-300 transition-all flex flex-col justify-between">
+                      <div key={relProduct.id} onClick={() => openProductModal(relProduct)} className="group cursor-pointer bg-slate-50 hover:bg-[#A044C3]/10 p-2 rounded-xl border border-slate-200/80 hover:border-[#A044C3]/40 transition-all flex flex-col justify-between">
                         <div className="aspect-square w-full rounded-lg overflow-hidden bg-white mb-2 border border-slate-100"><img src={formatDriveUrl(relProduct.images?.[0] || '')} alt={relProduct.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" /></div>
                         <div>
-                          <p className="text-[11px] font-bold text-slate-900 line-clamp-1 group-hover:text-violet-600">{relProduct.name}</p>
-                          <p className="text-[11px] font-mono font-black text-violet-700 mt-0.5">₦{relProduct.price.toLocaleString()}</p>
+                          <p className="text-[11px] font-bold text-slate-900 line-clamp-1 group-hover:text-[#A044C3]">{relProduct.name}</p>
+                          <p className="text-[11px] font-mono font-black text-[#A044C3] mt-0.5">₦{relProduct.price.toLocaleString()}</p>
                         </div>
                       </div>
                     ))}
@@ -1092,7 +1092,7 @@ export default function App() {
                 )}
               </div>
               {activeModalProduct.in_stock ? (
-                <button onClick={() => { addToCart(activeModalProduct); closeProductModal(); }} className="inline-flex items-center gap-2 text-sm font-black px-6 py-2.5 rounded-xl shadow-md bg-yellow-400 hover:bg-yellow-500 text-violet-900 transition-all active:scale-95"><Plus className="w-4 h-4" /><span>Add to Cart</span></button>
+                <button onClick={() => { addToCart(activeModalProduct); closeProductModal(); }} className="inline-flex items-center gap-2 text-sm font-black px-6 py-2.5 rounded-xl shadow-md bg-[#FFBB1C] hover:opacity-90 text-violet-900 transition-all active:scale-95"><Plus className="w-4 h-4" /><span>Add to Cart</span></button>
               ) : (
                 <a href={`https://wa.me/${selectedRepNumber}?text=${encodeURIComponent(`Hello Swiftwave Mall, I saw that "${activeModalProduct.name}" (ID: ${activeModalProduct.id}) is currently sold out. When are you restocking it?\n\nReference Image: ${formatDriveUrl(activeModalProduct.images?.[0] || '')}`)}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-xs font-bold px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-md transition-all"><span>Request Restock via WhatsApp</span><ExternalLink className="w-3.5 h-3.5" /></a>
               )}
@@ -1107,9 +1107,9 @@ export default function App() {
           <div className="bg-white w-full max-w-md h-full shadow-2xl flex flex-col justify-between">
             <div className="p-4 border-b border-violet-200 bg-violet-50 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <ShoppingBag className="w-5 h-5 text-violet-600" />
+                <ShoppingBag className="w-5 h-5 text-[#A044C3]" />
                 <h3 className="font-bold text-slate-900">Your Shopping Cart</h3>
-                <span className="text-xs bg-yellow-400 text-violet-900 font-black px-2 py-0.5 rounded-full">{totalCartCount}</span>
+                <span className="text-xs bg-[#FFBB1C] text-violet-900 font-black px-2 py-0.5 rounded-full">{totalCartCount}</span>
               </div>
               <button onClick={() => setIsCartOpen(false)} className="w-8 h-8 rounded-full bg-white hover:bg-slate-200 text-slate-600 flex items-center justify-center border border-slate-200"><X className="w-4 h-4" /></button>
             </div>
@@ -1125,9 +1125,9 @@ export default function App() {
               )}
               {cart.length === 0 ? (
                 <div className="text-center py-20 text-slate-400">
-                  <ShoppingBag className="w-12 h-12 mx-auto stroke-[1.5] mb-2 opacity-40 text-violet-600" />
+                  <ShoppingBag className="w-12 h-12 mx-auto stroke-[1.5] mb-2 opacity-40 text-[#A044C3]" />
                   <p className="text-sm font-medium">Your cart is empty</p>
-                  <button onClick={() => setIsCartOpen(false)} className="mt-4 text-xs font-bold text-violet-600 hover:underline">Browse products</button>
+                  <button onClick={() => setIsCartOpen(false)} className="mt-4 text-xs font-bold text-[#A044C3] hover:underline">Browse products</button>
                 </div>
               ) : (
                 cart.map(({ product, quantity }) => (
@@ -1135,7 +1135,7 @@ export default function App() {
                     <img src={formatDriveUrl(product.images?.[0] || '')} alt="" className="w-14 h-14 object-cover rounded-xl bg-white border border-slate-200" />
                     <div className="flex-1 min-w-0">
                       <h4 className="text-xs font-bold text-slate-900 truncate">{product.name}</h4>
-                      <p className="text-xs font-mono font-semibold text-violet-600 mt-0.5">₦{(product.price * quantity).toLocaleString()}</p>
+                      <p className="text-xs font-mono font-semibold text-[#A044C3] mt-0.5">₦{(product.price * quantity).toLocaleString()}</p>
                       <div className="flex items-center gap-2 mt-2">
                         <button onClick={() => updateQuantity(product.id, -1)} className="w-6 h-6 rounded-md bg-white border border-slate-200 text-slate-600 flex items-center justify-center hover:bg-slate-100"><Minus className="w-3 h-3" /></button>
                         <span className="text-xs font-bold font-mono px-1">{quantity}</span>
@@ -1168,8 +1168,8 @@ export default function App() {
             <button onClick={() => setIsCheckoutOpen(false)} className="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-colors"><X className="w-4 h-4" /></button>
             <div className="flex items-center justify-between mb-2 pr-8">
               <div className="flex items-center gap-1.5">
-                <span className="text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-violet-100 text-violet-900 font-mono">Order #{orderId}</span>
-                <button type="button" onClick={() => { navigator.clipboard.writeText(orderId); setCopiedOrderId(true); setTimeout(() => setCopiedOrderId(false), 2000); }} className="inline-flex items-center gap-1 text-[10px] font-bold text-violet-700 hover:underline bg-violet-50 px-2 py-0.5 rounded"><Copy className="w-3 h-3" /><span>{copiedOrderId ? 'Copied!' : 'Copy Remark'}</span></button>
+                <span className="text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-[#A044C3]/10 text-[#A044C3] font-mono">Order #{orderId}</span>
+                <button type="button" onClick={() => { navigator.clipboard.writeText(orderId); setCopiedOrderId(true); setTimeout(() => setCopiedOrderId(false), 2000); }} className="inline-flex items-center gap-1 text-[10px] font-bold text-[#A044C3] hover:underline bg-[#A044C3]/10 px-2 py-0.5 rounded"><Copy className="w-3 h-3" /><span>{copiedOrderId ? 'Copied!' : 'Copy Remark'}</span></button>
               </div>
             </div>
             <h3 className="text-lg font-bold text-slate-900 mb-0.5">Checkout & Payment</h3>
@@ -1178,7 +1178,7 @@ export default function App() {
             <div className="space-y-3 mb-5">
               <div>
                 <label className="text-xs font-bold text-slate-700 flex items-center justify-between mb-1.5">
-                  <span className="flex items-center gap-1"><Headphones className="w-3.5 h-3.5 text-violet-600" /><span>Send Order To WhatsApp Rep</span></span>
+                  <span className="flex items-center gap-1"><Headphones className="w-3.5 h-3.5 text-[#A044C3]" /><span>Send Order To WhatsApp Rep</span></span>
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                   {SUPPORT_REPS.map((rep) => (
@@ -1191,48 +1191,48 @@ export default function App() {
               </div>
               <div>
                 <label className="text-xs font-bold text-slate-700 block mb-1">Full Name</label>
-                <input type="text" placeholder="e.g. Ibrahim Mukhtar" value={customerName} onChange={(e) => setCustomerName(e.target.value)} className="w-full text-xs p-2.5 rounded-xl border border-slate-200 focus:border-violet-600 outline-none" />
+                <input type="text" placeholder="e.g. Ibrahim Mukhtar" value={customerName} onChange={(e) => setCustomerName(e.target.value)} className="w-full text-xs p-2.5 rounded-xl border border-slate-200 focus:border-[#A044C3] outline-none" />
               </div>
               <div>
                 <label className="text-xs font-bold text-slate-700 block mb-1">Active Phone Number</label>
                 <div className="relative">
                   <PhoneCall className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                  <input type="tel" placeholder="e.g. 08012345678" value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} className="w-full text-xs pl-8 pr-3 py-2.5 rounded-xl border border-slate-200 focus:border-violet-600 outline-none" />
+                  <input type="tel" placeholder="e.g. 08012345678" value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} className="w-full text-xs pl-8 pr-3 py-2.5 rounded-xl border border-slate-200 focus:border-[#A044C3] outline-none" />
                 </div>
               </div>
               <div>
                 <label className="text-xs font-bold text-slate-700 block mb-1.5">Fulfillment Method</label>
                 <div className="grid grid-cols-3 gap-2">
-                  <button type="button" onClick={() => setDeliveryMethod('pickup')} className={`p-2 rounded-xl border text-center transition-all ${deliveryMethod === 'pickup' ? 'border-violet-600 bg-violet-50 text-violet-800 font-bold shadow-sm' : 'border-slate-200 text-slate-600'}`}>
-                    <Building2 className="w-4 h-4 mx-auto mb-1 text-violet-600" /><span className="text-[11px] block">Shop Pickup</span><span className="text-[10px] text-emerald-600 font-bold">Free</span>
+                  <button type="button" onClick={() => setDeliveryMethod('pickup')} className={`p-2 rounded-xl border text-center transition-all ${deliveryMethod === 'pickup' ? 'border-[#A044C3] bg-[#A044C3]/10 text-[#A044C3] font-bold shadow-sm' : 'border-slate-200 text-slate-600'}`}>
+                    <Building2 className="w-4 h-4 mx-auto mb-1 text-[#A044C3]" /><span className="text-[11px] block">Shop Pickup</span><span className="text-[10px] text-emerald-600 font-bold">Free</span>
                   </button>
-                  <button type="button" onClick={() => setDeliveryMethod('minna')} className={`p-2 rounded-xl border text-center transition-all ${deliveryMethod === 'minna' ? 'border-violet-600 bg-violet-50 text-violet-800 font-bold shadow-sm' : 'border-slate-200 text-slate-600'}`}>
-                    <Truck className="w-4 h-4 mx-auto mb-1 text-violet-600" /><span className="text-[11px] block">Minna Delivery</span><span className="text-[10px] font-bold text-violet-700">₦1,500</span>
+                  <button type="button" onClick={() => setDeliveryMethod('minna')} className={`p-2 rounded-xl border text-center transition-all ${deliveryMethod === 'minna' ? 'border-[#A044C3] bg-[#A044C3]/10 text-[#A044C3] font-bold shadow-sm' : 'border-slate-200 text-slate-600'}`}>
+                    <Truck className="w-4 h-4 mx-auto mb-1 text-[#A044C3]" /><span className="text-[11px] block">Minna Delivery</span><span className="text-[10px] font-bold text-[#A044C3]">₦1,500</span>
                   </button>
-                  <button type="button" onClick={() => setDeliveryMethod('nationwide')} className={`p-2 rounded-xl border text-center transition-all ${deliveryMethod === 'nationwide' ? 'border-violet-600 bg-violet-50 text-violet-800 font-bold shadow-sm' : 'border-slate-200 text-slate-600'}`}>
-                    <Truck className="w-4 h-4 mx-auto mb-1 text-violet-600" /><span className="text-[11px] block">Nationwide</span><span className="text-[10px] font-bold text-slate-600">Calculated</span>
+                  <button type="button" onClick={() => setDeliveryMethod('nationwide')} className={`p-2 rounded-xl border text-center transition-all ${deliveryMethod === 'nationwide' ? 'border-[#A044C3] bg-[#A044C3]/10 text-[#A044C3] font-bold shadow-sm' : 'border-slate-200 text-slate-600'}`}>
+                    <Truck className="w-4 h-4 mx-auto mb-1 text-[#A044C3]" /><span className="text-[11px] block">Nationwide</span><span className="text-[10px] font-bold text-slate-600">Calculated</span>
                   </button>
                 </div>
               </div>
               {deliveryMethod === 'minna' && (
-                <div className="p-3 bg-violet-50/50 border border-violet-200 rounded-2xl space-y-2.5">
+                <div className="p-3 bg-[#A044C3]/5 border border-[#A044C3]/20 rounded-2xl space-y-2.5">
                   <div>
                     <label className="text-[11px] font-bold text-slate-900 block mb-1">Minna Area / Hub</label>
-                    <select value={minnaCampusZone} onChange={(e) => setMinnaCampusZone(e.target.value)} className="w-full text-xs p-2 rounded-xl border border-violet-300 bg-white font-medium text-slate-800 focus:border-violet-600 outline-none">
+                    <select value={minnaCampusZone} onChange={(e) => setMinnaCampusZone(e.target.value)} className="w-full text-xs p-2 rounded-xl border border-[#A044C3]/30 bg-white font-medium text-slate-800 focus:border-[#A044C3] outline-none">
                       {MINNA_ZONES.map((zone) => <option key={zone} value={zone}>{zone}</option>)}
                     </select>
                   </div>
                   <div>
                     <label className="text-[11px] font-bold text-slate-900 block mb-1">Delivery Address / Drop-off Point / Landmark</label>
-                    <input type="text" placeholder="e.g. Bosso Low-Cost, Mobil" value={landmarkHostel} onChange={(e) => setLandmarkHostel(e.target.value)} className="w-full text-xs p-2.5 rounded-xl border border-violet-300 bg-white focus:border-violet-600 outline-none" />
+                    <input type="text" placeholder="e.g. Bosso Low-Cost, Mobil" value={landmarkHostel} onChange={(e) => setLandmarkHostel(e.target.value)} className="w-full text-xs p-2.5 rounded-xl border border-[#A044C3]/30 bg-white focus:border-[#A044C3] outline-none" />
                   </div>
                 </div>
               )}
               {deliveryMethod === 'nationwide' && (
-                <div className="p-3 bg-violet-50/50 border border-violet-200 rounded-2xl space-y-2.5">
+                <div className="p-3 bg-[#A044C3]/5 border border-[#A044C3]/20 rounded-2xl space-y-2.5">
                   <div>
                     <label className="text-[11px] font-bold text-slate-900 block mb-1">Select Delivery Region</label>
-                    <select value={nationwideZone} onChange={(e) => setNationwideZone(e.target.value)} className="w-full text-xs p-2 rounded-xl border border-violet-300 bg-white font-medium text-slate-800 focus:border-violet-600 outline-none">
+                    <select value={nationwideZone} onChange={(e) => setNationwideZone(e.target.value)} className="w-full text-xs p-2 rounded-xl border border-[#A044C3]/30 bg-white font-medium text-slate-800 focus:border-[#A044C3] outline-none">
                       <option value="Abuja / North Central - ₦4,500">Abuja / North Central - ₦4,500</option>
                       <option value="Lagos / South West - ₦6,000">Lagos / South West - ₦6,000</option>
                       <option value="Kano / Far North - ₦7,000">Kano / Far North - ₦7,000</option>
@@ -1241,30 +1241,30 @@ export default function App() {
                   </div>
                   <div>
                     <label className="text-[11px] font-bold text-slate-900 block mb-1">Full Delivery Destination (State, City, Street)</label>
-                    <input type="text" placeholder="e.g. Lagos, Ikeja, 12 Allen Ave" value={deliveryAddress} onChange={(e) => setDeliveryAddress(e.target.value)} className="w-full text-xs p-2.5 rounded-xl border border-violet-300 bg-white focus:border-violet-600 outline-none" />
+                    <input type="text" placeholder="e.g. Lagos, Ikeja, 12 Allen Ave" value={deliveryAddress} onChange={(e) => setDeliveryAddress(e.target.value)} className="w-full text-xs p-2.5 rounded-xl border border-[#A044C3]/30 bg-white focus:border-[#A044C3] outline-none" />
                   </div>
                 </div>
               )}
               <div>
                 <label className="text-xs font-bold text-slate-700 block mb-1">Order Notes (Optional)</label>
-                <input type="text" placeholder="e.g. Preferred color" value={orderNotes} onChange={(e) => setOrderNotes(e.target.value)} className="w-full text-xs p-2.5 rounded-xl border border-slate-200 focus:border-violet-600 outline-none" />
+                <input type="text" placeholder="e.g. Preferred color" value={orderNotes} onChange={(e) => setOrderNotes(e.target.value)} className="w-full text-xs p-2.5 rounded-xl border border-slate-200 focus:border-[#A044C3] outline-none" />
               </div>
             </div>
 
             <div className="space-y-3 mb-5">
               {hasShop10 && (
-                <div className="bg-violet-700 text-white rounded-2xl p-3.5 shadow-sm">
+                <div className="bg-[#A044C3] text-white rounded-2xl p-3.5 shadow-sm">
                   <div className="flex justify-between items-center pb-2 border-b border-white/20">
                     <div>
-                      <span className="text-[10px] font-extrabold tracking-wider text-yellow-300 uppercase block">SHOP 10 • GADGETS & TECH</span>
+                      <span className="text-[10px] font-extrabold tracking-wider text-[#FFBB1C] uppercase block">SHOP 10 • GADGETS & TECH</span>
                       <span className="text-xs text-white/90 font-medium">Bank: OPay</span>
                     </div>
-                    {isMixedCart && <span className="text-xs font-mono font-bold text-violet-900 bg-yellow-400 px-2 py-0.5 rounded">Due: ₦{shop10Total.toLocaleString()}</span>}
+                    {isMixedCart && <span className="text-xs font-mono font-bold text-[#A044C3] bg-[#FFBB1C] px-2 py-0.5 rounded">Due: ₦{shop10Total.toLocaleString()}</span>}
                   </div>
                   <div className="flex justify-between items-center mt-2.5">
                     <div>
                       <span className="text-[10px] text-white/80 block">Account Number</span>
-                      <button type="button" onClick={() => { navigator.clipboard.writeText(SHOP_ACCOUNTS.shop10.number); setCopiedShop10(true); setTimeout(() => setCopiedShop10(false), 2000); }} className="inline-flex items-center gap-1.5 font-mono text-base font-black text-white hover:text-yellow-300">
+                      <button type="button" onClick={() => { navigator.clipboard.writeText(SHOP_ACCOUNTS.shop10.number); setCopiedShop10(true); setTimeout(() => setCopiedShop10(false), 2000); }} className="inline-flex items-center gap-1.5 font-mono text-base font-black text-white hover:text-[#FFBB1C]">
                         <span>{SHOP_ACCOUNTS.shop10.number}</span><Copy className="w-3.5 h-3.5" />
                       </button>
                     </div>
@@ -1273,18 +1273,18 @@ export default function App() {
                 </div>
               )}
               {hasShop9 && (
-                <div className="bg-violet-700 text-white rounded-2xl p-3.5 shadow-sm">
+                <div className="bg-[#A044C3] text-white rounded-2xl p-3.5 shadow-sm">
                   <div className="flex justify-between items-center pb-2 border-b border-white/20">
                     <div>
-                      <span className="text-[10px] font-extrabold tracking-wider text-yellow-300 uppercase block">SHOP 9 • DAILY ESSENTIALS</span>
+                      <span className="text-[10px] font-extrabold tracking-wider text-[#FFBB1C] uppercase block">SHOP 9 • DAILY ESSENTIALS</span>
                       <span className="text-xs text-white/90 font-medium">Bank: OPay</span>
                     </div>
-                    {isMixedCart && <span className="text-xs font-mono font-bold text-violet-900 bg-yellow-400 px-2 py-0.5 rounded">Due: ₦{shop9Total.toLocaleString()}</span>}
+                    {isMixedCart && <span className="text-xs font-mono font-bold text-[#A044C3] bg-[#FFBB1C] px-2 py-0.5 rounded">Due: ₦{shop9Total.toLocaleString()}</span>}
                   </div>
                   <div className="flex justify-between items-center mt-2.5">
                     <div>
                       <span className="text-[10px] text-white/80 block">Account Number</span>
-                      <button type="button" onClick={() => { navigator.clipboard.writeText(SHOP_ACCOUNTS.shop9.number); setCopiedShop9(true); setTimeout(() => setCopiedShop9(false), 2000); }} className="inline-flex items-center gap-1.5 font-mono text-base font-black text-white hover:text-yellow-300">
+                      <button type="button" onClick={() => { navigator.clipboard.writeText(SHOP_ACCOUNTS.shop9.number); setCopiedShop9(true); setTimeout(() => setCopiedShop9(false), 2000); }} className="inline-flex items-center gap-1.5 font-mono text-base font-black text-white hover:text-[#FFBB1C]">
                         <span>{SHOP_ACCOUNTS.shop9.number}</span><Copy className="w-3.5 h-3.5" />
                       </button>
                     </div>
@@ -1297,22 +1297,22 @@ export default function App() {
                   <span className="text-xs font-bold text-slate-900 block">Grand Total Due</span>
                   <span className="text-[10px] text-slate-500">Includes ₦{deliveryFee.toLocaleString()} delivery</span>
                 </div>
-                <span className="text-lg font-black text-violet-600">₦{orderTotal.toLocaleString()}</span>
+                <span className="text-lg font-black text-[#A044C3]">₦{orderTotal.toLocaleString()}</span>
               </div>
             </div>
 
             <div className="mb-4 px-2">
-              <label className="flex items-start gap-3 bg-violet-50/50 p-3 rounded-xl border border-violet-200 cursor-pointer hover:bg-violet-50 transition-colors">
+              <label className="flex items-start gap-3 bg-[#A044C3]/5 p-3 rounded-xl border border-[#A044C3]/20 cursor-pointer hover:bg-[#A044C3]/10 transition-colors">
                 <div className="pt-0.5">
                   <input 
                     type="checkbox" 
                     checked={agreedToPolicy}
                     onChange={(e) => setAgreedToPolicy(e.target.checked)}
-                    className="w-4 h-4 text-violet-600 bg-white border-slate-300 rounded focus:ring-violet-600 cursor-pointer"
+                    className="w-4 h-4 text-[#A044C3] bg-white border-slate-300 rounded focus:ring-[#A044C3] cursor-pointer"
                   />
                 </div>
                 <span className="text-[11px] font-medium text-slate-700 leading-relaxed">
-                  I explicitly acknowledge and agree to the <button type="button" onClick={(e) => { e.preventDefault(); setIsCheckoutOpen(false); setShowPolicyModal(true); }} className="text-violet-600 font-bold hover:underline">48-hour Option of Defect return policy</button> and confirm my order details are correct.
+                  I explicitly acknowledge and agree to the <button type="button" onClick={(e) => { e.preventDefault(); setIsCheckoutOpen(false); setShowPolicyModal(true); }} className="text-[#A044C3] font-bold hover:underline">48-hour Option of Defect return policy</button> and confirm my order details are correct.
                 </span>
               </label>
             </div>
@@ -1333,14 +1333,14 @@ export default function App() {
       {showAboutModal && (
         <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-lg w-full p-6 relative border border-slate-200 shadow-2xl">
-            <button onClick={() => setShowAboutModal(false)} className="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-colors z-10"><X className="w-4 h-4" /></button>
+            <button onClick={() => setShowAboutModal(false)} className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white shadow-sm hover:bg-slate-100 text-slate-600 flex items-center justify-center transition-colors z-10"><X className="w-4 h-4" /></button>
             
-            <div className="flex justify-center mb-6 bg-violet-600 p-6 rounded-2xl mt-2">
+            <div className="flex justify-center mb-6 bg-[#A044C3] p-6 rounded-2xl mt-2">
               <img src="/logo.png" alt="Swiftwave" className="h-16 w-auto object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
             </div>
             
             <div className="flex items-center gap-2 mb-3">
-              <ShieldCheck className="w-5 h-5 text-violet-600" />
+              <ShieldCheck className="w-5 h-5 text-[#A044C3]" />
               <h3 className="text-base font-bold text-slate-900">About Swiftwave Variety Mall</h3>
             </div>
             <p className="text-[13px] text-slate-600 leading-relaxed mb-6">Swiftwave is your modern everyday marketplace built for the way you actually live. Bringing together gadgets, home essentials, school supplies, phone accessories, beauty products, children's toys, and creator tools under one roof.</p>
@@ -1348,19 +1348,19 @@ export default function App() {
             <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 mb-4">
               <h4 className="text-[10px] font-bold text-slate-900 uppercase tracking-wider mb-3">Connect With Us</h4>
               <div className="grid grid-cols-3 gap-2">
-                <a href={SOCIAL_LINKS.instagram} target="_blank" rel="noreferrer" className="bg-white border border-slate-200 rounded-lg py-2 flex items-center justify-center gap-1.5 text-xs font-semibold text-slate-700 hover:border-violet-300 hover:text-violet-600 transition-colors"><Instagram className="w-3.5 h-3.5 text-rose-500" /> Instagram</a>
-                <a href={SOCIAL_LINKS.tiktok} target="_blank" rel="noreferrer" className="bg-white border border-slate-200 rounded-lg py-2 flex items-center justify-center gap-1.5 text-xs font-semibold text-slate-700 hover:border-violet-300 hover:text-violet-600 transition-colors"><svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.99v8.29c.03 2.05-.72 4.17-2.18 5.62-1.74 1.79-4.34 2.5-6.75 1.95-2.61-.53-4.78-2.6-5.46-5.18-.8-2.91.43-6.19 3.02-7.66 1.48-.87 3.26-1.07 4.93-.68v4.11c-.93-.31-1.99-.25-2.87.21-1.09.56-1.74 1.77-1.64 3 .07 1.19.86 2.27 2 2.59 1.25.37 2.7-.1 3.42-1.13.38-.52.55-1.17.54-1.81V.02z" /></svg> TikTok</a>
-                <a href={SOCIAL_LINKS.facebook} target="_blank" rel="noreferrer" className="bg-white border border-slate-200 rounded-lg py-2 flex items-center justify-center gap-1.5 text-xs font-semibold text-slate-700 hover:border-violet-300 hover:text-violet-600 transition-colors"><Facebook className="w-3.5 h-3.5 text-blue-600" /> Facebook</a>
+                <a href={SOCIAL_LINKS.instagram} target="_blank" rel="noreferrer" className="bg-white border border-slate-200 rounded-lg py-2 flex items-center justify-center gap-1.5 text-xs font-semibold text-slate-700 hover:border-[#A044C3] hover:text-[#A044C3] transition-colors"><Instagram className="w-3.5 h-3.5 text-rose-500" /> Instagram</a>
+                <a href={SOCIAL_LINKS.tiktok} target="_blank" rel="noreferrer" className="bg-white border border-slate-200 rounded-lg py-2 flex items-center justify-center gap-1.5 text-xs font-semibold text-slate-700 hover:border-[#A044C3] hover:text-[#A044C3] transition-colors"><svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.99v8.29c.03 2.05-.72 4.17-2.18 5.62-1.74 1.79-4.34 2.5-6.75 1.95-2.61-.53-4.78-2.6-5.46-5.18-.8-2.91.43-6.19 3.02-7.66 1.48-.87 3.26-1.07 4.93-.68v4.11c-.93-.31-1.99-.25-2.87.21-1.09.56-1.74 1.77-1.64 3 .07 1.19.86 2.27 2 2.59 1.25.37 2.7-.1 3.42-1.13.38-.52.55-1.17.54-1.81V.02z" /></svg> TikTok</a>
+                <a href={SOCIAL_LINKS.facebook} target="_blank" rel="noreferrer" className="bg-white border border-slate-200 rounded-lg py-2 flex items-center justify-center gap-1.5 text-xs font-semibold text-slate-700 hover:border-[#A044C3] hover:text-[#A044C3] transition-colors"><Facebook className="w-3.5 h-3.5 text-blue-600" /> Facebook</a>
               </div>
             </div>
 
-            <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 mb-6">
+            <div className="p-4 bg-[#A044C3]/5 rounded-xl border border-[#A044C3]/20 mb-6">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-[11px] font-bold text-slate-900 uppercase tracking-wider">Corporate Registration</span>
                 <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-full"><CheckCircle2 className="w-3 h-3" /> CAC Verified</span>
               </div>
-              <p className="text-xs font-mono text-slate-700 mb-4 leading-relaxed"><span className="font-semibold text-slate-900 font-sans">SWIFTWAVE VARIETY MALL LIMITED</span><br />RC: <span className="text-violet-600 font-bold">9468092</span> <span className="text-slate-300 mx-1">|</span> TIN: 2622689087269</p>
-              <button onClick={() => { setShowAboutModal(false); setShowCertLightbox(true); }} className="w-full bg-white border border-violet-200 text-violet-700 font-bold text-xs py-2.5 rounded-lg flex items-center justify-center gap-2 hover:bg-violet-50 transition-colors">
+              <p className="text-xs font-mono text-slate-700 mb-4 leading-relaxed"><span className="font-semibold text-slate-900 font-sans">SWIFTWAVE VARIETY MALL LIMITED</span><br />RC: <span className="text-[#A044C3] font-bold">9468092</span> <span className="text-slate-300 mx-1">|</span> TIN: 2622689087269</p>
+              <button onClick={() => { setShowAboutModal(false); setShowCertLightbox(true); }} className="w-full bg-white border border-[#A044C3]/30 text-[#A044C3] font-bold text-xs py-2.5 rounded-lg flex items-center justify-center gap-2 hover:bg-[#A044C3] hover:text-[#FFBB1C] transition-colors">
                 <ShieldCheck className="w-4 h-4" /> View Certificate of Incorporation
               </button>
             </div>
@@ -1384,12 +1384,12 @@ export default function App() {
           <div className="bg-white rounded-3xl max-w-lg w-full p-6 relative border border-slate-200 shadow-2xl overflow-y-auto max-h-[90vh]">
             <button onClick={() => setShowPolicyModal(false)} className="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-colors"><X className="w-4 h-4" /></button>
             <div className="flex items-center gap-2 mb-4">
-              <Scale className="w-6 h-6 text-violet-600" />
+              <Scale className="w-6 h-6 text-[#A044C3]" />
               <h3 className="text-lg font-bold text-slate-900">Store Policies & Returns</h3>
             </div>
             <div className="space-y-4 text-xs text-slate-600 leading-relaxed">
-              <div className="bg-violet-50 p-4 rounded-xl border border-violet-100">
-                <h4 className="font-bold text-violet-900 uppercase tracking-wider mb-1.5 text-[11px]">1. Payment & Fulfillment</h4>
+              <div className="bg-[#A044C3]/5 p-4 rounded-xl border border-[#A044C3]/20">
+                <h4 className="font-bold text-[#A044C3] uppercase tracking-wider mb-1.5 text-[11px]">1. Payment & Fulfillment</h4>
                 <p>All sales are finalized upon the confirmation of payment receipt and physical or constructive delivery to the customer or their assigned rider. Nationwide deliveries require full payment prior to dispatch.</p>
               </div>
               <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
@@ -1407,7 +1407,7 @@ export default function App() {
       )}
 
       {/* Footer */}
-      <footer className="bg-violet-600 text-white/90 text-xs pt-10 pb-8 mt-auto border-t-4 border-yellow-400">
+      <footer className="bg-[#A044C3] text-white/90 text-xs pt-10 pb-8 mt-auto border-t-4 border-[#FFBB1C]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 pb-8 border-b border-white/20">
             <div className="md:col-span-1">
@@ -1417,30 +1417,30 @@ export default function App() {
               <p className="text-white/80 leading-relaxed text-xs">Friendly, fast, and affordable. The one-stop shop that keeps everyday life moving.</p>
             </div>
             <div>
-              <h4 className="text-yellow-400 font-bold text-xs uppercase tracking-wider mb-3">Customer Support</h4>
+              <h4 className="text-[#FFBB1C] font-bold text-xs uppercase tracking-wider mb-3">Customer Support</h4>
               <ul className="space-y-2 text-white/80">
                 {SUPPORT_REPS.map((rep) => (
-                  <li key={rep.id}><a href={`https://wa.me/${rep.number}`} target="_blank" rel="noreferrer" className="hover:text-yellow-400 transition-colors flex items-center gap-1.5"><MessageCircle className="w-3.5 h-3.5" /><span>{rep.name}</span></a></li>
+                  <li key={rep.id}><a href={`https://wa.me/${rep.number}`} target="_blank" rel="noreferrer" className="hover:text-[#FFBB1C] transition-colors flex items-center gap-1.5"><MessageCircle className="w-3.5 h-3.5" /><span>{rep.name}</span></a></li>
                 ))}
               </ul>
             </div>
             <div>
-              <h4 className="text-yellow-400 font-bold text-xs uppercase tracking-wider mb-3">Connect & Legal</h4>
+              <h4 className="text-[#FFBB1C] font-bold text-xs uppercase tracking-wider mb-3">Connect & Legal</h4>
               <div className="flex flex-col space-y-2 text-white/80">
-                <a href={SOCIAL_LINKS.instagram} target="_blank" rel="noreferrer" className="hover:text-yellow-400 transition-colors flex items-center gap-1.5"><Instagram className="w-3.5 h-3.5" /><span>Instagram</span></a>
-                <a href={SOCIAL_LINKS.facebook} target="_blank" rel="noreferrer" className="hover:text-yellow-400 transition-colors flex items-center gap-1.5"><Facebook className="w-3.5 h-3.5" /><span>Facebook</span></a>
-                <button onClick={() => setShowPolicyModal(true)} className="hover:text-yellow-400 transition-colors flex items-center gap-1.5 mt-2"><Scale className="w-3.5 h-3.5" /><span>Store Policies & Returns</span></button>
+                <a href={SOCIAL_LINKS.instagram} target="_blank" rel="noreferrer" className="hover:text-[#FFBB1C] transition-colors flex items-center gap-1.5"><Instagram className="w-3.5 h-3.5" /><span>Instagram</span></a>
+                <a href={SOCIAL_LINKS.facebook} target="_blank" rel="noreferrer" className="hover:text-[#FFBB1C] transition-colors flex items-center gap-1.5"><Facebook className="w-3.5 h-3.5" /><span>Facebook</span></a>
+                <button onClick={() => setShowPolicyModal(true)} className="hover:text-[#FFBB1C] transition-colors flex items-center gap-1.5 mt-2"><Scale className="w-3.5 h-3.5" /><span>Store Policies & Returns</span></button>
               </div>
             </div>
             <div>
-              <h4 className="text-yellow-400 font-bold text-xs uppercase tracking-wider mb-3">Store Location</h4>
+              <h4 className="text-[#FFBB1C] font-bold text-xs uppercase tracking-wider mb-3">Store Location</h4>
               <p className="leading-relaxed text-white/80">Shop 9 & 10, ABH Plaza,<br />Bosso Road, Opposite Fire Service,<br />Minna, Niger State.</p>
             </div>
           </div>
           <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-white/70">
             <p>© {new Date().getFullYear()} Swiftwave Variety Mall Limited. All rights reserved.</p>
             <div className="flex items-center gap-4">
-              <div className="flex items-center gap-1.5 text-yellow-400"><ShieldCheck className="w-4 h-4" /><span>CAC Registered Vendor</span></div>
+              <div className="flex items-center gap-1.5 text-[#FFBB1C]"><ShieldCheck className="w-4 h-4" /><span>CAC Registered Vendor</span></div>
               <div className="border-l border-white/20 pl-4">
                 <span className="text-white/60 font-medium">Engineered by <span className="font-bold text-white/90">Mukhtar</span></span>
               </div>
