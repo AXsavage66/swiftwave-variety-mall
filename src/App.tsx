@@ -24,7 +24,7 @@ function AdminPanel() {
   const [products, setProducts] = useState<{id: string, name: string}[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
 
-  // UPDATE THIS SECURE PIN TO MATCH THE GOOGLE SHEET BEFORE YOU DEPLOY
+  // UPDATE THIS SECURE PIN BEFORE YOU DEPLOY
   const ADMIN_PIN = "1275"; 
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -70,7 +70,7 @@ function AdminPanel() {
       } 
     }
 
-    if (!finalId || !finalId.trim()) return;
+    if (!finalId.trim()) return;
 
     setLoading(true);
     setMessage({ text: '', type: '' });
@@ -1253,18 +1253,18 @@ export default function App() {
 
             <div className="space-y-3 mb-5">
               {hasShop10 && (
-                <div className="bg-[#A044C3] text-white rounded-2xl p-3.5 shadow-sm">
+                <div className="bg-violet-700 text-white rounded-2xl p-3.5 shadow-sm">
                   <div className="flex justify-between items-center pb-2 border-b border-white/20">
                     <div>
-                      <span className="text-[10px] font-extrabold tracking-wider text-[#FFBB1C] uppercase block">SHOP 10 • GADGETS & TECH</span>
+                      <span className="text-[10px] font-extrabold tracking-wider text-yellow-300 uppercase block">SHOP 10 • GADGETS & TECH</span>
                       <span className="text-xs text-white/90 font-medium">Bank: OPay</span>
                     </div>
-                    {isMixedCart && <span className="text-xs font-mono font-bold text-[#A044C3] bg-[#FFBB1C] px-2 py-0.5 rounded">Due: ₦{shop10Total.toLocaleString()}</span>}
+                    {isMixedCart && <span className="text-xs font-mono font-bold text-violet-900 bg-yellow-400 px-2 py-0.5 rounded">Due: ₦{shop10Total.toLocaleString()}</span>}
                   </div>
                   <div className="flex justify-between items-center mt-2.5">
                     <div>
                       <span className="text-[10px] text-white/80 block">Account Number</span>
-                      <button type="button" onClick={() => { navigator.clipboard.writeText(SHOP_ACCOUNTS.shop10.number); setCopiedShop10(true); setTimeout(() => setCopiedShop10(false), 2000); }} className="inline-flex items-center gap-1.5 font-mono text-base font-black text-white hover:text-[#FFBB1C]">
+                      <button type="button" onClick={() => { navigator.clipboard.writeText(SHOP_ACCOUNTS.shop10.number); setCopiedShop10(true); setTimeout(() => setCopiedShop10(false), 2000); }} className="inline-flex items-center gap-1.5 font-mono text-base font-black text-white hover:text-yellow-300">
                         <span>{SHOP_ACCOUNTS.shop10.number}</span><Copy className="w-3.5 h-3.5" />
                       </button>
                     </div>
@@ -1273,18 +1273,18 @@ export default function App() {
                 </div>
               )}
               {hasShop9 && (
-                <div className="bg-[#A044C3] text-white rounded-2xl p-3.5 shadow-sm">
+                <div className="bg-violet-700 text-white rounded-2xl p-3.5 shadow-sm">
                   <div className="flex justify-between items-center pb-2 border-b border-white/20">
                     <div>
-                      <span className="text-[10px] font-extrabold tracking-wider text-[#FFBB1C] uppercase block">SHOP 9 • DAILY ESSENTIALS</span>
+                      <span className="text-[10px] font-extrabold tracking-wider text-yellow-300 uppercase block">SHOP 9 • DAILY ESSENTIALS</span>
                       <span className="text-xs text-white/90 font-medium">Bank: OPay</span>
                     </div>
-                    {isMixedCart && <span className="text-xs font-mono font-bold text-[#A044C3] bg-[#FFBB1C] px-2 py-0.5 rounded">Due: ₦{shop9Total.toLocaleString()}</span>}
+                    {isMixedCart && <span className="text-xs font-mono font-bold text-violet-900 bg-yellow-400 px-2 py-0.5 rounded">Due: ₦{shop9Total.toLocaleString()}</span>}
                   </div>
                   <div className="flex justify-between items-center mt-2.5">
                     <div>
                       <span className="text-[10px] text-white/80 block">Account Number</span>
-                      <button type="button" onClick={() => { navigator.clipboard.writeText(SHOP_ACCOUNTS.shop9.number); setCopiedShop9(true); setTimeout(() => setCopiedShop9(false), 2000); }} className="inline-flex items-center gap-1.5 font-mono text-base font-black text-white hover:text-[#FFBB1C]">
+                      <button type="button" onClick={() => { navigator.clipboard.writeText(SHOP_ACCOUNTS.shop9.number); setCopiedShop9(true); setTimeout(() => setCopiedShop9(false), 2000); }} className="inline-flex items-center gap-1.5 font-mono text-base font-black text-white hover:text-yellow-300">
                         <span>{SHOP_ACCOUNTS.shop9.number}</span><Copy className="w-3.5 h-3.5" />
                       </button>
                     </div>
@@ -1297,7 +1297,7 @@ export default function App() {
                   <span className="text-xs font-bold text-slate-900 block">Grand Total Due</span>
                   <span className="text-[10px] text-slate-500">Includes ₦{deliveryFee.toLocaleString()} delivery</span>
                 </div>
-                <span className="text-lg font-black text-[#A044C3]">₦{orderTotal.toLocaleString()}</span>
+                <span className="text-lg font-black text-violet-600">₦{orderTotal.toLocaleString()}</span>
               </div>
             </div>
 
@@ -1308,11 +1308,11 @@ export default function App() {
                     type="checkbox" 
                     checked={agreedToPolicy}
                     onChange={(e) => setAgreedToPolicy(e.target.checked)}
-                    className="w-4 h-4 text-[#A044C3] bg-white border-slate-300 rounded focus:ring-[#A044C3] cursor-pointer"
+                    className="w-4 h-4 text-violet-600 bg-white border-slate-300 rounded focus:ring-violet-600 cursor-pointer"
                   />
                 </div>
                 <span className="text-[11px] font-medium text-slate-700 leading-relaxed">
-                  I explicitly acknowledge and agree to the <button type="button" onClick={(e) => { e.preventDefault(); setIsCheckoutOpen(false); setShowPolicyModal(true); }} className="text-[#A044C3] font-bold hover:underline">48-hour Option of Defect return policy</button> and confirm my order details are correct.
+                  I explicitly acknowledge and agree to the <button type="button" onClick={(e) => { e.preventDefault(); setIsCheckoutOpen(false); setShowPolicyModal(true); }} className="text-violet-600 font-bold hover:underline">48-hour Option of Defect return policy</button> and confirm my order details are correct.
                 </span>
               </label>
             </div>
@@ -1333,14 +1333,14 @@ export default function App() {
       {showAboutModal && (
         <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-lg w-full p-6 relative border border-slate-200 shadow-2xl">
-            <button onClick={() => setShowAboutModal(false)} className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white shadow-sm hover:bg-slate-100 text-slate-600 flex items-center justify-center transition-colors z-10"><X className="w-4 h-4" /></button>
+            <button onClick={() => setShowAboutModal(false)} className="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-colors z-10"><X className="w-4 h-4" /></button>
             
-            <div className="flex justify-center mb-6 bg-[#A044C3] p-6 rounded-2xl mt-2">
+            <div className="flex justify-center mb-6 bg-violet-600 p-6 rounded-2xl mt-2">
               <img src="/logo.png" alt="Swiftwave" className="h-16 w-auto object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
             </div>
             
             <div className="flex items-center gap-2 mb-3">
-              <ShieldCheck className="w-5 h-5 text-[#A044C3]" />
+              <ShieldCheck className="w-5 h-5 text-violet-600" />
               <h3 className="text-base font-bold text-slate-900">About Swiftwave Variety Mall</h3>
             </div>
             <p className="text-[13px] text-slate-600 leading-relaxed mb-6">Swiftwave is your modern everyday marketplace built for the way you actually live. Bringing together gadgets, home essentials, school supplies, phone accessories, beauty products, children's toys, and creator tools under one roof.</p>
@@ -1348,19 +1348,19 @@ export default function App() {
             <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 mb-4">
               <h4 className="text-[10px] font-bold text-slate-900 uppercase tracking-wider mb-3">Connect With Us</h4>
               <div className="grid grid-cols-3 gap-2">
-                <a href={SOCIAL_LINKS.instagram} target="_blank" rel="noreferrer" className="bg-white border border-slate-200 rounded-lg py-2 flex items-center justify-center gap-1.5 text-xs font-semibold text-slate-700 hover:border-[#A044C3] hover:text-[#A044C3] transition-colors"><Instagram className="w-3.5 h-3.5 text-rose-500" /> Instagram</a>
-                <a href={SOCIAL_LINKS.tiktok} target="_blank" rel="noreferrer" className="bg-white border border-slate-200 rounded-lg py-2 flex items-center justify-center gap-1.5 text-xs font-semibold text-slate-700 hover:border-[#A044C3] hover:text-[#A044C3] transition-colors"><svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.99v8.29c.03 2.05-.72 4.17-2.18 5.62-1.74 1.79-4.34 2.5-6.75 1.95-2.61-.53-4.78-2.6-5.46-5.18-.8-2.91.43-6.19 3.02-7.66 1.48-.87 3.26-1.07 4.93-.68v4.11c-.93-.31-1.99-.25-2.87.21-1.09.56-1.74 1.77-1.64 3 .07 1.19.86 2.27 2 2.59 1.25.37 2.7-.1 3.42-1.13.38-.52.55-1.17.54-1.81V.02z" /></svg> TikTok</a>
-                <a href={SOCIAL_LINKS.facebook} target="_blank" rel="noreferrer" className="bg-white border border-slate-200 rounded-lg py-2 flex items-center justify-center gap-1.5 text-xs font-semibold text-slate-700 hover:border-[#A044C3] hover:text-[#A044C3] transition-colors"><Facebook className="w-3.5 h-3.5 text-blue-600" /> Facebook</a>
+                <a href={SOCIAL_LINKS.instagram} target="_blank" rel="noreferrer" className="bg-white border border-slate-200 rounded-lg py-2 flex items-center justify-center gap-1.5 text-xs font-semibold text-slate-700 hover:border-violet-300 hover:text-violet-600 transition-colors"><Instagram className="w-3.5 h-3.5 text-rose-500" /> Instagram</a>
+                <a href={SOCIAL_LINKS.tiktok} target="_blank" rel="noreferrer" className="bg-white border border-slate-200 rounded-lg py-2 flex items-center justify-center gap-1.5 text-xs font-semibold text-slate-700 hover:border-violet-300 hover:text-violet-600 transition-colors"><svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.99v8.29c.03 2.05-.72 4.17-2.18 5.62-1.74 1.79-4.34 2.5-6.75 1.95-2.61-.53-4.78-2.6-5.46-5.18-.8-2.91.43-6.19 3.02-7.66 1.48-.87 3.26-1.07 4.93-.68v4.11c-.93-.31-1.99-.25-2.87.21-1.09.56-1.74 1.77-1.64 3 .07 1.19.86 2.27 2 2.59 1.25.37 2.7-.1 3.42-1.13.38-.52.55-1.17.54-1.81V.02z" /></svg> TikTok</a>
+                <a href={SOCIAL_LINKS.facebook} target="_blank" rel="noreferrer" className="bg-white border border-slate-200 rounded-lg py-2 flex items-center justify-center gap-1.5 text-xs font-semibold text-slate-700 hover:border-violet-300 hover:text-violet-600 transition-colors"><Facebook className="w-3.5 h-3.5 text-blue-600" /> Facebook</a>
               </div>
             </div>
 
-            <div className="p-4 bg-[#A044C3]/5 rounded-xl border border-[#A044C3]/20 mb-6">
+            <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 mb-6">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-[11px] font-bold text-slate-900 uppercase tracking-wider">Corporate Registration</span>
                 <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-full"><CheckCircle2 className="w-3 h-3" /> CAC Verified</span>
               </div>
-              <p className="text-xs font-mono text-slate-700 mb-4 leading-relaxed"><span className="font-semibold text-slate-900 font-sans">SWIFTWAVE VARIETY MALL LIMITED</span><br />RC: <span className="text-[#A044C3] font-bold">9468092</span> <span className="text-slate-300 mx-1">|</span> TIN: 2622689087269</p>
-              <button onClick={() => { setShowAboutModal(false); setShowCertLightbox(true); }} className="w-full bg-white border border-[#A044C3]/30 text-[#A044C3] font-bold text-xs py-2.5 rounded-lg flex items-center justify-center gap-2 hover:bg-[#A044C3] hover:text-[#FFBB1C] transition-colors">
+              <p className="text-xs font-mono text-slate-700 mb-4 leading-relaxed"><span className="font-semibold text-slate-900 font-sans">SWIFTWAVE VARIETY MALL LIMITED</span><br />RC: <span className="text-violet-600 font-bold">9468092</span> <span className="text-slate-300 mx-1">|</span> TIN: 2622689087269</p>
+              <button onClick={() => { setShowAboutModal(false); setShowCertLightbox(true); }} className="w-full bg-white border border-violet-200 text-violet-700 font-bold text-xs py-2.5 rounded-lg flex items-center justify-center gap-2 hover:bg-violet-50 transition-colors">
                 <ShieldCheck className="w-4 h-4" /> View Certificate of Incorporation
               </button>
             </div>
@@ -1407,7 +1407,7 @@ export default function App() {
       )}
 
       {/* Footer */}
-      <footer className="bg-[#A044C3] text-white/90 text-xs pt-10 pb-8 mt-auto border-t-4 border-[#FFBB1C]">
+      <footer className="bg-violet-600 text-white/90 text-xs pt-10 pb-8 mt-auto border-t-4 border-yellow-400">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 pb-8 border-b border-white/20">
             <div className="md:col-span-1">
@@ -1417,30 +1417,30 @@ export default function App() {
               <p className="text-white/80 leading-relaxed text-xs">Friendly, fast, and affordable. The one-stop shop that keeps everyday life moving.</p>
             </div>
             <div>
-              <h4 className="text-[#FFBB1C] font-bold text-xs uppercase tracking-wider mb-3">Customer Support</h4>
+              <h4 className="text-yellow-400 font-bold text-xs uppercase tracking-wider mb-3">Customer Support</h4>
               <ul className="space-y-2 text-white/80">
                 {SUPPORT_REPS.map((rep) => (
-                  <li key={rep.id}><a href={`https://wa.me/${rep.number}`} target="_blank" rel="noreferrer" className="hover:text-[#FFBB1C] transition-colors flex items-center gap-1.5"><MessageCircle className="w-3.5 h-3.5" /><span>{rep.name}</span></a></li>
+                  <li key={rep.id}><a href={`https://wa.me/${rep.number}`} target="_blank" rel="noreferrer" className="hover:text-yellow-400 transition-colors flex items-center gap-1.5"><MessageCircle className="w-3.5 h-3.5" /><span>{rep.name}</span></a></li>
                 ))}
               </ul>
             </div>
             <div>
-              <h4 className="text-[#FFBB1C] font-bold text-xs uppercase tracking-wider mb-3">Connect & Legal</h4>
+              <h4 className="text-yellow-400 font-bold text-xs uppercase tracking-wider mb-3">Connect & Legal</h4>
               <div className="flex flex-col space-y-2 text-white/80">
-                <a href={SOCIAL_LINKS.instagram} target="_blank" rel="noreferrer" className="hover:text-[#FFBB1C] transition-colors flex items-center gap-1.5"><Instagram className="w-3.5 h-3.5" /><span>Instagram</span></a>
-                <a href={SOCIAL_LINKS.facebook} target="_blank" rel="noreferrer" className="hover:text-[#FFBB1C] transition-colors flex items-center gap-1.5"><Facebook className="w-3.5 h-3.5" /><span>Facebook</span></a>
-                <button onClick={() => setShowPolicyModal(true)} className="hover:text-[#FFBB1C] transition-colors flex items-center gap-1.5 mt-2"><Scale className="w-3.5 h-3.5" /><span>Store Policies & Returns</span></button>
+                <a href={SOCIAL_LINKS.instagram} target="_blank" rel="noreferrer" className="hover:text-yellow-400 transition-colors flex items-center gap-1.5"><Instagram className="w-3.5 h-3.5" /><span>Instagram</span></a>
+                <a href={SOCIAL_LINKS.facebook} target="_blank" rel="noreferrer" className="hover:text-yellow-400 transition-colors flex items-center gap-1.5"><Facebook className="w-3.5 h-3.5" /><span>Facebook</span></a>
+                <button onClick={() => setShowPolicyModal(true)} className="hover:text-yellow-400 transition-colors flex items-center gap-1.5 mt-2"><Scale className="w-3.5 h-3.5" /><span>Store Policies & Returns</span></button>
               </div>
             </div>
             <div>
-              <h4 className="text-[#FFBB1C] font-bold text-xs uppercase tracking-wider mb-3">Store Location</h4>
+              <h4 className="text-yellow-400 font-bold text-xs uppercase tracking-wider mb-3">Store Location</h4>
               <p className="leading-relaxed text-white/80">Shop 9 & 10, ABH Plaza,<br />Bosso Road, Opposite Fire Service,<br />Minna, Niger State.</p>
             </div>
           </div>
           <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-white/70">
             <p>© {new Date().getFullYear()} Swiftwave Variety Mall Limited. All rights reserved.</p>
             <div className="flex items-center gap-4">
-              <div className="flex items-center gap-1.5 text-[#FFBB1C]"><ShieldCheck className="w-4 h-4" /><span>CAC Registered Vendor</span></div>
+              <div className="flex items-center gap-1.5 text-yellow-400"><ShieldCheck className="w-4 h-4" /><span>CAC Registered Vendor</span></div>
               <div className="border-l border-white/20 pl-4">
                 <span className="text-white/60 font-medium">Engineered by <span className="font-bold text-white/90">Mukhtar</span></span>
               </div>
