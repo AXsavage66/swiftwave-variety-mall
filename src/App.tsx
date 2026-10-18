@@ -4,7 +4,7 @@ import {
   CheckCircle2, ChevronRight, ChevronLeft, Info, Plus, Minus,
   Trash2, Truck, Building2, Copy, Image as ImageIcon, Maximize2,
   PhoneCall, Check, Instagram, Facebook, MessageCircle, Headphones,
-  Scale, ArrowDownCircle
+  Share, Calculator, Shield, Scale, ArrowDownCircle
 } from 'lucide-react';
 
 // ==========================================
@@ -24,7 +24,7 @@ function AdminPanel() {
   const [products, setProducts] = useState<{id: string, name: string}[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
 
-  // SECURE PIN MATCHING THE GOOGLE BACKEND
+  // UPDATE THIS SECURE PIN TO MATCH THE GOOGLE SHEET BEFORE YOU DEPLOY
   const ADMIN_PIN = "1275"; 
 
   const handleLogin = async (e: React.FormEvent) => {
