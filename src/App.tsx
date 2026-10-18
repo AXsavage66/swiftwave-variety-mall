@@ -25,7 +25,7 @@ function AdminPanel() {
   const [showDropdown, setShowDropdown] = useState(false);
 
   // UPDATE THIS SECURE PIN LATER
-  const ADMIN_PIN = "2026";
+  const ADMIN_PIN = "1275";
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
