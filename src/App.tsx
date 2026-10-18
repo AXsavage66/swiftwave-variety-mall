@@ -13,17 +13,20 @@ import {
 function AdminPanel() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [pinCode, setPinCode] = useState('');
-  const [productId, setProductId] = useState('');
+  
+  // The actual ID sent to Google
+  const [productId, setProductId] = useState(''); 
+  // What the user sees in the text box
+  const [displayValue, setDisplayValue] = useState(''); 
+  
   const [quantity, setQuantity] = useState(1);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ text: '', type: '' });
 
-  // Autocomplete State
   const [products, setProducts] = useState<{id: string, name: string}[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
 
-  const ADMIN_PIN = "1275"; 
+  const ADMIN_PIN = "1275"; // Remember to change this to Haris's new PIN!
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,7 +56,9 @@ function AdminPanel() {
 
   const handleLogSale = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!productId.trim()) return;
+    // Use the actual hidden ID, not the display name, or fallback to manual input if no dropdown was used
+    const finalId = productId || displayValue; 
+    if (!finalId.trim()) return;
 
     setLoading(true);
     setMessage({ text: '', type: '' });
@@ -63,12 +68,14 @@ function AdminPanel() {
       const response = await fetch(API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify({ productId: productId.trim(), quantity: quantity, pin: ADMIN_PIN })
+        body: JSON.stringify({ productId: finalId.trim(), quantity: quantity, pin: ADMIN_PIN })
       });
       const data = await response.json();
       if (data.status === 'success') {
-        setMessage({ text: `Success: ${quantity}x logged to ledger.`, type: 'success' });
-        setProductId(''); setSearchQuery(''); setQuantity(1);
+        setMessage({ text: `Success: ${quantity}x [${finalId}] logged.`, type: 'success' });
+        setProductId(''); 
+        setDisplayValue(''); 
+        setQuantity(1);
       } else { setMessage({ text: "Error: " + data.message, type: 'error' }); }
     } catch (err) { setMessage({ text: "Network error.", type: 'error' }); }
     setLoading(false);
@@ -107,21 +114,26 @@ function AdminPanel() {
             <input
               type="text"
               placeholder="e.g. iPhone Charger..."
-              value={searchQuery}
+              value={displayValue}
               onChange={(e) => {
-                 setSearchQuery(e.target.value);
+                 setDisplayValue(e.target.value);
+                 // If user starts typing manually, clear the hidden ID so we fallback to manual text
+                 setProductId(''); 
                  setShowDropdown(true);
-                 if(!e.target.value) { setProductId(''); }
               }}
               onFocus={() => setShowDropdown(true)}
               className="w-full p-3 rounded-xl border border-slate-300 focus:border-[#A044C3] outline-none font-bold text-slate-900"
             />
-            {showDropdown && searchQuery && (
+            {showDropdown && displayValue && (
                <div className="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-xl max-h-48 overflow-y-auto">
-                  {products.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()) || p.id.toLowerCase().includes(searchQuery.toLowerCase())).slice(0, 10).map(p => (
+                  {products.filter(p => p.name.toLowerCase().includes(displayValue.toLowerCase()) || p.id.toLowerCase().includes(displayValue.toLowerCase())).slice(0, 10).map(p => (
                      <div
                         key={p.id}
-                        onClick={() => { setProductId(p.id); setSearchQuery(p.name); setShowDropdown(false); }}
+                        onClick={() => { 
+                          setProductId(p.id); // Save the hidden ID for the server
+                          setDisplayValue(p.name); // Show the name to Haris
+                          setShowDropdown(false); 
+                        }}
                         className="p-3 hover:bg-violet-50 cursor-pointer border-b border-slate-100 last:border-0"
                      >
                         <div className="flex justify-between items-center">
@@ -141,7 +153,7 @@ function AdminPanel() {
               <button type="button" onClick={() => setQuantity(quantity + 1)} className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center hover:bg-slate-200 border border-slate-300"><Plus className="w-5 h-5 text-slate-700" /></button>
             </div>
           </div>
-          <button type="submit" disabled={loading || !productId} className={`w-full font-bold text-sm py-4 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 ${(loading || !productId) ? 'bg-slate-400 cursor-not-allowed text-white' : 'bg-[#A044C3] hover:opacity-90 text-[#FFBB1C] shadow-[#A044C3]/30'}`}>
+          <button type="submit" disabled={loading || !displayValue} className={`w-full font-bold text-sm py-4 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 ${(loading || !displayValue) ? 'bg-slate-400 cursor-not-allowed text-white' : 'bg-[#A044C3] hover:opacity-90 text-[#FFBB1C] shadow-[#A044C3]/30'}`}>
             {loading ? <span className="animate-pulse">Logging to Ledger...</span> : <><span>Log Sale</span><Check className="w-5 h-5" /></>}
           </button>
         </form>
