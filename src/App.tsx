@@ -25,7 +25,7 @@ function AdminPanel() {
   const [showDropdown, setShowDropdown] = useState(false);
 
   // UPDATE THIS SECURE PIN BEFORE YOU DEPLOY
-  const ADMIN_PIN = "2026"; 
+  const ADMIN_PIN = "1275"; 
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -378,7 +378,7 @@ export default function App() {
 
   const [isCartOpen, setIsCartOpen] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [isCheckoutOpen, setIsCheckoutOpen] = useState<boolean>(() => typeof window !== 'undefined' ? localStorage.getItem('swiftwave_checkout_open') === 'true' : false);
+  const [agreedToPolicy, setAgreedToPolicy] = useState<boolean>(false); = useState<boolean>(() => typeof window !== 'undefined' ? localStorage.getItem('swiftwave_checkout_open') === 'true' : false);
   
   const [copiedShop9, setCopiedShop9] = useState<boolean>(false);
   const [copiedShop10, setCopiedShop10] = useState<boolean>(false);
@@ -743,7 +743,7 @@ export default function App() {
   const orderTotal = cartSubtotal + deliveryFee;
   const totalCartCount = cart.reduce((sum, item) => sum + (item?.quantity || 0), 0);
 
-  const openCheckout = () => {
+  setAgreedToPolicy(false);
     if (!orderId) setOrderId(`SW-${Math.floor(1000 + Math.random() * 9000)}`);
     setIsCartOpen(false);
     setIsCheckoutOpen(true);
@@ -1299,13 +1299,28 @@ export default function App() {
               </div>
             </div>
 
-            <div className="text-center mb-4 px-2">
-              <p className="text-[10px] font-medium text-slate-500 leading-relaxed">
-                By finalizing this order, you agree to our <button type="button" onClick={() => { setIsCheckoutOpen(false); setShowPolicyModal(true); }} className="text-[#A044C3] font-bold hover:underline">48-hour Option of Defect return policy</button>.
-              </p>
+            <div className="mb-4 px-2">
+              <label className="flex items-start gap-3 bg-violet-50/50 p-3 rounded-xl border border-violet-200 cursor-pointer hover:bg-violet-50 transition-colors">
+                <div className="pt-0.5">
+                  <input 
+                    type="checkbox" 
+                    checked={agreedToPolicy}
+                    onChange={(e) => setAgreedToPolicy(e.target.checked)}
+                    className="w-4 h-4 text-[#A044C3] bg-white border-slate-300 rounded focus:ring-[#A044C3] cursor-pointer"
+                  />
+                </div>
+                <span className="text-[11px] font-medium text-slate-700 leading-relaxed">
+                  I explicitly acknowledge and agree to the <button type="button" onClick={(e) => { e.preventDefault(); setIsCheckoutOpen(false); setShowPolicyModal(true); }} className="text-[#A044C3] font-bold hover:underline">48-hour Option of Defect return policy</button> and confirm my order details are correct.
+                </span>
+              </label>
             </div>
 
-            <button type="button" onClick={handleFinalOrder} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm py-3 rounded-2xl shadow-lg transition-all flex items-center justify-center gap-2 active:scale-95">
+            <button 
+              type="button" 
+              onClick={handleFinalOrder} 
+              disabled={!agreedToPolicy}
+              className={`w-full font-bold text-sm py-3 rounded-2xl shadow-lg transition-all flex items-center justify-center gap-2 ${agreedToPolicy ? 'bg-emerald-600 hover:bg-emerald-700 text-white active:scale-95 shadow-emerald-600/30' : 'bg-slate-300 text-slate-500 cursor-not-allowed shadow-none'}`}
+            >
               <span>I Have Transferred • Submit via WhatsApp</span><ExternalLink className="w-4 h-4" />
             </button>
           </div>
