@@ -13,19 +13,19 @@ import {
 function AdminPanel() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [pinCode, setPinCode] = useState('');
-
-  const [productId, setProductId] = useState('');
-  const [displayValue, setDisplayValue] = useState('');
-
+  
+  const [productId, setProductId] = useState(''); 
+  const [displayValue, setDisplayValue] = useState(''); 
+  
   const [quantity, setQuantity] = useState(1);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ text: '', type: '' });
 
-  const [products, setProducts] = useState<{ id: string, name: string }[]>([]);
+  const [products, setProducts] = useState<{id: string, name: string}[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
 
-  // UPDATE THIS SECURE PIN LATER
-  const ADMIN_PIN = "1275";
+  // UPDATE THIS SECURE PIN BEFORE YOU DEPLOY
+  const ADMIN_PIN = "2026"; 
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,29 +39,35 @@ function AdminPanel() {
           const headers = parseCSVLine(lines[0]).map(h => h.toLowerCase().replace(/[^a-z]/g, ''));
           const idIdx = headers.findIndex(h => h.includes('id'));
           const nameIdx = headers.findIndex(h => h.includes('name') || h.includes('product'));
-
+          
           const parsed = [];
-          for (let i = 1; i < lines.length; i++) {
-            const row = parseCSVLine(lines[i]);
-            if (idIdx > -1 && nameIdx > -1 && row[nameIdx]) {
-              parsed.push({ id: row[idIdx], name: row[nameIdx] });
-            }
+          for(let i = 1; i < lines.length; i++) {
+             const row = parseCSVLine(lines[i]);
+             if(idIdx > -1 && nameIdx > -1 && row[nameIdx]) {
+                parsed.push({ id: row[idIdx], name: row[nameIdx] });
+             }
           }
           setProducts(parsed);
         }
-      } catch (err) { console.error("Catalog sync failed", err); }
-    } else { alert("Unauthorized Access"); setPinCode(''); }
+      } catch(err) { console.error("Catalog sync failed", err); }
+    } else { 
+      alert("Unauthorized Access"); 
+      setPinCode(''); 
+    }
   };
 
   const handleLogSale = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    // SMART RESOLVER: If Haris typed the name but didn't click the dropdown, find the ID automatically.
+    
+    // SMART RESOLVER: Automatically grab ID if Haris typed the name manually
     let finalId = productId;
     if (!finalId) {
       const match = products.find(p => p.name.toLowerCase() === displayValue.toLowerCase() || p.id.toLowerCase() === displayValue.toLowerCase());
-      if (match) { finalId = match.id; }
-      else { finalId = displayValue; }
+      if (match) { 
+        finalId = match.id; 
+      } else { 
+        finalId = displayValue; 
+      } 
     }
 
     if (!finalId.trim()) return;
@@ -79,11 +85,15 @@ function AdminPanel() {
       const data = await response.json();
       if (data.status === 'success') {
         setMessage({ text: `Success: ${quantity}x [${finalId}] logged.`, type: 'success' });
-        setProductId('');
-        setDisplayValue('');
+        setProductId(''); 
+        setDisplayValue(''); 
         setQuantity(1);
-      } else { setMessage({ text: "Error: " + data.message, type: 'error' }); }
-    } catch (err) { setMessage({ text: "Network error.", type: 'error' }); }
+      } else { 
+        setMessage({ text: "Error: " + data.message, type: 'error' }); 
+      }
+    } catch (err) { 
+      setMessage({ text: "Network error.", type: 'error' }); 
+    }
     setLoading(false);
   };
 
@@ -94,8 +104,17 @@ function AdminPanel() {
           <ShieldCheck className="w-12 h-12 text-[#A044C3] mx-auto mb-4" />
           <h2 className="text-xl font-black text-slate-900 mb-2">Restricted Access</h2>
           <p className="text-xs text-slate-500 mb-6">Enter admin PIN to access ledger</p>
-          <input type="password" value={pinCode} onChange={(e) => setPinCode(e.target.value)} className="w-full text-center text-2xl tracking-[0.5em] font-black p-4 rounded-xl border border-slate-300 focus:border-[#A044C3] outline-none mb-4" placeholder="••••" maxLength={4} />
-          <button type="submit" className="w-full bg-[#A044C3] text-[#FFBB1C] font-bold py-3 rounded-xl shadow-lg hover:opacity-90 transition-all">Unlock Desk</button>
+          <input 
+            type="password" 
+            value={pinCode} 
+            onChange={(e) => setPinCode(e.target.value)} 
+            className="w-full text-center text-2xl tracking-[0.5em] font-black p-4 rounded-xl border border-slate-300 focus:border-[#A044C3] outline-none mb-4" 
+            placeholder="••••" 
+            maxLength={4} 
+          />
+          <button type="submit" className="w-full bg-[#A044C3] text-[#FFBB1C] font-bold py-3 rounded-xl shadow-lg hover:opacity-90 transition-all">
+            Unlock Desk
+          </button>
         </form>
       </div>
     );
@@ -104,13 +123,18 @@ function AdminPanel() {
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col items-center justify-center p-4">
       <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl border border-slate-200">
-        <div className="flex justify-center mb-4"><div className="w-16 h-16 bg-[#A044C3]/10 text-[#A044C3] rounded-full flex items-center justify-center"><Calculator className="w-8 h-8" /></div></div>
+        <div className="flex justify-center mb-4">
+          <div className="w-16 h-16 bg-[#A044C3]/10 text-[#A044C3] rounded-full flex items-center justify-center">
+            <Calculator className="w-8 h-8" />
+          </div>
+        </div>
         <h2 className="text-2xl font-black text-center text-slate-900 mb-1">Store Admin Desk</h2>
         <p className="text-sm text-center text-slate-500 mb-6 font-medium">Log Sales & Deduct Inventory</p>
 
         {message.text && (
           <div className={`p-4 rounded-xl mb-6 text-sm font-bold flex items-start gap-2 ${message.type === 'success' ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-rose-50 text-rose-800 border border-rose-200'}`}>
-            {message.type === 'success' ? <CheckCircle2 className="w-5 h-5 shrink-0" /> : <Shield className="w-5 h-5 shrink-0" />}<span>{message.text}</span>
+            {message.type === 'success' ? <CheckCircle2 className="w-5 h-5 shrink-0" /> : <Shield className="w-5 h-5 shrink-0" />}
+            <span>{message.text}</span>
           </div>
         )}
 
@@ -122,47 +146,57 @@ function AdminPanel() {
               placeholder="e.g. iPhone Charger..."
               value={displayValue}
               onChange={(e) => {
-                setDisplayValue(e.target.value);
-                setProductId('');
-                setShowDropdown(true);
+                 setDisplayValue(e.target.value);
+                 setProductId(''); 
+                 setShowDropdown(true);
               }}
               onFocus={() => setShowDropdown(true)}
               className="w-full p-3 rounded-xl border border-slate-300 focus:border-[#A044C3] outline-none font-bold text-slate-900"
             />
             {showDropdown && displayValue && (
-              <div className="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-xl max-h-48 overflow-y-auto">
-                {products.filter(p => p.name.toLowerCase().includes(displayValue.toLowerCase()) || p.id.toLowerCase().includes(displayValue.toLowerCase())).slice(0, 10).map(p => (
-                  <div
-                    key={p.id}
-                    onClick={() => {
-                      setProductId(p.id);
-                      setDisplayValue(p.name);
-                      setShowDropdown(false);
-                    }}
-                    className="p-3 hover:bg-violet-50 cursor-pointer border-b border-slate-100 last:border-0"
-                  >
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm font-bold text-slate-900 truncate pr-2">{p.name}</span>
-                      <span className="text-xs font-mono font-black text-[#A044C3] bg-violet-100 px-2 py-0.5 rounded">{p.id}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
+               <div className="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-xl max-h-48 overflow-y-auto">
+                  {products.filter(p => p.name.toLowerCase().includes(displayValue.toLowerCase()) || p.id.toLowerCase().includes(displayValue.toLowerCase())).slice(0, 10).map(p => (
+                     <div
+                        key={p.id}
+                        onClick={() => { 
+                          setProductId(p.id);
+                          setDisplayValue(p.name);
+                          setShowDropdown(false); 
+                        }}
+                        className="p-3 hover:bg-violet-50 cursor-pointer border-b border-slate-100 last:border-0"
+                     >
+                        <div className="flex justify-between items-center">
+                           <span className="text-sm font-bold text-slate-900 truncate pr-2">{p.name}</span>
+                           <span className="text-xs font-mono font-black text-[#A044C3] bg-violet-100 px-2 py-0.5 rounded">{p.id}</span>
+                        </div>
+                     </div>
+                  ))}
+               </div>
             )}
           </div>
           <div>
             <label className="text-xs font-bold text-slate-700 block mb-1.5 uppercase tracking-wider">Quantity Sold</label>
             <div className="flex items-center gap-3">
-              <button type="button" onClick={() => setQuantity(Math.max(1, quantity - 1))} className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center hover:bg-slate-200 border border-slate-300"><Minus className="w-5 h-5 text-slate-700" /></button>
+              <button type="button" onClick={() => setQuantity(Math.max(1, quantity - 1))} className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center hover:bg-slate-200 border border-slate-300">
+                <Minus className="w-5 h-5 text-slate-700" />
+              </button>
               <input type="number" readOnly value={quantity} className="flex-1 text-center font-black text-xl p-2 rounded-xl border border-slate-300 outline-none" />
-              <button type="button" onClick={() => setQuantity(quantity + 1)} className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center hover:bg-slate-200 border border-slate-300"><Plus className="w-5 h-5 text-slate-700" /></button>
+              <button type="button" onClick={() => setQuantity(quantity + 1)} className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center hover:bg-slate-200 border border-slate-300">
+                <Plus className="w-5 h-5 text-slate-700" />
+              </button>
             </div>
           </div>
-          <button type="submit" disabled={loading || !displayValue} className={`w-full font-bold text-sm py-4 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 ${(loading || !displayValue) ? 'bg-slate-400 cursor-not-allowed text-white' : 'bg-[#A044C3] hover:opacity-90 text-[#FFBB1C] shadow-[#A044C3]/30'}`}>
+          <button 
+            type="submit" 
+            disabled={loading || !displayValue} 
+            className={`w-full font-bold text-sm py-4 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 ${(loading || !displayValue) ? 'bg-slate-400 cursor-not-allowed text-white' : 'bg-[#A044C3] hover:opacity-90 text-[#FFBB1C] shadow-[#A044C3]/30'}`}
+          >
             {loading ? <span className="animate-pulse">Logging to Ledger...</span> : <><span>Log Sale</span><Check className="w-5 h-5" /></>}
           </button>
         </form>
-        <button onClick={() => window.location.href = '/'} className="w-full mt-4 text-xs font-bold text-slate-500 hover:text-[#A044C3] text-center py-2">Return to Storefront</button>
+        <button onClick={() => window.location.href = '/'} className="w-full mt-4 text-xs font-bold text-slate-500 hover:text-[#A044C3] text-center py-2">
+          Return to Storefront
+        </button>
       </div>
     </div>
   );
@@ -316,7 +350,6 @@ export default function App() {
   const [loading, setLoading] = useState<boolean>(true);
   const [isOffline, setIsOffline] = useState<boolean>(typeof navigator !== 'undefined' ? !navigator.onLine : false);
 
-  // --- STATE MEMORY & PAGINATION ---
   const [selectedCategory, setSelectedCategory] = useState<string>(() => typeof window !== 'undefined' ? sessionStorage.getItem('sw_category') || 'All' : 'All');
   const [searchQuery, setSearchQuery] = useState<string>(() => typeof window !== 'undefined' ? sessionStorage.getItem('sw_search') || '' : '');
   const [displayLimit, setDisplayLimit] = useState<number>(48);
@@ -346,6 +379,7 @@ export default function App() {
   const [isCartOpen, setIsCartOpen] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState<boolean>(() => typeof window !== 'undefined' ? localStorage.getItem('swiftwave_checkout_open') === 'true' : false);
+  
   const [copiedShop9, setCopiedShop9] = useState<boolean>(false);
   const [copiedShop10, setCopiedShop10] = useState<boolean>(false);
   const [copiedOrderId, setCopiedOrderId] = useState<boolean>(false);
@@ -364,6 +398,7 @@ export default function App() {
   const [minnaCampusZone, setMinnaCampusZone] = useState<string>(() => typeof window !== 'undefined' ? localStorage.getItem('swiftwave_minna_zone') || MINNA_ZONES[0] : MINNA_ZONES[0]);
   const [landmarkHostel, setLandmarkHostel] = useState<string>(() => typeof window !== 'undefined' ? localStorage.getItem('swiftwave_landmark') || '' : '');
   const [deliveryAddress, setDeliveryAddress] = useState<string>(() => typeof window !== 'undefined' ? localStorage.getItem('swiftwave_deliv_address') || '' : '');
+  const [nationwideZone, setNationwideZone] = useState<string>(() => typeof window !== 'undefined' ? localStorage.getItem('swiftwave_nw_zone') || 'Abuja / North Central - ₦4,500' : 'Abuja / North Central - ₦4,500');
   const [orderNotes, setOrderNotes] = useState<string>(() => typeof window !== 'undefined' ? localStorage.getItem('swiftwave_order_notes') || '' : '');
 
   // Persist State Memory
@@ -372,7 +407,6 @@ export default function App() {
     sessionStorage.setItem('sw_search', searchQuery);
   }, [selectedCategory, searchQuery]);
 
-  // Track & Restore Scroll Position Visually
   useEffect(() => {
     const handleVisibility = () => {
       if (document.visibilityState === 'hidden') {
@@ -404,12 +438,13 @@ export default function App() {
       localStorage.setItem('swiftwave_minna_zone', minnaCampusZone);
       localStorage.setItem('swiftwave_landmark', landmarkHostel);
       localStorage.setItem('swiftwave_deliv_address', deliveryAddress);
+      localStorage.setItem('swiftwave_nw_zone', nationwideZone);
       localStorage.setItem('swiftwave_order_notes', orderNotes);
       localStorage.setItem('swiftwave_support_rep', selectedRepNumber);
     } catch (e) {
       console.error('Storage sync error:', e);
     }
-  }, [cart, isCheckoutOpen, orderId, customerName, customerPhone, deliveryMethod, minnaCampusZone, landmarkHostel, deliveryAddress, orderNotes, selectedRepNumber]);
+  }, [cart, isCheckoutOpen, orderId, customerName, customerPhone, deliveryMethod, minnaCampusZone, landmarkHostel, deliveryAddress, nationwideZone, orderNotes, selectedRepNumber]);
 
   useEffect(() => {
     const handleOnline = () => setIsOffline(false);
@@ -419,7 +454,6 @@ export default function App() {
     return () => { window.removeEventListener('online', handleOnline); window.removeEventListener('offline', handleOffline); };
   }, []);
 
-  // iOS Install
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const ua = window.navigator.userAgent.toLowerCase();
@@ -442,9 +476,12 @@ export default function App() {
     const { outcome } = await deferredPrompt.userChoice;
     if (outcome === 'accepted') { setShowInstallBanner(false); setDeferredPrompt(null); }
   };
-  const dismissInstallBanner = () => { setShowInstallBanner(false); sessionStorage.setItem('swiftwave_install_dismissed', 'true'); };
+  
+  const dismissInstallBanner = () => { 
+    setShowInstallBanner(false); 
+    sessionStorage.setItem('swiftwave_install_dismissed', 'true'); 
+  };
 
-  // --- SILENT POLLING DATA FETCH ---
   const fetchInventory = useCallback(async () => {
     try {
       const res = await fetch(GOOGLE_SHEET_CSV_URL);
@@ -521,27 +558,32 @@ export default function App() {
     }
   }, []);
 
-  // Initial Fetch & Polling Setup
   useEffect(() => {
     fetchInventory();
     const interval = setInterval(fetchInventory, 60000);
     return () => clearInterval(interval);
   }, [fetchInventory]);
 
-  // Handle URL Product Opening
   useEffect(() => {
     if (products.length === 0) return;
     const params = new URLSearchParams(window.location.search);
     const productIdFromUrl = params.get('product') || sessionStorage.getItem('swiftwave_active_modal');
     if (productIdFromUrl && !activeModalProduct) {
       const matched = products.find((p) => p.id === productIdFromUrl);
-      if (matched) { setActiveModalProduct(matched); setActiveImageIndex(0); setMediaViewMode('photos'); }
+      if (matched) { 
+        setActiveModalProduct(matched); 
+        setActiveImageIndex(0); 
+        setMediaViewMode('photos'); 
+      }
     }
   }, [products]);
 
   const openProductModal = (product: Product) => {
     sessionStorage.setItem('sw_scroll', window.scrollY.toString());
-    setActiveModalProduct(product); setActiveImageIndex(0); setMediaViewMode('photos'); setIsDescExpanded(false);
+    setActiveModalProduct(product); 
+    setActiveImageIndex(0); 
+    setMediaViewMode('photos'); 
+    setIsDescExpanded(false);
     try {
       window.history.replaceState(null, '', `${window.location.pathname}?product=${encodeURIComponent(product.id)}`);
       sessionStorage.setItem('swiftwave_active_modal', product.id);
@@ -550,16 +592,19 @@ export default function App() {
 
   const closeProductModal = () => {
     setActiveModalProduct(null);
-    try { window.history.replaceState(null, '', window.location.pathname); sessionStorage.removeItem('swiftwave_active_modal'); } catch (e) { console.error(e); }
+    try { 
+      window.history.replaceState(null, '', window.location.pathname); 
+      sessionStorage.removeItem('swiftwave_active_modal'); 
+    } catch (e) { console.error(e); }
   };
 
-  // Cart Stock Sync Verification
   useEffect(() => {
     if (products.length === 0) return;
     setCart((currentCart) => {
       if (currentCart.length === 0) return currentCart;
       const notices: string[] = [];
       const updatedCart: CartItem[] = [];
+      
       currentCart.forEach((item) => {
         if (!item || !item.product) return;
         const liveProduct = products.find((p) => p.id === item.product.id);
@@ -582,32 +627,26 @@ export default function App() {
   const filteredProducts = useMemo(() => {
     if (!Array.isArray(products)) return [];
 
-    // STRICT "NEW IN" LOGIC: Absolute 20 newest items overriding categories
     if (selectedCategory === 'New In') {
       return products.slice(0, 20).sort((a, b) => (a.in_stock === b.in_stock ? 0 : a.in_stock ? -1 : 1));
     }
 
-    return products
-      .filter((p) => {
-        if (!p) return false;
+    return products.filter((p) => {
+      if (!p) return false;
+      const matchesCategory = selectedCategory === 'All' ? true :
+        ((p.category || '').toLowerCase() === selectedCategory.toLowerCase() ||
+          (p.description || '').toLowerCase().includes(selectedCategory.toLowerCase()));
 
-        // Multi-category support via description scanning
-        const matchesCategory = selectedCategory === 'All' ? true :
-          ((p.category || '').toLowerCase() === selectedCategory.toLowerCase() ||
-            (p.description || '').toLowerCase().includes(selectedCategory.toLowerCase()));
+      const searchTokens = searchQuery.toLowerCase().trim().split(/\s+/).filter(Boolean);
+      const matchesSearch = searchTokens.length === 0 || searchTokens.every(token =>
+        (p.name || '').toLowerCase().includes(token) ||
+        (p.description || '').toLowerCase().includes(token) ||
+        (p.id || '').toLowerCase().includes(token));
 
-        const searchTokens = searchQuery.toLowerCase().trim().split(/\s+/).filter(Boolean);
-        const matchesSearch = searchTokens.length === 0 || searchTokens.every(token =>
-          (p.name || '').toLowerCase().includes(token) ||
-          (p.description || '').toLowerCase().includes(token) ||
-          (p.id || '').toLowerCase().includes(token));
-
-        return matchesCategory && matchesSearch;
-      })
-      .sort((a, b) => (a.in_stock === b.in_stock ? 0 : a.in_stock ? -1 : 1));
+      return matchesCategory && matchesSearch;
+    }).sort((a, b) => (a.in_stock === b.in_stock ? 0 : a.in_stock ? -1 : 1));
   }, [products, selectedCategory, searchQuery]);
 
-  // Pagination Slice
   const paginatedProducts = useMemo(() => {
     return filteredProducts.slice(0, displayLimit);
   }, [filteredProducts, displayLimit]);
@@ -624,19 +663,22 @@ export default function App() {
     if (!activeModalProduct || products.length === 0) return [];
     const stopWords = new Set(['and', 'the', 'for', 'with', 'in', 'of', 'to', 'a', 'an', 'at', 'by', 'from', 'on', 'is', 'it', 'or', 'as', 'are', 'be', 'this', 'that', 'your', 'original', 'high', 'quality', 'new', 'best', 'pro', 'plus']);
     const currentTokens = activeModalProduct.name.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter((w) => w.length > 2 && !stopWords.has(w));
-    const scored = products
-      .filter((p) => p.id !== activeModalProduct.id)
-      .map((p) => {
-        let score = 0;
-        if (p.category.toLowerCase() === activeModalProduct.category.toLowerCase()) score += 3;
-        currentTokens.forEach((token) => {
-          if (p.name.toLowerCase().includes(token)) score += 7;
-          else if ((p.description || '').toLowerCase().includes(token)) score += 1.5;
-        });
-        if (p.in_stock) score += 1;
-        return { product: p, score };
+    
+    const scored = products.filter((p) => p.id !== activeModalProduct.id).map((p) => {
+      let score = 0;
+      if (p.category.toLowerCase() === activeModalProduct.category.toLowerCase()) score += 3;
+      currentTokens.forEach((token) => {
+        if (p.name.toLowerCase().includes(token)) score += 7;
+        else if ((p.description || '').toLowerCase().includes(token)) score += 1.5;
       });
-    return scored.filter((item) => item.score > 0).sort((a, b) => b.score !== a.score ? b.score - a.score : Math.abs(a.product.price - activeModalProduct.price) - Math.abs(b.product.price - activeModalProduct.price)).slice(0, 4).map((item) => item.product);
+      if (p.in_stock) score += 1;
+      return { product: p, score };
+    });
+
+    return scored.filter((item) => item.score > 0)
+      .sort((a, b) => b.score !== a.score ? b.score - a.score : Math.abs(a.product.price - activeModalProduct.price) - Math.abs(b.product.price - activeModalProduct.price))
+      .slice(0, 4)
+      .map((item) => item.product);
   }, [activeModalProduct, products]);
 
   const addToCart = (product: Product) => {
@@ -665,13 +707,22 @@ export default function App() {
   const cartSubtotal = useMemo(() => cart.reduce((sum, item) => sum + ((item?.product?.price || 0) * (item?.quantity || 1)), 0), [cart]);
 
   const { shop9Items, shop10Items, shop9Total, shop10Total } = useMemo(() => {
-    const s9Items: CartItem[] = []; const s10Items: CartItem[] = [];
-    let s9Sum = 0; let s10Sum = 0;
+    const s9Items: CartItem[] = []; 
+    const s10Items: CartItem[] = [];
+    let s9Sum = 0; 
+    let s10Sum = 0;
+    
     cart.forEach((item) => {
       if (!item || !item.product) return;
       const shop = getProductShop(item.product.category || '');
       const val = (item.product.price || 0) * (item.quantity || 1);
-      if (shop === 'shop10') { s10Items.push(item); s10Sum += val; } else { s9Items.push(item); s9Sum += val; }
+      if (shop === 'shop10') { 
+        s10Items.push(item); 
+        s10Sum += val; 
+      } else { 
+        s9Items.push(item); 
+        s9Sum += val; 
+      }
     });
     return { shop9Items: s9Items, shop10Items: s10Items, shop9Total: s9Sum, shop10Total: s10Sum };
   }, [cart]);
@@ -679,13 +730,23 @@ export default function App() {
   const hasShop9 = shop9Items.length > 0;
   const hasShop10 = shop10Items.length > 0;
   const isMixedCart = hasShop9 && hasShop10;
-  const deliveryFee = useMemo(() => deliveryMethod === 'pickup' ? 0 : deliveryMethod === 'minna' ? 1500 : 4500, [deliveryMethod]);
+
+  const deliveryFee = useMemo(() => {
+    if (deliveryMethod === 'pickup') return 0;
+    if (deliveryMethod === 'minna') return 1500;
+    if (nationwideZone.includes('6,000')) return 6000;
+    if (nationwideZone.includes('7,000')) return 7000;
+    if (nationwideZone.includes('8,000')) return 8000;
+    return 4500;
+  }, [deliveryMethod, nationwideZone]);
+
   const orderTotal = cartSubtotal + deliveryFee;
   const totalCartCount = cart.reduce((sum, item) => sum + (item?.quantity || 0), 0);
 
   const openCheckout = () => {
     if (!orderId) setOrderId(`SW-${Math.floor(1000 + Math.random() * 9000)}`);
-    setIsCartOpen(false); setIsCheckoutOpen(true);
+    setIsCartOpen(false);
+    setIsCheckoutOpen(true);
   };
 
   const handleFinalOrder = () => {
@@ -693,15 +754,20 @@ export default function App() {
     if (deliveryMethod === 'minna' && !landmarkHostel.trim()) return alert("Please specify your delivery address, landmark, or campus drop-off point.");
     if (deliveryMethod === 'nationwide' && !deliveryAddress.trim()) return alert("Please enter your delivery destination (state, city, street).");
 
-    const deliveryTitle = deliveryMethod === 'pickup' ? "Store Pickup @ ABH Plaza, Minna (FREE)" : deliveryMethod === 'minna' ? `Minna Local/Campus Dispatch (₦1,500) - [${minnaCampusZone}]` : "Nationwide Logistics Dispatch (₦4,500)";
+    const deliveryTitle = deliveryMethod === 'pickup' ? "Store Pickup @ ABH Plaza, Minna (FREE)" : deliveryMethod === 'minna' ? `Minna Local/Campus Dispatch (₦1,500) - [${minnaCampusZone}]` : `Nationwide Dispatch: ${nationwideZone}`;
 
     let paymentBreakdownText = isMixedCart ? `*PAYMENT SPLIT INSTRUCTIONS:*\n- Shop 9 (Essentials Subtotal): ₦${shop9Total.toLocaleString()} -> Pay to OPay (${SHOP_ACCOUNTS.shop9.number})\n- Shop 10 (Gadgets Subtotal): ₦${shop10Total.toLocaleString()} -> Pay to OPay (${SHOP_ACCOUNTS.shop10.number})\n- Delivery Fee: ₦${deliveryFee.toLocaleString()} (Paid to either account)\n*TOTAL PAID:* ₦${orderTotal.toLocaleString()}` : `*PAYMENT ACCOUNT:*\nPaid into OPay (${hasShop10 ? SHOP_ACCOUNTS.shop10.number : SHOP_ACCOUNTS.shop9.number}) - ${hasShop10 ? 'Shop 10 Gadgets' : 'Shop 9 Daily Essentials'}\nAccount: ${SHOP_ACCOUNTS.shop9.name}\n*TOTAL PAID:* ₦${orderTotal.toLocaleString()}`;
     let itemsSummary = isMixedCart ? `*SHOP 10 (GADGETS & TECH):*\n${shop10Items.map((item, idx) => `  ${idx + 1}. ${item.product.name} x${item.quantity} = ₦${(item.product.price * item.quantity).toLocaleString()}`).join('\n')}\n\n*SHOP 9 (DAILY ESSENTIALS):*\n${shop9Items.map((item, idx) => `  ${idx + 1}. ${item.product.name} x${item.quantity} = ₦${(item.product.price * item.quantity).toLocaleString()}`).join('\n')}` : cart.map((item, idx) => `${idx + 1}. ${item.product.name} (ID: ${item.product.id}) x${item.quantity} = ₦${(item.product.price * item.quantity).toLocaleString()}`).join('\n');
 
     const message = `🛍️ *PAID ORDER VERIFICATION - SWIFTWAVE MALL*\n*Order Reference:* #${orderId}\n----------------------------------------\n*Customer Name:* ${customerName.trim()}\n*Calling Phone:* ${customerPhone.trim()}\n\n*Fulfillment:* ${deliveryTitle}\n${deliveryMethod === 'minna' ? `*Area/Zone:* ${minnaCampusZone}\n*Address/Landmark/Drop Point:* ${landmarkHostel.trim()}\n` : ''}${deliveryMethod === 'nationwide' ? `*Delivery Destination:* ${deliveryAddress.trim()}\n` : ''}${orderNotes.trim() ? `*Special Notes:* ${orderNotes.trim()}\n` : ''}\n*ITEMS ORDERED:*\n${itemsSummary}\n----------------------------------------\n*Subtotal:* ₦${cartSubtotal.toLocaleString()}\n*Delivery Fee:* ₦${deliveryFee.toLocaleString()}\n----------------------------------------\n${paymentBreakdownText}\n----------------------------------------\n*Transfer Remark Used:* ${orderId}\n*(Attached is my payment transfer receipt screenshot)*`;
+    
     window.open(`https://wa.me/${selectedRepNumber}?text=${encodeURIComponent(message)}`, '_blank');
 
-    setCart([]); setOrderId(''); setOrderNotes(''); setLandmarkHostel(''); setIsCheckoutOpen(false);
+    setCart([]); 
+    setOrderId(''); 
+    setOrderNotes(''); 
+    setLandmarkHostel(''); 
+    setIsCheckoutOpen(false);
     ['swiftwave_checkout_open', 'swiftwave_order_id', 'swiftwave_order_notes', 'swiftwave_landmark'].forEach(k => localStorage.removeItem(k));
   };
 
@@ -717,9 +783,13 @@ export default function App() {
 
       {toastMessage && (
         <aside className="fixed bottom-20 sm:bottom-6 left-1/2 -translate-x-1/2 z-50 bg-slate-900/95 text-white backdrop-blur-md px-4 py-2.5 rounded-full shadow-2xl flex items-center gap-3 border border-violet-500/30 animate-bounce">
-          <div className="w-5 h-5 rounded-full bg-emerald-500 text-slate-950 flex items-center justify-center"><Check className="w-3 h-3 stroke-[3]" /></div>
+          <div className="w-5 h-5 rounded-full bg-emerald-500 text-slate-950 flex items-center justify-center">
+            <Check className="w-3 h-3 stroke-[3]" />
+          </div>
           <span className="text-xs font-semibold">{toastMessage}</span>
-          <button onClick={() => { setToastMessage(null); setIsCartOpen(true); }} className="text-xs font-bold text-yellow-400 hover:text-white underline underline-offset-2 ml-1">View Cart</button>
+          <button onClick={() => { setToastMessage(null); setIsCartOpen(true); }} className="text-xs font-bold text-yellow-400 hover:text-white underline underline-offset-2 ml-1">
+            View Cart
+          </button>
         </aside>
       )}
 
@@ -823,7 +893,9 @@ export default function App() {
           </div>
         ) : filteredProducts.length === 0 ? (
           <div className="bg-white rounded-2xl border border-slate-200 p-8 sm:p-12 text-center max-w-lg mx-auto my-12 shadow-sm">
-            <div className="w-12 h-12 bg-violet-100 text-violet-600 rounded-full flex items-center justify-center mx-auto mb-3"><Search className="w-6 h-6" /></div>
+            <div className="w-12 h-12 bg-violet-100 text-violet-600 rounded-full flex items-center justify-center mx-auto mb-3">
+              <Search className="w-6 h-6" />
+            </div>
             <h3 className="text-base font-bold text-slate-900">No exact match found</h3>
             <p className="text-xs text-slate-500 mt-1 mb-6">We couldn't find exactly "{searchQuery}". </p>
             {suggestedProducts.length > 0 ? (
@@ -935,7 +1007,9 @@ export default function App() {
                 <span className="text-xs font-mono font-bold text-violet-700 bg-violet-100 px-2 py-0.5 rounded-md">{activeModalProduct.id}</span>
                 <span className="text-xs text-slate-400">• {activeModalProduct.category}</span>
               </div>
-              <button onClick={closeProductModal} className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-colors"><X className="w-4 h-4" /></button>
+              <button onClick={closeProductModal} className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-colors">
+                <X className="w-4 h-4" />
+              </button>
             </div>
             <div className="p-6 overflow-y-auto flex-1">
               {activeModalProduct.video && (
@@ -1134,7 +1208,7 @@ export default function App() {
                     <Truck className="w-4 h-4 mx-auto mb-1 text-violet-600" /><span className="text-[11px] block">Minna Delivery</span><span className="text-[10px] font-bold text-violet-700">₦1,500</span>
                   </button>
                   <button type="button" onClick={() => setDeliveryMethod('nationwide')} className={`p-2 rounded-xl border text-center transition-all ${deliveryMethod === 'nationwide' ? 'border-violet-600 bg-violet-50 text-violet-800 font-bold shadow-sm' : 'border-slate-200 text-slate-600'}`}>
-                    <Truck className="w-4 h-4 mx-auto mb-1 text-violet-600" /><span className="text-[11px] block">Nationwide</span><span className="text-[10px] font-bold text-slate-600">₦4,500</span>
+                    <Truck className="w-4 h-4 mx-auto mb-1 text-violet-600" /><span className="text-[11px] block">Nationwide</span><span className="text-[10px] font-bold text-slate-600">Calculated</span>
                   </button>
                 </div>
               </div>
@@ -1153,9 +1227,26 @@ export default function App() {
                 </div>
               )}
               {deliveryMethod === 'nationwide' && (
-                <div><label className="text-xs font-bold text-slate-700 block mb-1">Delivery Destination (State, City, Street)</label><input type="text" placeholder="e.g. Abuja FCT, Gwarinpa" value={deliveryAddress} onChange={(e) => setDeliveryAddress(e.target.value)} className="w-full text-xs p-2.5 rounded-xl border border-slate-200 focus:border-violet-600 outline-none" /></div>
+                <div className="p-3 bg-violet-50/50 border border-violet-200 rounded-2xl space-y-2.5">
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-900 block mb-1">Select Delivery Region</label>
+                    <select value={nationwideZone} onChange={(e) => setNationwideZone(e.target.value)} className="w-full text-xs p-2 rounded-xl border border-violet-300 bg-white font-medium text-slate-800 focus:border-violet-600 outline-none">
+                      <option value="Abuja / North Central - ₦4,500">Abuja / North Central - ₦4,500</option>
+                      <option value="Lagos / South West - ₦6,000">Lagos / South West - ₦6,000</option>
+                      <option value="Kano / Far North - ₦7,000">Kano / Far North - ₦7,000</option>
+                      <option value="South East / South South - ₦8,000">South East / South South - ₦8,000</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-900 block mb-1">Full Delivery Destination (State, City, Street)</label>
+                    <input type="text" placeholder="e.g. Lagos, Ikeja, 12 Allen Ave" value={deliveryAddress} onChange={(e) => setDeliveryAddress(e.target.value)} className="w-full text-xs p-2.5 rounded-xl border border-violet-300 bg-white focus:border-violet-600 outline-none" />
+                  </div>
+                </div>
               )}
-              <div><label className="text-xs font-bold text-slate-700 block mb-1">Order Notes (Optional)</label><input type="text" placeholder="e.g. Preferred color" value={orderNotes} onChange={(e) => setOrderNotes(e.target.value)} className="w-full text-xs p-2.5 rounded-xl border border-slate-200 focus:border-violet-600 outline-none" /></div>
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1">Order Notes (Optional)</label>
+                <input type="text" placeholder="e.g. Preferred color" value={orderNotes} onChange={(e) => setOrderNotes(e.target.value)} className="w-full text-xs p-2.5 rounded-xl border border-slate-200 focus:border-violet-600 outline-none" />
+              </div>
             </div>
 
             <div className="space-y-3 mb-5">
@@ -1226,12 +1317,17 @@ export default function App() {
         <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-lg w-full p-6 relative border border-slate-200 shadow-2xl">
             <button onClick={() => setShowAboutModal(false)} className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white shadow-sm hover:bg-slate-100 text-slate-600 flex items-center justify-center transition-colors z-10"><X className="w-4 h-4" /></button>
-
-            <div className="flex justify-center mb-6 bg-[#A044C3] p-6 rounded-2xl mt-2"><img src="/logo.png" alt="Swiftwave" className="h-16 w-auto object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; }} /></div>
-
-            <div className="flex items-center gap-2 mb-3"><ShieldCheck className="w-5 h-5 text-[#A044C3]" /><h3 className="text-base font-bold text-slate-900">About Swiftwave Variety Mall</h3></div>
+            
+            <div className="flex justify-center mb-6 bg-[#A044C3] p-6 rounded-2xl mt-2">
+              <img src="/logo.png" alt="Swiftwave" className="h-16 w-auto object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+            </div>
+            
+            <div className="flex items-center gap-2 mb-3">
+              <ShieldCheck className="w-5 h-5 text-[#A044C3]" />
+              <h3 className="text-base font-bold text-slate-900">About Swiftwave Variety Mall</h3>
+            </div>
             <p className="text-[13px] text-slate-600 leading-relaxed mb-6">Swiftwave is your modern everyday marketplace built for the way you actually live. Bringing together gadgets, home essentials, school supplies, phone accessories, beauty products, children's toys, and creator tools under one roof.</p>
-
+            
             <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 mb-4">
               <h4 className="text-[10px] font-bold text-slate-900 uppercase tracking-wider mb-3">Connect With Us</h4>
               <div className="grid grid-cols-3 gap-2">
@@ -1242,11 +1338,16 @@ export default function App() {
             </div>
 
             <div className="p-4 bg-[#A044C3]/5 rounded-xl border border-[#A044C3]/20 mb-6">
-              <div className="flex items-center justify-between mb-2"><span className="text-[11px] font-bold text-slate-900 uppercase tracking-wider">Corporate Registration</span><span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-full"><CheckCircle2 className="w-3 h-3" /> CAC Verified</span></div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[11px] font-bold text-slate-900 uppercase tracking-wider">Corporate Registration</span>
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-full"><CheckCircle2 className="w-3 h-3" /> CAC Verified</span>
+              </div>
               <p className="text-xs font-mono text-slate-700 mb-4 leading-relaxed"><span className="font-semibold text-slate-900 font-sans">SWIFTWAVE VARIETY MALL LIMITED</span><br />RC: <span className="text-[#A044C3] font-bold">9468092</span> <span className="text-slate-300 mx-1">|</span> TIN: 2622689087269</p>
-              <button onClick={() => { setShowAboutModal(false); setShowCertLightbox(true); }} className="w-full bg-white border border-[#A044C3]/30 text-[#A044C3] font-bold text-xs py-2.5 rounded-lg flex items-center justify-center gap-2 hover:bg-[#A044C3] hover:text-[#FFBB1C] transition-colors"><ShieldCheck className="w-4 h-4" /> View Certificate of Incorporation</button>
+              <button onClick={() => { setShowAboutModal(false); setShowCertLightbox(true); }} className="w-full bg-white border border-[#A044C3]/30 text-[#A044C3] font-bold text-xs py-2.5 rounded-lg flex items-center justify-center gap-2 hover:bg-[#A044C3] hover:text-[#FFBB1C] transition-colors">
+                <ShieldCheck className="w-4 h-4" /> View Certificate of Incorporation
+              </button>
             </div>
-
+            
             <button onClick={() => setShowAboutModal(false)} className="w-full bg-slate-900 text-white font-bold text-sm py-3 rounded-xl hover:bg-slate-800 transition-colors shadow-md">Back to Catalog</button>
           </div>
         </div>
@@ -1293,7 +1394,9 @@ export default function App() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 pb-8 border-b border-white/20">
             <div className="md:col-span-1">
-              <div className="mb-3"><img src="/logo.png" alt="Swiftwave" className="h-8 w-auto object-contain filter brightness-0 invert" onError={(e) => { e.currentTarget.style.display = 'none'; }} /></div>
+              <div className="mb-3">
+                <img src="/logo.png" alt="Swiftwave" className="h-8 w-auto object-contain filter brightness-0 invert" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+              </div>
               <p className="text-white/80 leading-relaxed text-xs">Friendly, fast, and affordable. The one-stop shop that keeps everyday life moving.</p>
             </div>
             <div>
