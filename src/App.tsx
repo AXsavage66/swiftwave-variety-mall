@@ -13,20 +13,19 @@ import {
 function AdminPanel() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [pinCode, setPinCode] = useState('');
-  
-  // The actual ID sent to Google
-  const [productId, setProductId] = useState(''); 
-  // What the user sees in the text box
-  const [displayValue, setDisplayValue] = useState(''); 
-  
+
+  const [productId, setProductId] = useState('');
+  const [displayValue, setDisplayValue] = useState('');
+
   const [quantity, setQuantity] = useState(1);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ text: '', type: '' });
 
-  const [products, setProducts] = useState<{id: string, name: string}[]>([]);
+  const [products, setProducts] = useState<{ id: string, name: string }[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
 
-  const ADMIN_PIN = "1275"; // Remember to change this to Haris's new PIN!
+  // UPDATE THIS SECURE PIN LATER
+  const ADMIN_PIN = "2026";
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,24 +39,31 @@ function AdminPanel() {
           const headers = parseCSVLine(lines[0]).map(h => h.toLowerCase().replace(/[^a-z]/g, ''));
           const idIdx = headers.findIndex(h => h.includes('id'));
           const nameIdx = headers.findIndex(h => h.includes('name') || h.includes('product'));
-          
+
           const parsed = [];
-          for(let i = 1; i < lines.length; i++) {
-             const row = parseCSVLine(lines[i]);
-             if(idIdx > -1 && nameIdx > -1 && row[nameIdx]) {
-                parsed.push({ id: row[idIdx], name: row[nameIdx] });
-             }
+          for (let i = 1; i < lines.length; i++) {
+            const row = parseCSVLine(lines[i]);
+            if (idIdx > -1 && nameIdx > -1 && row[nameIdx]) {
+              parsed.push({ id: row[idIdx], name: row[nameIdx] });
+            }
           }
           setProducts(parsed);
         }
-      } catch(err) { console.error("Catalog sync failed", err); }
+      } catch (err) { console.error("Catalog sync failed", err); }
     } else { alert("Unauthorized Access"); setPinCode(''); }
   };
 
   const handleLogSale = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Use the actual hidden ID, not the display name, or fallback to manual input if no dropdown was used
-    const finalId = productId || displayValue; 
+
+    // SMART RESOLVER: If Haris typed the name but didn't click the dropdown, find the ID automatically.
+    let finalId = productId;
+    if (!finalId) {
+      const match = products.find(p => p.name.toLowerCase() === displayValue.toLowerCase() || p.id.toLowerCase() === displayValue.toLowerCase());
+      if (match) { finalId = match.id; }
+      else { finalId = displayValue; }
+    }
+
     if (!finalId.trim()) return;
 
     setLoading(true);
@@ -73,8 +79,8 @@ function AdminPanel() {
       const data = await response.json();
       if (data.status === 'success') {
         setMessage({ text: `Success: ${quantity}x [${finalId}] logged.`, type: 'success' });
-        setProductId(''); 
-        setDisplayValue(''); 
+        setProductId('');
+        setDisplayValue('');
         setQuantity(1);
       } else { setMessage({ text: "Error: " + data.message, type: 'error' }); }
     } catch (err) { setMessage({ text: "Network error.", type: 'error' }); }
@@ -116,33 +122,32 @@ function AdminPanel() {
               placeholder="e.g. iPhone Charger..."
               value={displayValue}
               onChange={(e) => {
-                 setDisplayValue(e.target.value);
-                 // If user starts typing manually, clear the hidden ID so we fallback to manual text
-                 setProductId(''); 
-                 setShowDropdown(true);
+                setDisplayValue(e.target.value);
+                setProductId('');
+                setShowDropdown(true);
               }}
               onFocus={() => setShowDropdown(true)}
               className="w-full p-3 rounded-xl border border-slate-300 focus:border-[#A044C3] outline-none font-bold text-slate-900"
             />
             {showDropdown && displayValue && (
-               <div className="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-xl max-h-48 overflow-y-auto">
-                  {products.filter(p => p.name.toLowerCase().includes(displayValue.toLowerCase()) || p.id.toLowerCase().includes(displayValue.toLowerCase())).slice(0, 10).map(p => (
-                     <div
-                        key={p.id}
-                        onClick={() => { 
-                          setProductId(p.id); // Save the hidden ID for the server
-                          setDisplayValue(p.name); // Show the name to Haris
-                          setShowDropdown(false); 
-                        }}
-                        className="p-3 hover:bg-violet-50 cursor-pointer border-b border-slate-100 last:border-0"
-                     >
-                        <div className="flex justify-between items-center">
-                           <span className="text-sm font-bold text-slate-900 truncate pr-2">{p.name}</span>
-                           <span className="text-xs font-mono font-black text-[#A044C3] bg-violet-100 px-2 py-0.5 rounded">{p.id}</span>
-                        </div>
-                     </div>
-                  ))}
-               </div>
+              <div className="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-xl max-h-48 overflow-y-auto">
+                {products.filter(p => p.name.toLowerCase().includes(displayValue.toLowerCase()) || p.id.toLowerCase().includes(displayValue.toLowerCase())).slice(0, 10).map(p => (
+                  <div
+                    key={p.id}
+                    onClick={() => {
+                      setProductId(p.id);
+                      setDisplayValue(p.name);
+                      setShowDropdown(false);
+                    }}
+                    className="p-3 hover:bg-violet-50 cursor-pointer border-b border-slate-100 last:border-0"
+                  >
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-bold text-slate-900 truncate pr-2">{p.name}</span>
+                      <span className="text-xs font-mono font-black text-[#A044C3] bg-violet-100 px-2 py-0.5 rounded">{p.id}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
           <div>
@@ -519,7 +524,7 @@ export default function App() {
   // Initial Fetch & Polling Setup
   useEffect(() => {
     fetchInventory();
-    const interval = setInterval(fetchInventory, 60000); // Silent update every 60s
+    const interval = setInterval(fetchInventory, 60000);
     return () => clearInterval(interval);
   }, [fetchInventory]);
 
@@ -1221,12 +1226,12 @@ export default function App() {
         <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-lg w-full p-6 relative border border-slate-200 shadow-2xl">
             <button onClick={() => setShowAboutModal(false)} className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white shadow-sm hover:bg-slate-100 text-slate-600 flex items-center justify-center transition-colors z-10"><X className="w-4 h-4" /></button>
-            
+
             <div className="flex justify-center mb-6 bg-[#A044C3] p-6 rounded-2xl mt-2"><img src="/logo.png" alt="Swiftwave" className="h-16 w-auto object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; }} /></div>
-            
+
             <div className="flex items-center gap-2 mb-3"><ShieldCheck className="w-5 h-5 text-[#A044C3]" /><h3 className="text-base font-bold text-slate-900">About Swiftwave Variety Mall</h3></div>
             <p className="text-[13px] text-slate-600 leading-relaxed mb-6">Swiftwave is your modern everyday marketplace built for the way you actually live. Bringing together gadgets, home essentials, school supplies, phone accessories, beauty products, children's toys, and creator tools under one roof.</p>
-            
+
             <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 mb-4">
               <h4 className="text-[10px] font-bold text-slate-900 uppercase tracking-wider mb-3">Connect With Us</h4>
               <div className="grid grid-cols-3 gap-2">
@@ -1239,11 +1244,19 @@ export default function App() {
             <div className="p-4 bg-[#A044C3]/5 rounded-xl border border-[#A044C3]/20 mb-6">
               <div className="flex items-center justify-between mb-2"><span className="text-[11px] font-bold text-slate-900 uppercase tracking-wider">Corporate Registration</span><span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-full"><CheckCircle2 className="w-3 h-3" /> CAC Verified</span></div>
               <p className="text-xs font-mono text-slate-700 mb-4 leading-relaxed"><span className="font-semibold text-slate-900 font-sans">SWIFTWAVE VARIETY MALL LIMITED</span><br />RC: <span className="text-[#A044C3] font-bold">9468092</span> <span className="text-slate-300 mx-1">|</span> TIN: 2622689087269</p>
-              <a href="https://search.cac.gov.ng/home" target="_blank" rel="noreferrer" className="w-full bg-white border border-[#A044C3]/30 text-[#A044C3] font-bold text-xs py-2.5 rounded-lg flex items-center justify-center gap-2 hover:bg-[#A044C3] hover:text-[#FFBB1C] transition-colors"><ShieldCheck className="w-4 h-4" /> View Certificate of Incorporation <ExternalLink className="w-3 h-3" /></a>
+              <button onClick={() => { setShowAboutModal(false); setShowCertLightbox(true); }} className="w-full bg-white border border-[#A044C3]/30 text-[#A044C3] font-bold text-xs py-2.5 rounded-lg flex items-center justify-center gap-2 hover:bg-[#A044C3] hover:text-[#FFBB1C] transition-colors"><ShieldCheck className="w-4 h-4" /> View Certificate of Incorporation</button>
             </div>
-            
+
             <button onClick={() => setShowAboutModal(false)} className="w-full bg-slate-900 text-white font-bold text-sm py-3 rounded-xl hover:bg-slate-800 transition-colors shadow-md">Back to Catalog</button>
           </div>
+        </div>
+      )}
+
+      {/* CAC Certificate Lightbox */}
+      {showCertLightbox && (
+        <div className="fixed inset-0 z-50 bg-black/95 backdrop-blur-md flex items-center justify-center p-4" onClick={() => setShowCertLightbox(false)}>
+          <button onClick={() => setShowCertLightbox(false)} className="absolute top-6 right-6 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors border border-white/20"><X className="w-5 h-5" /></button>
+          <img src="/cac-certificate.jpg" alt="CAC Certificate of Incorporation" className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl border border-white/10" onClick={(e) => e.stopPropagation()} />
         </div>
       )}
 
@@ -1276,7 +1289,7 @@ export default function App() {
       )}
 
       {/* Footer */}
-      <footer className="bg-violet-600 text-white/90 text-xs pt-10 pb-8 mt-auto border-t-4 border-yellow-400">
+      <footer className="bg-[#A044C3] text-white/90 text-xs pt-10 pb-8 mt-auto border-t-4 border-[#FFBB1C]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 pb-8 border-b border-white/20">
             <div className="md:col-span-1">
@@ -1284,30 +1297,30 @@ export default function App() {
               <p className="text-white/80 leading-relaxed text-xs">Friendly, fast, and affordable. The one-stop shop that keeps everyday life moving.</p>
             </div>
             <div>
-              <h4 className="text-yellow-400 font-bold text-xs uppercase tracking-wider mb-3">Customer Support</h4>
+              <h4 className="text-[#FFBB1C] font-bold text-xs uppercase tracking-wider mb-3">Customer Support</h4>
               <ul className="space-y-2 text-white/80">
                 {SUPPORT_REPS.map((rep) => (
-                  <li key={rep.id}><a href={`https://wa.me/${rep.number}`} target="_blank" rel="noreferrer" className="hover:text-yellow-400 transition-colors flex items-center gap-1.5"><MessageCircle className="w-3.5 h-3.5" /><span>{rep.name}</span></a></li>
+                  <li key={rep.id}><a href={`https://wa.me/${rep.number}`} target="_blank" rel="noreferrer" className="hover:text-[#FFBB1C] transition-colors flex items-center gap-1.5"><MessageCircle className="w-3.5 h-3.5" /><span>{rep.name}</span></a></li>
                 ))}
               </ul>
             </div>
             <div>
-              <h4 className="text-yellow-400 font-bold text-xs uppercase tracking-wider mb-3">Connect & Legal</h4>
+              <h4 className="text-[#FFBB1C] font-bold text-xs uppercase tracking-wider mb-3">Connect & Legal</h4>
               <div className="flex flex-col space-y-2 text-white/80">
-                <a href={SOCIAL_LINKS.instagram} target="_blank" rel="noreferrer" className="hover:text-yellow-400 transition-colors flex items-center gap-1.5"><Instagram className="w-3.5 h-3.5" /><span>Instagram</span></a>
-                <a href={SOCIAL_LINKS.facebook} target="_blank" rel="noreferrer" className="hover:text-yellow-400 transition-colors flex items-center gap-1.5"><Facebook className="w-3.5 h-3.5" /><span>Facebook</span></a>
-                <button onClick={() => setShowPolicyModal(true)} className="hover:text-yellow-400 transition-colors flex items-center gap-1.5 mt-2"><Scale className="w-3.5 h-3.5" /><span>Store Policies & Returns</span></button>
+                <a href={SOCIAL_LINKS.instagram} target="_blank" rel="noreferrer" className="hover:text-[#FFBB1C] transition-colors flex items-center gap-1.5"><Instagram className="w-3.5 h-3.5" /><span>Instagram</span></a>
+                <a href={SOCIAL_LINKS.facebook} target="_blank" rel="noreferrer" className="hover:text-[#FFBB1C] transition-colors flex items-center gap-1.5"><Facebook className="w-3.5 h-3.5" /><span>Facebook</span></a>
+                <button onClick={() => setShowPolicyModal(true)} className="hover:text-[#FFBB1C] transition-colors flex items-center gap-1.5 mt-2"><Scale className="w-3.5 h-3.5" /><span>Store Policies & Returns</span></button>
               </div>
             </div>
             <div>
-              <h4 className="text-yellow-400 font-bold text-xs uppercase tracking-wider mb-3">Store Location</h4>
+              <h4 className="text-[#FFBB1C] font-bold text-xs uppercase tracking-wider mb-3">Store Location</h4>
               <p className="leading-relaxed text-white/80">Shop 9 & 10, ABH Plaza,<br />Bosso Road, Opposite Fire Service,<br />Minna, Niger State.</p>
             </div>
           </div>
           <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-white/70">
             <p>© {new Date().getFullYear()} Swiftwave Variety Mall Limited. All rights reserved.</p>
             <div className="flex items-center gap-4">
-              <div className="flex items-center gap-1.5 text-yellow-400"><ShieldCheck className="w-4 h-4" /><span>CAC Registered Vendor</span></div>
+              <div className="flex items-center gap-1.5 text-[#FFBB1C]"><ShieldCheck className="w-4 h-4" /><span>CAC Registered Vendor</span></div>
               <div className="border-l border-white/20 pl-4">
                 <span className="text-white/60 font-medium">Engineered by <span className="font-bold text-white/90">Mukhtar</span></span>
               </div>
