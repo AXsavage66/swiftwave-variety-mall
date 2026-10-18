@@ -18,12 +18,37 @@ function AdminPanel() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ text: '', type: '' });
 
+  // Autocomplete State
+  const [products, setProducts] = useState<{id: string, name: string}[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showDropdown, setShowDropdown] = useState(false);
+
   const ADMIN_PIN = "1275"; 
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (pinCode === ADMIN_PIN) setIsAuthenticated(true);
-    else { alert("Unauthorized Access"); setPinCode(''); }
+    if (pinCode === ADMIN_PIN) {
+      setIsAuthenticated(true);
+      try {
+        const res = await fetch("https://docs.google.com/spreadsheets/d/1XysYSGvgDR9t70VSrIwdXsN3GwzOjFmLUOfgB2s8Xbo/gviz/tq?tqx=out:csv");
+        const text = await res.text();
+        const lines = text.split('\n').filter(x => x.trim());
+        if (lines.length > 1) {
+          const headers = parseCSVLine(lines[0]).map(h => h.toLowerCase().replace(/[^a-z]/g, ''));
+          const idIdx = headers.findIndex(h => h.includes('id'));
+          const nameIdx = headers.findIndex(h => h.includes('name') || h.includes('product'));
+          
+          const parsed = [];
+          for(let i = 1; i < lines.length; i++) {
+             const row = parseCSVLine(lines[i]);
+             if(idIdx > -1 && nameIdx > -1 && row[nameIdx]) {
+                parsed.push({ id: row[idIdx], name: row[nameIdx] });
+             }
+          }
+          setProducts(parsed);
+        }
+      } catch(err) { console.error("Catalog sync failed", err); }
+    } else { alert("Unauthorized Access"); setPinCode(''); }
   };
 
   const handleLogSale = async (e: React.FormEvent) => {
@@ -32,32 +57,20 @@ function AdminPanel() {
 
     setLoading(true);
     setMessage({ text: '', type: '' });
-
     const API_URL = "https://script.google.com/macros/s/AKfycbzPx4RCKIubIJyKkHfdZuVjk_lNYyueQrRHJaDY7rDPWVTltpNlcGpLPq76ydXVjgwD7w/exec";
 
     try {
       const response = await fetch(API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify({
-          productId: productId.trim(),
-          quantity: quantity,
-          pin: ADMIN_PIN
-        })
+        body: JSON.stringify({ productId: productId.trim(), quantity: quantity, pin: ADMIN_PIN })
       });
-
       const data = await response.json();
-
       if (data.status === 'success') {
-        setMessage({ text: `Success: ${quantity}x [${productId}] logged. Inventory updated.`, type: 'success' });
-        setProductId('');
-        setQuantity(1);
-      } else {
-        setMessage({ text: "Error: " + data.message, type: 'error' });
-      }
-    } catch (err) {
-      setMessage({ text: "Network error communicating with Google Sheets database.", type: 'error' });
-    }
+        setMessage({ text: `Success: ${quantity}x logged to ledger.`, type: 'success' });
+        setProductId(''); setSearchQuery(''); setQuantity(1);
+      } else { setMessage({ text: "Error: " + data.message, type: 'error' }); }
+    } catch (err) { setMessage({ text: "Network error.", type: 'error' }); }
     setLoading(false);
   };
 
@@ -77,33 +90,48 @@ function AdminPanel() {
 
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col items-center justify-center p-4">
-      <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl border border-slate-200">
-        <div className="flex justify-center mb-4">
-          <div className="w-16 h-16 bg-[#A044C3]/10 text-[#A044C3] rounded-full flex items-center justify-center">
-            <Calculator className="w-8 h-8" />
-          </div>
-        </div>
+      <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl border border-slate-200">
+        <div className="flex justify-center mb-4"><div className="w-16 h-16 bg-[#A044C3]/10 text-[#A044C3] rounded-full flex items-center justify-center"><Calculator className="w-8 h-8" /></div></div>
         <h2 className="text-2xl font-black text-center text-slate-900 mb-1">Store Admin Desk</h2>
-        <p className="text-sm text-center text-slate-500 mb-8 font-medium">Log Sales & Deduct Inventory</p>
+        <p className="text-sm text-center text-slate-500 mb-6 font-medium">Log Sales & Deduct Inventory</p>
 
         {message.text && (
           <div className={`p-4 rounded-xl mb-6 text-sm font-bold flex items-start gap-2 ${message.type === 'success' ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-rose-50 text-rose-800 border border-rose-200'}`}>
-            {message.type === 'success' ? <CheckCircle2 className="w-5 h-5 shrink-0" /> : <Shield className="w-5 h-5 shrink-0" />}
-            <span>{message.text}</span>
+            {message.type === 'success' ? <CheckCircle2 className="w-5 h-5 shrink-0" /> : <Shield className="w-5 h-5 shrink-0" />}<span>{message.text}</span>
           </div>
         )}
 
         <form onSubmit={handleLogSale} className="space-y-5">
-          <div>
-            <label className="text-xs font-bold text-slate-700 block mb-1.5 uppercase tracking-wider">Product ID</label>
+          <div className="relative">
+            <label className="text-xs font-bold text-slate-700 block mb-1.5 uppercase tracking-wider">Search Product Name or ID</label>
             <input
               type="text"
-              required
-              placeholder="e.g. SW-001"
-              value={productId}
-              onChange={(e) => setProductId(e.target.value)}
-              className="w-full p-3 rounded-xl border border-slate-300 focus:border-[#A044C3] focus:ring-2 focus:ring-[#A044C3]/20 outline-none uppercase font-mono font-bold"
+              placeholder="e.g. iPhone Charger..."
+              value={searchQuery}
+              onChange={(e) => {
+                 setSearchQuery(e.target.value);
+                 setShowDropdown(true);
+                 if(!e.target.value) { setProductId(''); }
+              }}
+              onFocus={() => setShowDropdown(true)}
+              className="w-full p-3 rounded-xl border border-slate-300 focus:border-[#A044C3] outline-none font-bold text-slate-900"
             />
+            {showDropdown && searchQuery && (
+               <div className="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-xl max-h-48 overflow-y-auto">
+                  {products.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()) || p.id.toLowerCase().includes(searchQuery.toLowerCase())).slice(0, 10).map(p => (
+                     <div
+                        key={p.id}
+                        onClick={() => { setProductId(p.id); setSearchQuery(p.name); setShowDropdown(false); }}
+                        className="p-3 hover:bg-violet-50 cursor-pointer border-b border-slate-100 last:border-0"
+                     >
+                        <div className="flex justify-between items-center">
+                           <span className="text-sm font-bold text-slate-900 truncate pr-2">{p.name}</span>
+                           <span className="text-xs font-mono font-black text-[#A044C3] bg-violet-100 px-2 py-0.5 rounded">{p.id}</span>
+                        </div>
+                     </div>
+                  ))}
+               </div>
+            )}
           </div>
           <div>
             <label className="text-xs font-bold text-slate-700 block mb-1.5 uppercase tracking-wider">Quantity Sold</label>
@@ -113,17 +141,11 @@ function AdminPanel() {
               <button type="button" onClick={() => setQuantity(quantity + 1)} className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center hover:bg-slate-200 border border-slate-300"><Plus className="w-5 h-5 text-slate-700" /></button>
             </div>
           </div>
-          <button
-            type="submit"
-            disabled={loading}
-            className={`w-full font-bold text-sm py-4 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 ${loading ? 'bg-slate-400 cursor-not-allowed text-white' : 'bg-[#A044C3] hover:opacity-90 text-[#FFBB1C] shadow-[#A044C3]/30'}`}
-          >
-            {loading ? <span className="animate-pulse">Syncing to Database...</span> : <><span>Log Sale to Ledger</span><Check className="w-5 h-5" /></>}
+          <button type="submit" disabled={loading || !productId} className={`w-full font-bold text-sm py-4 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 ${(loading || !productId) ? 'bg-slate-400 cursor-not-allowed text-white' : 'bg-[#A044C3] hover:opacity-90 text-[#FFBB1C] shadow-[#A044C3]/30'}`}>
+            {loading ? <span className="animate-pulse">Logging to Ledger...</span> : <><span>Log Sale</span><Check className="w-5 h-5" /></>}
           </button>
         </form>
-        <button onClick={() => window.location.href = '/'} className="w-full mt-4 text-xs font-bold text-slate-500 hover:text-[#A044C3] text-center py-2">
-          Return to Storefront
-        </button>
+        <button onClick={() => window.location.href = '/'} className="w-full mt-4 text-xs font-bold text-slate-500 hover:text-[#A044C3] text-center py-2">Return to Storefront</button>
       </div>
     </div>
   );
