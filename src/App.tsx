@@ -4,7 +4,7 @@ import {
   CheckCircle2, ChevronRight, ChevronLeft, Info, Plus, Minus,
   Trash2, Truck, Building2, Copy, Image as ImageIcon, Maximize2,
   PhoneCall, Check, Instagram, Facebook, MessageCircle, Headphones,
-  Share, Calculator, Shield, Scale, ArrowDownCircle
+  Scale, ArrowDownCircle
 } from 'lucide-react';
 
 // ==========================================
@@ -24,7 +24,7 @@ function AdminPanel() {
   const [products, setProducts] = useState<{id: string, name: string}[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
 
-  // UPDATE THIS SECURE PIN BEFORE YOU DEPLOY
+  // SECURE PIN MATCHING THE GOOGLE BACKEND
   const ADMIN_PIN = "1275"; 
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -70,7 +70,7 @@ function AdminPanel() {
       } 
     }
 
-    if (!finalId.trim()) return;
+    if (!finalId || !finalId.trim()) return;
 
     setLoading(true);
     setMessage({ text: '', type: '' });
@@ -378,7 +378,8 @@ export default function App() {
 
   const [isCartOpen, setIsCartOpen] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [agreedToPolicy, setAgreedToPolicy] = useState<boolean>(false); = useState<boolean>(() => typeof window !== 'undefined' ? localStorage.getItem('swiftwave_checkout_open') === 'true' : false);
+  const [isCheckoutOpen, setIsCheckoutOpen] = useState<boolean>(() => typeof window !== 'undefined' ? localStorage.getItem('swiftwave_checkout_open') === 'true' : false);
+  const [agreedToPolicy, setAgreedToPolicy] = useState<boolean>(false);
   
   const [copiedShop9, setCopiedShop9] = useState<boolean>(false);
   const [copiedShop10, setCopiedShop10] = useState<boolean>(false);
@@ -743,8 +744,9 @@ export default function App() {
   const orderTotal = cartSubtotal + deliveryFee;
   const totalCartCount = cart.reduce((sum, item) => sum + (item?.quantity || 0), 0);
 
-  setAgreedToPolicy(false);
+  const openCheckout = () => {
     if (!orderId) setOrderId(`SW-${Math.floor(1000 + Math.random() * 9000)}`);
+    setAgreedToPolicy(false);
     setIsCartOpen(false);
     setIsCheckoutOpen(true);
   };
