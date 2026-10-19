@@ -1239,7 +1239,7 @@ export default function App() {
             <div className="space-y-3 mb-5">
               <div>
                 <label className="text-xs font-bold text-slate-700 flex items-center justify-between mb-1.5">
-                  <span className="flex items-center gap-1"><Headphones className="w-3.5 h-3.5 text-[#A044C3]" /><span>Send Order To WhatsApp Rep</span></span>
+                  <span className="flex items-center gap-1"><Headphones className="w-3.5 h-3.5 text-[#A044C3]" /><span>Send Order To WhatsApp</span></span>
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                   {SUPPORT_REPS.map((rep) => (
