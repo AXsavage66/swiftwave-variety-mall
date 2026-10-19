@@ -475,7 +475,8 @@ export default function App() {
   const [copiedOrderId, setCopiedOrderId] = useState<boolean>(false);
   const [removedItemsNotice, setRemovedItemsNotice] = useState<string[]>([]);
 
-  const [selectedRepNumber, setSelectedRepNumber] = useState<string>(() => typeof window !== 'undefined' ? localStorage.getItem('swiftwave_support_rep') || SUPPORT_REPS[0].number : SUPPORT_REPS[0].number);
+  // FORCED DEFAULT: Always default to Support 1 (Main Store) instead of relying on localStorage
+  const [selectedRepNumber, setSelectedRepNumber] = useState<string>(SUPPORT_REPS[0].number);
   const [orderId, setOrderId] = useState<string>(() => typeof window !== 'undefined' ? localStorage.getItem('swiftwave_order_id') || '' : '');
   const [customerName, setCustomerName] = useState<string>(() => typeof window !== 'undefined' ? localStorage.getItem('swiftwave_cust_name') || '' : '');
   const [customerPhone, setCustomerPhone] = useState<string>(() => typeof window !== 'undefined' ? localStorage.getItem('swiftwave_cust_phone') || '' : '');
@@ -1465,6 +1466,33 @@ export default function App() {
           </div>
         </div>
       )}
+      
+{/* Product Image Lightbox (Zoom) */}
+      {isLightboxOpen && activeModalProduct && mediaViewMode === 'photos' && (
+        <div className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-xl flex items-center justify-center p-4 sm:p-8" onClick={() => setIsLightboxOpen(false)}>
+          <button onClick={() => setIsLightboxOpen(false)} className="absolute top-4 right-4 sm:top-8 sm:right-8 w-12 h-12 rounded-full bg-white/10 hover:bg-white/25 text-white flex items-center justify-center transition-colors border border-white/20 z-10">
+            <X className="w-6 h-6" />
+          </button>
+          
+          <img 
+            src={formatDriveUrl(activeModalProduct.images?.[activeImageIndex] || activeModalProduct.images?.[0] || '')} 
+            alt={activeModalProduct.name} 
+            className="max-w-full max-h-full object-contain rounded-xl shadow-2xl" 
+            onClick={(e) => e.stopPropagation()} 
+          />
+
+          {activeModalProduct.images && activeModalProduct.images.length > 1 && (
+            <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 flex justify-between px-4 sm:px-12 pointer-events-none">
+              <button onClick={(e) => { e.stopPropagation(); setActiveImageIndex((prev) => (prev === 0 ? activeModalProduct.images.length - 1 : prev - 1)); }} className="pointer-events-auto w-12 h-12 rounded-full bg-white/10 hover:bg-white/25 text-white flex items-center justify-center transition-all border border-white/20 backdrop-blur-sm">
+                <ChevronLeft className="w-6 h-6" />
+              </button>
+              <button onClick={(e) => { e.stopPropagation(); setActiveImageIndex((prev) => (prev === activeModalProduct.images.length - 1 ? 0 : prev + 1)); }} className="pointer-events-auto w-12 h-12 rounded-full bg-white/10 hover:bg-white/25 text-white flex items-center justify-center transition-all border border-white/20 backdrop-blur-sm">
+                <ChevronRight className="w-6 h-6" />
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Footer */}
       <footer className="bg-[#A044C3] text-white/90 text-xs pt-10 pb-8 mt-auto border-t-4 border-[#FFBB1C]">
@@ -1472,7 +1500,7 @@ export default function App() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 pb-8 border-b border-white/20">
             <div className="md:col-span-1">
               <div className="mb-3">
-                <img src="/logo.png" alt="Swiftwave" className="h-8 w-auto object-contain filter brightness-0 invert" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                <img src="/logo.png" alt="Swiftwave" className="h-8 w-auto object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
               </div>
               <p className="text-white/80 leading-relaxed text-xs">Friendly, fast, and affordable. The one-stop shop that keeps everyday life moving.</p>
             </div>
