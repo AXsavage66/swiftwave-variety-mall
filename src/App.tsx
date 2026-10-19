@@ -14,8 +14,14 @@ const PWAInstaller = () => {
   const [installPrompt, setInstallPrompt] = useState<any>(null);
   const [isIOS, setIsIOS] = useState(false);
   const [isStandalone, setIsStandalone] = useState(true);
+  const [isDismissed, setIsDismissed] = useState(false);
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+    
+    // Check if the user previously closed the banner
+    setIsDismissed(sessionStorage.getItem('sw_install_dismissed') === 'true');
+
     // 1. Listen for Android/Desktop install prompt
     const handleBeforeInstall = (e: any) => {
       e.preventDefault();
@@ -25,8 +31,7 @@ const PWAInstaller = () => {
 
     // 2. Detect iPhone/iPad
     const userAgent = window.navigator.userAgent.toLowerCase();
-    const isApple = /iphone|ipad|ipod/.test(userAgent);
-    setIsIOS(isApple);
+    setIsIOS(/iphone|ipad|ipod/.test(userAgent));
 
     // 3. Check if app is already installed
     const isInstalled = window.matchMedia('(display-mode: standalone)').matches || 
@@ -36,7 +41,10 @@ const PWAInstaller = () => {
     return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
   }, []);
 
-  if (isStandalone) return null;
+  const dismiss = () => {
+    setIsDismissed(true);
+    sessionStorage.setItem('sw_install_dismissed', 'true');
+  };
 
   const handleInstallClick = async () => {
     if (!installPrompt) return;
@@ -47,23 +55,43 @@ const PWAInstaller = () => {
     }
   };
 
+  // THE FIX: If installed, dismissed, OR if there's no prompt available yet, render absolutely nothing (no empty box!)
+  if (isStandalone || isDismissed) return null;
+  if (!isIOS && !installPrompt) return null; 
+
   return (
-    <div className="bg-white text-slate-800 text-sm p-3 flex justify-between items-center rounded-2xl mb-6 shadow-sm border border-[#A044C3]/30">
+    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-sm z-50 bg-gradient-to-r from-[#A044C3] to-violet-900 p-4 rounded-2xl shadow-2xl border border-white/20 flex flex-col gap-3">
+      <div className="flex justify-between items-start gap-3">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shrink-0 shadow-inner">
+            <span className="text-[#A044C3] font-black text-xl">S</span>
+          </div>
+          <div>
+            <h4 className="font-black text-sm text-[#FFBB1C] leading-none mb-1">Swiftwave App</h4>
+            <p className="text-xs text-white/90 leading-tight">
+              {isIOS 
+                ? "Install for faster access to the mall." 
+                : "Add to home screen for faster shopping!"}
+            </p>
+          </div>
+        </div>
+        <button onClick={dismiss} className="w-6 h-6 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center shrink-0 transition-colors">
+          <X className="w-3.5 h-3.5 text-white" />
+        </button>
+      </div>
+      
       {isIOS ? (
-        <span className="font-medium text-xs sm:text-sm">
-          📲 To install on iPhone: tap the <b className="text-[#A044C3]">Share</b> icon below, then <b className="text-[#A044C3]">"Add to Home Screen"</b>.
-        </span>
-      ) : installPrompt ? (
-        <>
-          <span className="font-bold text-[#A044C3] text-xs sm:text-sm">Get the Swiftwave App for faster access!</span>
-          <button 
-            onClick={handleInstallClick}
-            className="bg-[#A044C3] text-[#FFBB1C] px-4 py-1.5 rounded-lg font-black shadow hover:opacity-90 transition-all active:scale-95"
-          >
-            Install
-          </button>
-        </>
-      ) : null}
+        <div className="bg-black/20 rounded-lg p-2.5 text-[11px] font-medium text-white/90 text-center">
+          Tap <span className="font-bold text-[#FFBB1C]">Share</span> below, then <span className="font-bold text-[#FFBB1C]">"Add to Home Screen"</span>
+        </div>
+      ) : (
+        <button 
+          onClick={handleInstallClick}
+          className="w-full bg-[#FFBB1C] hover:bg-yellow-400 text-violet-950 text-sm font-black py-2.5 rounded-xl shadow-md transition-all active:scale-95"
+        >
+          Install App Now
+        </button>
+      )}
     </div>
   );
 };
