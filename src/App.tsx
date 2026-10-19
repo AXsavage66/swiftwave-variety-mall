@@ -8,6 +8,67 @@ import {
 } from 'lucide-react';
 
 // ==========================================
+// PWA INSTALLER (Brand Matched)
+// ==========================================
+const PWAInstaller = () => {
+  const [installPrompt, setInstallPrompt] = useState<any>(null);
+  const [isIOS, setIsIOS] = useState(false);
+  const [isStandalone, setIsStandalone] = useState(true);
+
+  useEffect(() => {
+    // 1. Listen for Android/Desktop install prompt
+    const handleBeforeInstall = (e: any) => {
+      e.preventDefault();
+      setInstallPrompt(e);
+    };
+    window.addEventListener('beforeinstallprompt', handleBeforeInstall);
+
+    // 2. Detect iPhone/iPad
+    const userAgent = window.navigator.userAgent.toLowerCase();
+    const isApple = /iphone|ipad|ipod/.test(userAgent);
+    setIsIOS(isApple);
+
+    // 3. Check if app is already installed
+    const isInstalled = window.matchMedia('(display-mode: standalone)').matches || 
+                        ('standalone' in window.navigator && (window.navigator as any).standalone);
+    setIsStandalone(isInstalled);
+
+    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
+  }, []);
+
+  if (isStandalone) return null;
+
+  const handleInstallClick = async () => {
+    if (!installPrompt) return;
+    installPrompt.prompt();
+    const { outcome } = await installPrompt.userChoice;
+    if (outcome === 'accepted') {
+      setInstallPrompt(null);
+    }
+  };
+
+  return (
+    <div className="bg-white text-slate-800 text-sm p-3 flex justify-between items-center rounded-2xl mb-6 shadow-sm border border-[#A044C3]/30">
+      {isIOS ? (
+        <span className="font-medium text-xs sm:text-sm">
+          📲 To install on iPhone: tap the <b className="text-[#A044C3]">Share</b> icon below, then <b className="text-[#A044C3]">"Add to Home Screen"</b>.
+        </span>
+      ) : installPrompt ? (
+        <>
+          <span className="font-bold text-[#A044C3] text-xs sm:text-sm">Get the Swiftwave App for faster access!</span>
+          <button 
+            onClick={handleInstallClick}
+            className="bg-[#A044C3] text-[#FFBB1C] px-4 py-1.5 rounded-lg font-black shadow hover:opacity-90 transition-all active:scale-95"
+          >
+            Install
+          </button>
+        </>
+      ) : null}
+    </div>
+  );
+};
+
+// ==========================================
 // 0. ADMIN SMART LEDGER UI (HIDDEN ROUTE)
 // ==========================================
 function AdminPanel() {
@@ -386,11 +447,6 @@ export default function App() {
   const [copiedOrderId, setCopiedOrderId] = useState<boolean>(false);
   const [removedItemsNotice, setRemovedItemsNotice] = useState<string[]>([]);
 
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
-  const [showInstallBanner, setShowInstallBanner] = useState<boolean>(false);
-  const [isIOS, setIsIOS] = useState<boolean>(false);
-  const [isStandalone, setIsStandalone] = useState<boolean>(false);
-
   const [selectedRepNumber, setSelectedRepNumber] = useState<string>(() => typeof window !== 'undefined' ? localStorage.getItem('swiftwave_support_rep') || SUPPORT_REPS[0].number : SUPPORT_REPS[0].number);
   const [orderId, setOrderId] = useState<string>(() => typeof window !== 'undefined' ? localStorage.getItem('swiftwave_order_id') || '' : '');
   const [customerName, setCustomerName] = useState<string>(() => typeof window !== 'undefined' ? localStorage.getItem('swiftwave_cust_name') || '' : '');
@@ -454,34 +510,6 @@ export default function App() {
     window.addEventListener('offline', handleOffline);
     return () => { window.removeEventListener('online', handleOnline); window.removeEventListener('offline', handleOffline); };
   }, []);
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const ua = window.navigator.userAgent.toLowerCase();
-      setIsIOS(/iphone|ipad|ipod/.test(ua));
-      setIsStandalone(('standalone' in window.navigator) && !!(window.navigator as any).standalone);
-      const handleBeforeInstall = (e: Event) => {
-        e.preventDefault();
-        setDeferredPrompt(e);
-        if (!sessionStorage.getItem('swiftwave_install_dismissed')) setShowInstallBanner(true);
-      };
-      window.addEventListener('beforeinstallprompt', handleBeforeInstall);
-      window.addEventListener('appinstalled', () => { setShowInstallBanner(false); setDeferredPrompt(null); });
-      return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
-    }
-  }, []);
-
-  const handleInstallClick = async () => {
-    if (!deferredPrompt) return;
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    if (outcome === 'accepted') { setShowInstallBanner(false); setDeferredPrompt(null); }
-  };
-  
-  const dismissInstallBanner = () => { 
-    setShowInstallBanner(false); 
-    sessionStorage.setItem('swiftwave_install_dismissed', 'true'); 
-  };
 
   const fetchInventory = useCallback(async () => {
     try {
@@ -866,6 +894,10 @@ export default function App() {
       </header>
 
       <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
+        
+        {/* PWA INSTALLER PLACED HERE */}
+        <PWAInstaller />
+
         {/* Brand Hero Banner */}
         <section className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#A044C3] via-[#8A36A8] to-violet-900 text-white p-6 sm:p-10 mb-8 shadow-xl border border-[#A044C3]">
           <div className="relative z-10 max-w-2xl">
