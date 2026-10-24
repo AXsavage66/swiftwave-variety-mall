@@ -4,7 +4,7 @@ import {
   CheckCircle2, ChevronRight, ChevronLeft, Info, Plus, Minus,
   Trash2, Truck, Building2, Copy, Image as ImageIcon, Maximize2,
   PhoneCall, Check, Instagram, Facebook, MessageCircle, Headphones,
-  Share, Calculator, Shield, Scale, ArrowDownCircle
+  Share, Calculator, Shield, Scale, ArrowDownCircle, History
 } from 'lucide-react';
 
 // ==========================================
@@ -18,23 +18,19 @@ const PWAInstaller = () => {
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    
-    // Check if the user previously closed the banner
+   
     setIsDismissed(sessionStorage.getItem('sw_install_dismissed') === 'true');
 
-    // 1. Listen for Android/Desktop install prompt
     const handleBeforeInstall = (e: any) => {
       e.preventDefault();
       setInstallPrompt(e);
     };
     window.addEventListener('beforeinstallprompt', handleBeforeInstall);
 
-    // 2. Detect iPhone/iPad
     const userAgent = window.navigator.userAgent.toLowerCase();
     setIsIOS(/iphone|ipad|ipod/.test(userAgent));
 
-    // 3. Check if app is already installed
-    const isInstalled = window.matchMedia('(display-mode: standalone)').matches || 
+    const isInstalled = window.matchMedia('(display-mode: standalone)').matches ||
                         ('standalone' in window.navigator && (window.navigator as any).standalone);
     setIsStandalone(isInstalled);
 
@@ -55,9 +51,8 @@ const PWAInstaller = () => {
     }
   };
 
-  // THE FIX: If installed, dismissed, OR if there's no prompt available yet, render absolutely nothing (no empty box!)
   if (isStandalone || isDismissed) return null;
-  if (!isIOS && !installPrompt) return null; 
+  if (!isIOS && !installPrompt) return null;
 
   return (
     <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-sm z-50 bg-gradient-to-r from-[#A044C3] to-violet-900 p-4 rounded-2xl shadow-2xl border border-white/20 flex flex-col gap-3">
@@ -69,8 +64,8 @@ const PWAInstaller = () => {
           <div>
             <h4 className="font-black text-sm text-[#FFBB1C] leading-none mb-1">Swiftwave App</h4>
             <p className="text-xs text-white/90 leading-tight">
-              {isIOS 
-                ? "Install for faster access to the mall." 
+              {isIOS
+                ? "Install for faster access to the mall."
                 : "Add to home screen for faster shopping!"}
             </p>
           </div>
@@ -79,13 +74,13 @@ const PWAInstaller = () => {
           <X className="w-3.5 h-3.5 text-white" />
         </button>
       </div>
-      
+     
       {isIOS ? (
         <div className="bg-black/20 rounded-lg p-2.5 text-[11px] font-medium text-white/90 text-center">
           Tap <span className="font-bold text-[#FFBB1C]">Share</span> below, then <span className="font-bold text-[#FFBB1C]">"Add to Home Screen"</span>
         </div>
       ) : (
-        <button 
+        <button
           onClick={handleInstallClick}
           className="w-full bg-[#FFBB1C] hover:bg-yellow-400 text-violet-950 text-sm font-black py-2.5 rounded-xl shadow-md transition-all active:scale-95"
         >
@@ -102,19 +97,15 @@ const PWAInstaller = () => {
 function AdminPanel() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [pinCode, setPinCode] = useState('');
-  
-  const [productId, setProductId] = useState(''); 
-  const [displayValue, setDisplayValue] = useState(''); 
-  
+  const [productId, setProductId] = useState('');
+  const [displayValue, setDisplayValue] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ text: '', type: '' });
-
   const [products, setProducts] = useState<{id: string, name: string}[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
 
-  // UPDATE THIS SECURE PIN TO MATCH THE GOOGLE SHEET BEFORE YOU DEPLOY
-  const ADMIN_PIN = "1275"; 
+  const ADMIN_PIN = "1275";
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -128,7 +119,7 @@ function AdminPanel() {
           const headers = parseCSVLine(lines[0]).map(h => h.toLowerCase().replace(/[^a-z]/g, ''));
           const idIdx = headers.findIndex(h => h.includes('id'));
           const nameIdx = headers.findIndex(h => h.includes('name') || h.includes('product'));
-          
+         
           const parsed = [];
           for(let i = 1; i < lines.length; i++) {
              const row = parseCSVLine(lines[i]);
@@ -139,24 +130,22 @@ function AdminPanel() {
           setProducts(parsed);
         }
       } catch(err) { console.error("Catalog sync failed", err); }
-    } else { 
-      alert("Unauthorized Access"); 
-      setPinCode(''); 
+    } else {
+      alert("Unauthorized Access");
+      setPinCode('');
     }
   };
 
   const handleLogSale = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // SMART RESOLVER: Automatically grab ID if Haris typed the name manually
     let finalId = productId;
     if (!finalId) {
       const match = products.find(p => p.name.toLowerCase() === displayValue.toLowerCase() || p.id.toLowerCase() === displayValue.toLowerCase());
-      if (match) { 
-        finalId = match.id; 
-      } else { 
-        finalId = displayValue; 
-      } 
+      if (match) {
+        finalId = match.id;
+      } else {
+        finalId = displayValue;
+      }
     }
 
     if (!finalId || !finalId.trim()) return;
@@ -174,14 +163,14 @@ function AdminPanel() {
       const data = await response.json();
       if (data.status === 'success') {
         setMessage({ text: `Success: ${quantity}x [${finalId}] logged.`, type: 'success' });
-        setProductId(''); 
-        setDisplayValue(''); 
+        setProductId('');
+        setDisplayValue('');
         setQuantity(1);
-      } else { 
-        setMessage({ text: "Error: " + data.message, type: 'error' }); 
+      } else {
+        setMessage({ text: "Error: " + data.message, type: 'error' });
       }
-    } catch (err) { 
-      setMessage({ text: "Network error.", type: 'error' }); 
+    } catch (err) {
+      setMessage({ text: "Network error.", type: 'error' });
     }
     setLoading(false);
   };
@@ -193,13 +182,13 @@ function AdminPanel() {
           <ShieldCheck className="w-12 h-12 text-[#A044C3] mx-auto mb-4" />
           <h2 className="text-xl font-black text-slate-900 mb-2">Restricted Access</h2>
           <p className="text-xs text-slate-500 mb-6">Enter admin PIN to access ledger</p>
-          <input 
-            type="password" 
-            value={pinCode} 
-            onChange={(e) => setPinCode(e.target.value)} 
-            className="w-full text-center text-2xl tracking-[0.5em] font-black p-4 rounded-xl border border-slate-300 focus:border-[#A044C3] outline-none mb-4" 
-            placeholder="••••" 
-            maxLength={4} 
+          <input
+            type="password"
+            value={pinCode}
+            onChange={(e) => setPinCode(e.target.value)}
+            className="w-full text-center text-2xl tracking-[0.5em] font-black p-4 rounded-xl border border-slate-300 focus:border-[#A044C3] outline-none mb-4"
+            placeholder="••••"
+            maxLength={4}
           />
           <button type="submit" className="w-full bg-[#A044C3] text-[#FFBB1C] font-bold py-3 rounded-xl shadow-lg hover:opacity-90 transition-all">
             Unlock Desk
@@ -236,7 +225,7 @@ function AdminPanel() {
               value={displayValue}
               onChange={(e) => {
                  setDisplayValue(e.target.value);
-                 setProductId(''); 
+                 setProductId('');
                  setShowDropdown(true);
               }}
               onFocus={() => setShowDropdown(true)}
@@ -247,10 +236,10 @@ function AdminPanel() {
                   {products.filter(p => p.name.toLowerCase().includes(displayValue.toLowerCase()) || p.id.toLowerCase().includes(displayValue.toLowerCase())).slice(0, 10).map(p => (
                      <div
                         key={p.id}
-                        onClick={() => { 
+                        onClick={() => {
                           setProductId(p.id);
                           setDisplayValue(p.name);
-                          setShowDropdown(false); 
+                          setShowDropdown(false);
                         }}
                         className="p-3 hover:bg-[#A044C3]/10 cursor-pointer border-b border-slate-100 last:border-0"
                      >
@@ -275,9 +264,9 @@ function AdminPanel() {
               </button>
             </div>
           </div>
-          <button 
-            type="submit" 
-            disabled={loading || !displayValue} 
+          <button
+            type="submit"
+            disabled={loading || !displayValue}
             className={`w-full font-bold text-sm py-4 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 ${(loading || !displayValue) ? 'bg-slate-400 cursor-not-allowed text-white' : 'bg-[#A044C3] hover:opacity-90 text-[#FFBB1C] shadow-[#A044C3]/30'}`}
           >
             {loading ? <span className="animate-pulse">Logging to Ledger...</span> : <><span>Log Sale</span><Check className="w-5 h-5" /></>}
@@ -443,6 +432,15 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState<string>(() => typeof window !== 'undefined' ? sessionStorage.getItem('sw_search') || '' : '');
   const [displayLimit, setDisplayLimit] = useState<number>(48);
 
+  // SEARCH HISTORY STATE
+  const [recentSearches, setRecentSearches] = useState<string[]>(() => {
+    if (typeof window === 'undefined') return [];
+    try {
+      return JSON.parse(localStorage.getItem('sw_recent_searches') || '[]');
+    } catch { return []; }
+  });
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
+
   const [activeModalProduct, setActiveModalProduct] = useState<Product | null>(null);
   const [activeImageIndex, setActiveImageIndex] = useState<number>(0);
   const [mediaViewMode, setMediaViewMode] = useState<'photos' | 'video'>('photos');
@@ -469,13 +467,12 @@ export default function App() {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState<boolean>(() => typeof window !== 'undefined' ? localStorage.getItem('swiftwave_checkout_open') === 'true' : false);
   const [agreedToPolicy, setAgreedToPolicy] = useState<boolean>(false);
-  
+ 
   const [copiedShop9, setCopiedShop9] = useState<boolean>(false);
   const [copiedShop10, setCopiedShop10] = useState<boolean>(false);
   const [copiedOrderId, setCopiedOrderId] = useState<boolean>(false);
   const [removedItemsNotice, setRemovedItemsNotice] = useState<string[]>([]);
 
-  // FORCED DEFAULT: Always default to Support 1 (Main Store) instead of relying on localStorage
   const [selectedRepNumber, setSelectedRepNumber] = useState<string>(SUPPORT_REPS[0].number);
   const [orderId, setOrderId] = useState<string>(() => typeof window !== 'undefined' ? localStorage.getItem('swiftwave_order_id') || '' : '');
   const [customerName, setCustomerName] = useState<string>(() => typeof window !== 'undefined' ? localStorage.getItem('swiftwave_cust_name') || '' : '');
@@ -487,7 +484,33 @@ export default function App() {
   const [nationwideZone, setNationwideZone] = useState<string>(() => typeof window !== 'undefined' ? localStorage.getItem('swiftwave_nw_zone') || 'Abuja / North Central - ₦4,500' : 'Abuja / North Central - ₦4,500');
   const [orderNotes, setOrderNotes] = useState<string>(() => typeof window !== 'undefined' ? localStorage.getItem('swiftwave_order_notes') || '' : '');
 
-  // Persist State Memory
+  // SEARCH HISTORY EFFECTS
+  useEffect(() => {
+    localStorage.setItem('sw_recent_searches', JSON.stringify(recentSearches));
+  }, [recentSearches]);
+
+  const saveSearchTerm = (term: string) => {
+    const trimmed = term.trim();
+    if (trimmed.length < 2) return;
+    setRecentSearches(prev => {
+      const filtered = prev.filter(s => s.toLowerCase() !== trimmed.toLowerCase());
+      return [trimmed, ...filtered].slice(0, 5); // Keep top 5 searches
+    });
+  };
+
+  const handleSearchSubmit = (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === 'Enter') {
+          saveSearchTerm(searchQuery);
+          setIsSearchFocused(false);
+          (e.target as HTMLInputElement).blur();
+      }
+  };
+
+  const removeSearchHistory = (e: React.MouseEvent, term: string) => {
+      e.stopPropagation();
+      setRecentSearches(prev => prev.filter(s => s !== term));
+  };
+
   useEffect(() => {
     sessionStorage.setItem('sw_category', selectedCategory);
     sessionStorage.setItem('sw_search', searchQuery);
@@ -512,7 +535,6 @@ export default function App() {
     }
   }, [loading, products.length]);
 
-  // Local Storage Sync
   useEffect(() => {
     try {
       localStorage.setItem('swiftwave_cart', JSON.stringify(cart));
@@ -628,19 +650,21 @@ export default function App() {
     const productIdFromUrl = params.get('product') || sessionStorage.getItem('swiftwave_active_modal');
     if (productIdFromUrl && !activeModalProduct) {
       const matched = products.find((p) => p.id === productIdFromUrl);
-      if (matched) { 
-        setActiveModalProduct(matched); 
-        setActiveImageIndex(0); 
-        setMediaViewMode('photos'); 
+      if (matched) {
+        setActiveModalProduct(matched);
+        setActiveImageIndex(0);
+        setMediaViewMode('photos');
       }
     }
   }, [products]);
 
   const openProductModal = (product: Product) => {
+    if (searchQuery) saveSearchTerm(searchQuery); // Save search term when clicking a product!
+    
     sessionStorage.setItem('sw_scroll', window.scrollY.toString());
-    setActiveModalProduct(product); 
-    setActiveImageIndex(0); 
-    setMediaViewMode('photos'); 
+    setActiveModalProduct(product);
+    setActiveImageIndex(0);
+    setMediaViewMode('photos');
     setIsDescExpanded(false);
     try {
       window.history.replaceState(null, '', `${window.location.pathname}?product=${encodeURIComponent(product.id)}`);
@@ -650,9 +674,9 @@ export default function App() {
 
   const closeProductModal = () => {
     setActiveModalProduct(null);
-    try { 
-      window.history.replaceState(null, '', window.location.pathname); 
-      sessionStorage.removeItem('swiftwave_active_modal'); 
+    try {
+      window.history.replaceState(null, '', window.location.pathname);
+      sessionStorage.removeItem('swiftwave_active_modal');
     } catch (e) { console.error(e); }
   };
 
@@ -662,7 +686,7 @@ export default function App() {
       if (currentCart.length === 0) return currentCart;
       const notices: string[] = [];
       const updatedCart: CartItem[] = [];
-      
+     
       currentCart.forEach((item) => {
         if (!item || !item.product) return;
         const liveProduct = products.find((p) => p.id === item.product.id);
@@ -721,7 +745,7 @@ export default function App() {
     if (!activeModalProduct || products.length === 0) return [];
     const stopWords = new Set(['and', 'the', 'for', 'with', 'in', 'of', 'to', 'a', 'an', 'at', 'by', 'from', 'on', 'is', 'it', 'or', 'as', 'are', 'be', 'this', 'that', 'your', 'original', 'high', 'quality', 'new', 'best', 'pro', 'plus']);
     const currentTokens = activeModalProduct.name.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter((w) => w.length > 2 && !stopWords.has(w));
-    
+   
     const scored = products.filter((p) => p.id !== activeModalProduct.id).map((p) => {
       let score = 0;
       if (p.category.toLowerCase() === activeModalProduct.category.toLowerCase()) score += 3;
@@ -740,6 +764,7 @@ export default function App() {
   }, [activeModalProduct, products]);
 
   const addToCart = (product: Product) => {
+    if (searchQuery) saveSearchTerm(searchQuery); // Save search term when adding from grid
     setCart((prev) => {
       const existing = prev.find((item) => item?.product?.id === product.id);
       if (product.stock_quantity !== undefined && (existing ? existing.quantity : 0) >= product.stock_quantity) return prev;
@@ -765,21 +790,21 @@ export default function App() {
   const cartSubtotal = useMemo(() => cart.reduce((sum, item) => sum + ((item?.product?.price || 0) * (item?.quantity || 1)), 0), [cart]);
 
   const { shop9Items, shop10Items, shop9Total, shop10Total } = useMemo(() => {
-    const s9Items: CartItem[] = []; 
+    const s9Items: CartItem[] = [];
     const s10Items: CartItem[] = [];
-    let s9Sum = 0; 
+    let s9Sum = 0;
     let s10Sum = 0;
-    
+   
     cart.forEach((item) => {
       if (!item || !item.product) return;
       const shop = getProductShop(item.product.category || '');
       const val = (item.product.price || 0) * (item.quantity || 1);
-      if (shop === 'shop10') { 
-        s10Items.push(item); 
-        s10Sum += val; 
-      } else { 
-        s9Items.push(item); 
-        s9Sum += val; 
+      if (shop === 'shop10') {
+        s10Items.push(item);
+        s10Sum += val;
+      } else {
+        s9Items.push(item);
+        s9Sum += val;
       }
     });
     return { shop9Items: s9Items, shop10Items: s10Items, shop9Total: s9Sum, shop10Total: s10Sum };
@@ -819,13 +844,13 @@ export default function App() {
     let itemsSummary = isMixedCart ? `*SHOP 10 (GADGETS & TECH):*\n${shop10Items.map((item, idx) => `  ${idx + 1}. ${item.product.name} x${item.quantity} = ₦${(item.product.price * item.quantity).toLocaleString()}`).join('\n')}\n\n*SHOP 9 (DAILY ESSENTIALS):*\n${shop9Items.map((item, idx) => `  ${idx + 1}. ${item.product.name} x${item.quantity} = ₦${(item.product.price * item.quantity).toLocaleString()}`).join('\n')}` : cart.map((item, idx) => `${idx + 1}. ${item.product.name} (ID: ${item.product.id}) x${item.quantity} = ₦${(item.product.price * item.quantity).toLocaleString()}`).join('\n');
 
     const message = `🛍️ *PAID ORDER VERIFICATION - SWIFTWAVE MALL*\n*Order Reference:* #${orderId}\n----------------------------------------\n*Customer Name:* ${customerName.trim()}\n*Calling Phone:* ${customerPhone.trim()}\n\n*Fulfillment:* ${deliveryTitle}\n${deliveryMethod === 'minna' ? `*Area/Zone:* ${minnaCampusZone}\n*Address/Landmark/Drop Point:* ${landmarkHostel.trim()}\n` : ''}${deliveryMethod === 'nationwide' ? `*Delivery Destination:* ${deliveryAddress.trim()}\n` : ''}${orderNotes.trim() ? `*Special Notes:* ${orderNotes.trim()}\n` : ''}\n*ITEMS ORDERED:*\n${itemsSummary}\n----------------------------------------\n*Subtotal:* ₦${cartSubtotal.toLocaleString()}\n*Delivery Fee:* ₦${deliveryFee.toLocaleString()}\n----------------------------------------\n${paymentBreakdownText}\n----------------------------------------\n*Transfer Remark Used:* ${orderId}\n*(Attached is my payment transfer receipt screenshot)*`;
-    
+   
     window.open(`https://wa.me/${selectedRepNumber}?text=${encodeURIComponent(message)}`, '_blank');
 
-    setCart([]); 
-    setOrderId(''); 
-    setOrderNotes(''); 
-    setLandmarkHostel(''); 
+    setCart([]);
+    setOrderId('');
+    setOrderNotes('');
+    setLandmarkHostel('');
     setIsCheckoutOpen(false);
     ['swiftwave_checkout_open', 'swiftwave_order_id', 'swiftwave_order_notes', 'swiftwave_landmark'].forEach(k => localStorage.removeItem(k));
   };
@@ -852,7 +877,6 @@ export default function App() {
         </aside>
       )}
 
-      {/* Top Corporate Legal Badge Bar */}
       <div className="bg-[#A044C3] text-white text-xs py-2 px-4 border-b border-[#A044C3]">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-2">
           <div className="flex items-center gap-2">
@@ -888,9 +912,41 @@ export default function App() {
               </div>
             </div>
 
+            {/* DESKTOP SEARCH WITH HISTORY */}
             <div className="flex-1 max-w-md relative hidden sm:block">
               <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-              <input type="text" placeholder="Search products, gadgets, essentials..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full bg-slate-100 hover:bg-slate-200/60 focus:bg-white text-sm rounded-full pl-10 pr-4 py-2 border border-transparent focus:border-[#A044C3] focus:ring-4 focus:ring-[#A044C3]/10 transition-all outline-none" />
+              <input 
+                type="text" 
+                placeholder="Search products, gadgets, essentials..." 
+                value={searchQuery} 
+                onChange={(e) => setSearchQuery(e.target.value)} 
+                onFocus={() => setIsSearchFocused(true)}
+                onBlur={() => setTimeout(() => setIsSearchFocused(false), 200)}
+                onKeyDown={handleSearchSubmit}
+                className="w-full bg-slate-100 hover:bg-slate-200/60 focus:bg-white text-sm rounded-full pl-10 pr-4 py-2 border border-transparent focus:border-[#A044C3] focus:ring-4 focus:ring-[#A044C3]/10 transition-all outline-none" 
+              />
+              {/* Dropdown Menu */}
+              {isSearchFocused && recentSearches.length > 0 && !searchQuery && (
+                  <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-200 shadow-xl rounded-2xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
+                      <div className="px-4 py-2.5 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Recent Searches</span>
+                          <button onClick={() => setRecentSearches([])} className="text-[10px] font-bold text-[#A044C3] hover:underline">Clear</button>
+                      </div>
+                      {recentSearches.map((term, i) => (
+                          <div 
+                              key={i} 
+                              className="flex justify-between items-center px-4 py-3 hover:bg-slate-50 cursor-pointer border-b border-slate-50 last:border-0" 
+                              onClick={() => { setSearchQuery(term); saveSearchTerm(term); setIsSearchFocused(false); }}
+                          >
+                              <div className="flex items-center gap-2.5 text-sm text-slate-700">
+                                  <History className="w-4 h-4 text-slate-400" />
+                                  <span className="font-semibold">{term}</span>
+                              </div>
+                              <button onClick={(e) => removeSearchHistory(e, term)} className="text-slate-400 hover:text-rose-500 p-1 rounded-md transition-colors"><X className="w-3.5 h-3.5" /></button>
+                          </div>
+                      ))}
+                  </div>
+              )}
             </div>
 
             <button onClick={() => setIsCartOpen(true)} className="relative inline-flex items-center gap-2 bg-[#FFBB1C] hover:opacity-90 text-violet-900 text-xs sm:text-sm font-black px-4 py-2.5 rounded-full transition-all shadow-md active:scale-95">
@@ -904,9 +960,41 @@ export default function App() {
             </button>
           </div>
 
+          {/* MOBILE SEARCH WITH HISTORY */}
           <div className="mt-3 sm:hidden relative">
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-            <input type="text" placeholder="Search products..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full bg-slate-100 text-sm rounded-xl pl-9 pr-3 py-2 border border-transparent focus:border-[#A044C3] focus:bg-white transition-all outline-none" />
+            <input 
+              type="text" 
+              placeholder="Search products..." 
+              value={searchQuery} 
+              onChange={(e) => setSearchQuery(e.target.value)} 
+              onFocus={() => setIsSearchFocused(true)}
+              onBlur={() => setTimeout(() => setIsSearchFocused(false), 200)}
+              onKeyDown={handleSearchSubmit}
+              className="w-full bg-slate-100 text-sm rounded-xl pl-9 pr-3 py-2.5 border border-transparent focus:border-[#A044C3] focus:bg-white transition-all outline-none" 
+            />
+            {/* Mobile Dropdown */}
+            {isSearchFocused && recentSearches.length > 0 && !searchQuery && (
+                  <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-200 shadow-xl rounded-xl overflow-hidden z-50">
+                      <div className="px-4 py-2 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Recent Searches</span>
+                          <button onClick={() => setRecentSearches([])} className="text-[10px] font-bold text-[#A044C3]">Clear</button>
+                      </div>
+                      {recentSearches.map((term, i) => (
+                          <div 
+                              key={i} 
+                              className="flex justify-between items-center px-4 py-3 hover:bg-slate-50 cursor-pointer border-b border-slate-50 last:border-0" 
+                              onClick={() => { setSearchQuery(term); saveSearchTerm(term); setIsSearchFocused(false); }}
+                          >
+                              <div className="flex items-center gap-2.5 text-sm text-slate-700">
+                                  <History className="w-4 h-4 text-slate-400" />
+                                  <span className="font-semibold">{term}</span>
+                              </div>
+                              <button onClick={(e) => removeSearchHistory(e, term)} className="text-slate-400 hover:text-rose-500 p-1 rounded-md"><X className="w-3.5 h-3.5" /></button>
+                          </div>
+                      ))}
+                  </div>
+              )}
           </div>
 
           <nav className="flex items-center gap-2 overflow-x-auto no-scrollbar pt-3 pb-1">
@@ -923,11 +1011,9 @@ export default function App() {
       </header>
 
       <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
-        
-        {/* PWA INSTALLER PLACED HERE */}
+       
         <PWAInstaller />
 
-        {/* Brand Hero Banner */}
         <section className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#A044C3] via-[#8A36A8] to-violet-900 text-white p-6 sm:p-10 mb-8 shadow-xl border border-[#A044C3]">
           <div className="relative z-10 max-w-2xl">
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-[#FFBB1C] text-violet-900 shadow-sm mb-3">
@@ -1045,7 +1131,6 @@ export default function App() {
               })}
             </div>
 
-            {/* Pagination Load More */}
             {filteredProducts.length > displayLimit && (
               <div className="flex justify-center mt-10">
                 <button
@@ -1061,7 +1146,6 @@ export default function App() {
         )}
       </main>
 
-      {/* Product Detail Modal */}
       {activeModalProduct && (
         <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4" onClick={(e) => { if (e.target === e.currentTarget) closeProductModal(); }}>
           <div className="bg-white rounded-3xl max-w-2xl w-full overflow-hidden shadow-2xl relative border border-slate-200 flex flex-col max-h-[92vh]">
@@ -1162,7 +1246,6 @@ export default function App() {
         </div>
       )}
 
-      {/* Cart Drawer */}
       {isCartOpen && (
         <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex justify-end">
           <div className="bg-white w-full max-w-md h-full shadow-2xl flex flex-col justify-between">
@@ -1222,7 +1305,6 @@ export default function App() {
         </div>
       )}
 
-      {/* Checkout Modal */}
       {isCheckoutOpen && (
         <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4" onClick={(e) => { if (e.target === e.currentTarget) setIsCheckoutOpen(false); }}>
           <div className="bg-white rounded-3xl max-w-lg w-full max-h-[92vh] overflow-y-auto p-5 sm:p-6 relative border border-slate-200 shadow-2xl">
@@ -1365,8 +1447,8 @@ export default function App() {
             <div className="mb-4 px-2">
               <label className="flex items-start gap-3 bg-[#A044C3]/5 p-3 rounded-xl border border-[#A044C3]/20 cursor-pointer hover:bg-[#A044C3]/10 transition-colors">
                 <div className="pt-0.5">
-                  <input 
-                    type="checkbox" 
+                  <input
+                    type="checkbox"
                     checked={agreedToPolicy}
                     onChange={(e) => setAgreedToPolicy(e.target.checked)}
                     className="w-4 h-4 text-[#A044C3] bg-white border-slate-300 rounded focus:ring-[#A044C3] cursor-pointer"
@@ -1378,9 +1460,9 @@ export default function App() {
               </label>
             </div>
 
-            <button 
-              type="button" 
-              onClick={handleFinalOrder} 
+            <button
+              type="button"
+              onClick={handleFinalOrder}
               disabled={!agreedToPolicy}
               className={`w-full font-bold text-sm py-3 rounded-2xl shadow-lg transition-all flex items-center justify-center gap-2 ${agreedToPolicy ? 'bg-emerald-600 hover:bg-emerald-700 text-white active:scale-95 shadow-emerald-600/30' : 'bg-slate-300 text-slate-500 cursor-not-allowed shadow-none'}`}
             >
@@ -1390,22 +1472,21 @@ export default function App() {
         </div>
       )}
 
-      {/* Brand Identity Modal */}
       {showAboutModal && (
         <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-lg w-full p-6 relative border border-slate-200 shadow-2xl">
             <button onClick={() => setShowAboutModal(false)} className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white shadow-sm hover:bg-slate-100 text-slate-600 flex items-center justify-center transition-colors z-10"><X className="w-4 h-4" /></button>
-            
+           
             <div className="flex justify-center mb-6 bg-[#A044C3] p-6 rounded-2xl mt-2">
               <img src="/logo.png" alt="Swiftwave" className="h-16 w-auto object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
             </div>
-            
+           
             <div className="flex items-center gap-2 mb-3">
               <ShieldCheck className="w-5 h-5 text-[#A044C3]" />
               <h3 className="text-base font-bold text-slate-900">About Swiftwave Variety Mall</h3>
             </div>
             <p className="text-[13px] text-slate-600 leading-relaxed mb-6">Swiftwave is your modern everyday marketplace built for the way you actually live. Bringing together gadgets, home essentials, school supplies, phone accessories, beauty products, children's toys, and creator tools under one roof.</p>
-            
+           
             <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 mb-4">
               <h4 className="text-[10px] font-bold text-slate-900 uppercase tracking-wider mb-3">Connect With Us</h4>
               <div className="grid grid-cols-3 gap-2">
@@ -1425,13 +1506,12 @@ export default function App() {
                 <ShieldCheck className="w-4 h-4" /> View Certificate of Incorporation
               </button>
             </div>
-            
+           
             <button onClick={() => setShowAboutModal(false)} className="w-full bg-slate-900 text-white font-bold text-sm py-3 rounded-xl hover:bg-slate-800 transition-colors shadow-md">Back to Catalog</button>
           </div>
         </div>
       )}
 
-      {/* CAC Certificate Lightbox */}
       {showCertLightbox && (
         <div className="fixed inset-0 z-50 bg-black/95 backdrop-blur-md flex items-center justify-center p-4" onClick={() => setShowCertLightbox(false)}>
           <button onClick={() => setShowCertLightbox(false)} className="absolute top-6 right-6 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors border border-white/20"><X className="w-5 h-5" /></button>
@@ -1439,7 +1519,6 @@ export default function App() {
         </div>
       )}
 
-      {/* Shariah Compliance & T&C Modal */}
       {showPolicyModal && (
         <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-lg w-full p-6 relative border border-slate-200 shadow-2xl overflow-y-auto max-h-[90vh]">
@@ -1466,19 +1545,18 @@ export default function App() {
           </div>
         </div>
       )}
-      
-{/* Product Image Lightbox (Zoom) */}
+     
       {isLightboxOpen && activeModalProduct && mediaViewMode === 'photos' && (
         <div className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-xl flex items-center justify-center p-4 sm:p-8" onClick={() => setIsLightboxOpen(false)}>
           <button onClick={() => setIsLightboxOpen(false)} className="absolute top-4 right-4 sm:top-8 sm:right-8 w-12 h-12 rounded-full bg-white/10 hover:bg-white/25 text-white flex items-center justify-center transition-colors border border-white/20 z-10">
             <X className="w-6 h-6" />
           </button>
-          
-          <img 
-            src={formatDriveUrl(activeModalProduct.images?.[activeImageIndex] || activeModalProduct.images?.[0] || '')} 
-            alt={activeModalProduct.name} 
-            className="max-w-full max-h-full object-contain rounded-xl shadow-2xl" 
-            onClick={(e) => e.stopPropagation()} 
+         
+          <img
+            src={formatDriveUrl(activeModalProduct.images?.[activeImageIndex] || activeModalProduct.images?.[0] || '')}
+            alt={activeModalProduct.name}
+            className="max-w-full max-h-full object-contain rounded-xl shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
           />
 
           {activeModalProduct.images && activeModalProduct.images.length > 1 && (
@@ -1494,7 +1572,6 @@ export default function App() {
         </div>
       )}
 
-      {/* Footer */}
       <footer className="bg-[#A044C3] text-white/90 text-xs pt-10 pb-8 mt-auto border-t-4 border-[#FFBB1C]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 pb-8 border-b border-white/20">
