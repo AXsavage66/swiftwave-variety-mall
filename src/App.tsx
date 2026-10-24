@@ -1593,6 +1593,10 @@ export default function App() {
               <h4 className="text-[#FFBB1C] font-bold text-xs uppercase tracking-wider mb-3">Connect & Legal</h4>
               <div className="flex flex-col space-y-2 text-white/80">
                 <a href={SOCIAL_LINKS.instagram} target="_blank" rel="noreferrer" className="hover:text-[#FFBB1C] transition-colors flex items-center gap-1.5"><Instagram className="w-3.5 h-3.5" /><span>Instagram</span></a>
+                <a href={SOCIAL_LINKS.tiktok} target="_blank" rel="noreferrer" className="hover:text-[#FFBB1C] transition-colors flex items-center gap-1.5">
+                  <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.99v8.29c.03 2.05-.72 4.17-2.18 5.62-1.74 1.79-4.34 2.5-6.75 1.95-2.61-.53-4.78-2.6-5.46-5.18-.8-2.91.43-6.19 3.02-7.66 1.48-.87 3.26-1.07 4.93-.68v4.11c-.93-.31-1.99-.25-2.87.21-1.09.56-1.74 1.77-1.64 3 .07 1.19.86 2.27 2 2.59 1.25.37 2.7-.1 3.42-1.13.38-.52.55-1.17.54-1.81V.02z" /></svg>
+                  <span>TikTok</span>
+                </a>
                 <a href={SOCIAL_LINKS.facebook} target="_blank" rel="noreferrer" className="hover:text-[#FFBB1C] transition-colors flex items-center gap-1.5"><Facebook className="w-3.5 h-3.5" /><span>Facebook</span></a>
                 <button onClick={() => setShowPolicyModal(true)} className="hover:text-[#FFBB1C] transition-colors flex items-center gap-1.5 mt-2"><Scale className="w-3.5 h-3.5" /><span>Store Policies & Returns</span></button>
               </div>
