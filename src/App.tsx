@@ -4,7 +4,7 @@ import {
   CheckCircle2, ChevronRight, ChevronLeft, Info, Plus, Minus,
   Trash2, Truck, Building2, Copy, Image as ImageIcon, Maximize2,
   PhoneCall, Check, Instagram, Facebook, MessageCircle, Headphones,
-  Share, Calculator, Shield, Scale, ArrowDownCircle, History
+  Share, Calculator, Shield, Scale, ArrowDownCircle, History, Loader2
 } from 'lucide-react';
 
 // ==========================================
@@ -18,7 +18,7 @@ const PWAInstaller = () => {
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-   
+    
     setIsDismissed(sessionStorage.getItem('sw_install_dismissed') === 'true');
 
     const handleBeforeInstall = (e: any) => {
@@ -74,7 +74,7 @@ const PWAInstaller = () => {
           <X className="w-3.5 h-3.5 text-white" />
         </button>
       </div>
-     
+      
       {isIOS ? (
         <div className="bg-black/20 rounded-lg p-2.5 text-[11px] font-medium text-white/90 text-center">
           Tap <span className="font-bold text-[#FFBB1C]">Share</span> below, then <span className="font-bold text-[#FFBB1C]">"Add to Home Screen"</span>
@@ -119,7 +119,7 @@ function AdminPanel() {
           const headers = parseCSVLine(lines[0]).map(h => h.toLowerCase().replace(/[^a-z]/g, ''));
           const idIdx = headers.findIndex(h => h.includes('id'));
           const nameIdx = headers.findIndex(h => h.includes('name') || h.includes('product'));
-         
+          
           const parsed = [];
           for(let i = 1; i < lines.length; i++) {
              const row = parseCSVLine(lines[i]);
@@ -466,8 +466,9 @@ export default function App() {
   const [isCartOpen, setIsCartOpen] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState<boolean>(() => typeof window !== 'undefined' ? localStorage.getItem('swiftwave_checkout_open') === 'true' : false);
+  const [isProcessingCheckout, setIsProcessingCheckout] = useState<boolean>(false);
   const [agreedToPolicy, setAgreedToPolicy] = useState<boolean>(false);
- 
+  
   const [copiedShop9, setCopiedShop9] = useState<boolean>(false);
   const [copiedShop10, setCopiedShop10] = useState<boolean>(false);
   const [copiedOrderId, setCopiedOrderId] = useState<boolean>(false);
@@ -686,7 +687,7 @@ export default function App() {
       if (currentCart.length === 0) return currentCart;
       const notices: string[] = [];
       const updatedCart: CartItem[] = [];
-     
+      
       currentCart.forEach((item) => {
         if (!item || !item.product) return;
         const liveProduct = products.find((p) => p.id === item.product.id);
@@ -745,7 +746,7 @@ export default function App() {
     if (!activeModalProduct || products.length === 0) return [];
     const stopWords = new Set(['and', 'the', 'for', 'with', 'in', 'of', 'to', 'a', 'an', 'at', 'by', 'from', 'on', 'is', 'it', 'or', 'as', 'are', 'be', 'this', 'that', 'your', 'original', 'high', 'quality', 'new', 'best', 'pro', 'plus']);
     const currentTokens = activeModalProduct.name.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter((w) => w.length > 2 && !stopWords.has(w));
-   
+    
     const scored = products.filter((p) => p.id !== activeModalProduct.id).map((p) => {
       let score = 0;
       if (p.category.toLowerCase() === activeModalProduct.category.toLowerCase()) score += 3;
@@ -794,7 +795,7 @@ export default function App() {
     const s10Items: CartItem[] = [];
     let s9Sum = 0;
     let s10Sum = 0;
-   
+    
     cart.forEach((item) => {
       if (!item || !item.product) return;
       const shop = getProductShop(item.product.category || '');
@@ -838,21 +839,26 @@ export default function App() {
     if (deliveryMethod === 'minna' && !landmarkHostel.trim()) return alert("Please specify your delivery address, landmark, or campus drop-off point.");
     if (deliveryMethod === 'nationwide' && !deliveryAddress.trim()) return alert("Please enter your delivery destination (state, city, street).");
 
-    const deliveryTitle = deliveryMethod === 'pickup' ? "Store Pickup @ ABH Plaza, Minna (FREE)" : deliveryMethod === 'minna' ? `Minna Local/Campus Dispatch (₦1,500) - [${minnaCampusZone}]` : `Nationwide Dispatch: ${nationwideZone}`;
+    setIsProcessingCheckout(true);
 
-    let paymentBreakdownText = isMixedCart ? `*PAYMENT SPLIT INSTRUCTIONS:*\n- Shop 9 (Essentials Subtotal): ₦${shop9Total.toLocaleString()} -> Pay to OPay (${SHOP_ACCOUNTS.shop9.number})\n- Shop 10 (Gadgets Subtotal): ₦${shop10Total.toLocaleString()} -> Pay to OPay (${SHOP_ACCOUNTS.shop10.number})\n- Delivery Fee: ₦${deliveryFee.toLocaleString()} (Paid to either account)\n*TOTAL PAID:* ₦${orderTotal.toLocaleString()}` : `*PAYMENT ACCOUNT:*\nPaid into OPay (${hasShop10 ? SHOP_ACCOUNTS.shop10.number : SHOP_ACCOUNTS.shop9.number}) - ${hasShop10 ? 'Shop 10 Gadgets' : 'Shop 9 Daily Essentials'}\nAccount: ${SHOP_ACCOUNTS.shop9.name}\n*TOTAL PAID:* ₦${orderTotal.toLocaleString()}`;
-    let itemsSummary = isMixedCart ? `*SHOP 10 (GADGETS & TECH):*\n${shop10Items.map((item, idx) => `  ${idx + 1}. ${item.product.name} x${item.quantity} = ₦${(item.product.price * item.quantity).toLocaleString()}`).join('\n')}\n\n*SHOP 9 (DAILY ESSENTIALS):*\n${shop9Items.map((item, idx) => `  ${idx + 1}. ${item.product.name} x${item.quantity} = ₦${(item.product.price * item.quantity).toLocaleString()}`).join('\n')}` : cart.map((item, idx) => `${idx + 1}. ${item.product.name} (ID: ${item.product.id}) x${item.quantity} = ₦${(item.product.price * item.quantity).toLocaleString()}`).join('\n');
+    setTimeout(() => {
+        const deliveryTitle = deliveryMethod === 'pickup' ? "Store Pickup @ ABH Plaza, Minna (FREE)" : deliveryMethod === 'minna' ? `Minna Local/Campus Dispatch (₦1,500) - [${minnaCampusZone}]` : `Nationwide Dispatch: ${nationwideZone}`;
 
-    const message = `🛍️ *PAID ORDER VERIFICATION - SWIFTWAVE MALL*\n*Order Reference:* #${orderId}\n----------------------------------------\n*Customer Name:* ${customerName.trim()}\n*Calling Phone:* ${customerPhone.trim()}\n\n*Fulfillment:* ${deliveryTitle}\n${deliveryMethod === 'minna' ? `*Area/Zone:* ${minnaCampusZone}\n*Address/Landmark/Drop Point:* ${landmarkHostel.trim()}\n` : ''}${deliveryMethod === 'nationwide' ? `*Delivery Destination:* ${deliveryAddress.trim()}\n` : ''}${orderNotes.trim() ? `*Special Notes:* ${orderNotes.trim()}\n` : ''}\n*ITEMS ORDERED:*\n${itemsSummary}\n----------------------------------------\n*Subtotal:* ₦${cartSubtotal.toLocaleString()}\n*Delivery Fee:* ₦${deliveryFee.toLocaleString()}\n----------------------------------------\n${paymentBreakdownText}\n----------------------------------------\n*Transfer Remark Used:* ${orderId}\n*(Attached is my payment transfer receipt screenshot)*`;
-   
-    window.open(`https://wa.me/${selectedRepNumber}?text=${encodeURIComponent(message)}`, '_blank');
+        let paymentBreakdownText = isMixedCart ? `*PAYMENT SPLIT INSTRUCTIONS:*\n- Shop 9 (Essentials Subtotal): ₦${shop9Total.toLocaleString()} -> Pay to OPay (${SHOP_ACCOUNTS.shop9.number})\n- Shop 10 (Gadgets Subtotal): ₦${shop10Total.toLocaleString()} -> Pay to OPay (${SHOP_ACCOUNTS.shop10.number})\n- Delivery Fee: ₦${deliveryFee.toLocaleString()} (Paid to either account)\n*TOTAL PAID:* ₦${orderTotal.toLocaleString()}` : `*PAYMENT ACCOUNT:*\nPaid into OPay (${hasShop10 ? SHOP_ACCOUNTS.shop10.number : SHOP_ACCOUNTS.shop9.number}) - ${hasShop10 ? 'Shop 10 Gadgets' : 'Shop 9 Daily Essentials'}\nAccount: ${SHOP_ACCOUNTS.shop9.name}\n*TOTAL PAID:* ₦${orderTotal.toLocaleString()}`;
+        let itemsSummary = isMixedCart ? `*SHOP 10 (GADGETS & TECH):*\n${shop10Items.map((item, idx) => `  ${idx + 1}. ${item.product.name} x${item.quantity} = ₦${(item.product.price * item.quantity).toLocaleString()}`).join('\n')}\n\n*SHOP 9 (DAILY ESSENTIALS):*\n${shop9Items.map((item, idx) => `  ${idx + 1}. ${item.product.name} x${item.quantity} = ₦${(item.product.price * item.quantity).toLocaleString()}`).join('\n')}` : cart.map((item, idx) => `${idx + 1}. ${item.product.name} (ID: ${item.product.id}) x${item.quantity} = ₦${(item.product.price * item.quantity).toLocaleString()}`).join('\n');
 
-    setCart([]);
-    setOrderId('');
-    setOrderNotes('');
-    setLandmarkHostel('');
-    setIsCheckoutOpen(false);
-    ['swiftwave_checkout_open', 'swiftwave_order_id', 'swiftwave_order_notes', 'swiftwave_landmark'].forEach(k => localStorage.removeItem(k));
+        const message = `🛍️ *PAID ORDER VERIFICATION - SWIFTWAVE MALL*\n*Order Reference:* #${orderId}\n----------------------------------------\n*Customer Name:* ${customerName.trim()}\n*Calling Phone:* ${customerPhone.trim()}\n\n*Fulfillment:* ${deliveryTitle}\n${deliveryMethod === 'minna' ? `*Area/Zone:* ${minnaCampusZone}\n*Address/Landmark/Drop Point:* ${landmarkHostel.trim()}\n` : ''}${deliveryMethod === 'nationwide' ? `*Delivery Destination:* ${deliveryAddress.trim()}\n` : ''}${orderNotes.trim() ? `*Special Notes:* ${orderNotes.trim()}\n` : ''}\n*ITEMS ORDERED:*\n${itemsSummary}\n----------------------------------------\n*Subtotal:* ₦${cartSubtotal.toLocaleString()}\n*Delivery Fee:* ₦${deliveryFee.toLocaleString()}\n----------------------------------------\n${paymentBreakdownText}\n----------------------------------------\n*Transfer Remark Used:* ${orderId}\n*(Attached is my payment transfer receipt screenshot)*`;
+        
+        window.open(`https://wa.me/${selectedRepNumber}?text=${encodeURIComponent(message)}`, '_blank');
+
+        setCart([]);
+        setOrderId('');
+        setOrderNotes('');
+        setLandmarkHostel('');
+        setIsCheckoutOpen(false);
+        setIsProcessingCheckout(false);
+        ['swiftwave_checkout_open', 'swiftwave_order_id', 'swiftwave_order_notes', 'swiftwave_landmark'].forEach(k => localStorage.removeItem(k));
+    }, 1500);
   };
 
   const activeVideoEmbed = useMemo(() => activeModalProduct ? getVideoEmbed(activeModalProduct.video) : null, [activeModalProduct]);
@@ -975,26 +981,26 @@ export default function App() {
             />
             {/* Mobile Dropdown */}
             {isSearchFocused && recentSearches.length > 0 && !searchQuery && (
-                  <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-200 shadow-xl rounded-xl overflow-hidden z-50">
-                      <div className="px-4 py-2 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Recent Searches</span>
-                          <button onClick={() => setRecentSearches([])} className="text-[10px] font-bold text-[#A044C3]">Clear</button>
-                      </div>
-                      {recentSearches.map((term, i) => (
-                          <div 
-                              key={i} 
-                              className="flex justify-between items-center px-4 py-3 hover:bg-slate-50 cursor-pointer border-b border-slate-50 last:border-0" 
-                              onClick={() => { setSearchQuery(term); saveSearchTerm(term); setIsSearchFocused(false); }}
-                          >
-                              <div className="flex items-center gap-2.5 text-sm text-slate-700">
-                                  <History className="w-4 h-4 text-slate-400" />
-                                  <span className="font-semibold">{term}</span>
-                              </div>
-                              <button onClick={(e) => removeSearchHistory(e, term)} className="text-slate-400 hover:text-rose-500 p-1 rounded-md"><X className="w-3.5 h-3.5" /></button>
-                          </div>
-                      ))}
-                  </div>
-              )}
+                <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-200 shadow-xl rounded-xl overflow-hidden z-50">
+                    <div className="px-4 py-2 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Recent Searches</span>
+                        <button onClick={() => setRecentSearches([])} className="text-[10px] font-bold text-[#A044C3]">Clear</button>
+                    </div>
+                    {recentSearches.map((term, i) => (
+                        <div 
+                            key={i} 
+                            className="flex justify-between items-center px-4 py-3 hover:bg-slate-50 cursor-pointer border-b border-slate-50 last:border-0" 
+                            onClick={() => { setSearchQuery(term); saveSearchTerm(term); setIsSearchFocused(false); }}
+                        >
+                            <div className="flex items-center gap-2.5 text-sm text-slate-700">
+                                <History className="w-4 h-4 text-slate-400" />
+                                <span className="font-semibold">{term}</span>
+                            </div>
+                            <button onClick={(e) => removeSearchHistory(e, term)} className="text-slate-400 hover:text-rose-500 p-1 rounded-md"><X className="w-3.5 h-3.5" /></button>
+                        </div>
+                    ))}
+                </div>
+            )}
           </div>
 
           <nav className="flex items-center gap-2 overflow-x-auto no-scrollbar pt-3 pb-1">
@@ -1011,7 +1017,7 @@ export default function App() {
       </header>
 
       <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
-       
+        
         <PWAInstaller />
 
         <section className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#A044C3] via-[#8A36A8] to-violet-900 text-white p-6 sm:p-10 mb-8 shadow-xl border border-[#A044C3]">
@@ -1455,7 +1461,7 @@ export default function App() {
                   />
                 </div>
                 <span className="text-[11px] font-medium text-slate-700 leading-relaxed">
-                  I explicitly acknowledge and agree to the <button type="button" onClick={(e) => { e.preventDefault(); setIsCheckoutOpen(false); setShowPolicyModal(true); }} className="text-[#A044C3] font-bold hover:underline">48-hour Option of Defect return policy</button> and confirm my order details are correct.
+                  I explicitly acknowledge and agree to the <button type="button" onClick={(e) => { e.preventDefault(); setShowPolicyModal(true); }} className="text-[#A044C3] font-bold hover:underline">48-hour Option of Defect return policy</button> and confirm my order details are correct.
                 </span>
               </label>
             </div>
@@ -1463,10 +1469,20 @@ export default function App() {
             <button
               type="button"
               onClick={handleFinalOrder}
-              disabled={!agreedToPolicy}
-              className={`w-full font-bold text-sm py-3 rounded-2xl shadow-lg transition-all flex items-center justify-center gap-2 ${agreedToPolicy ? 'bg-emerald-600 hover:bg-emerald-700 text-white active:scale-95 shadow-emerald-600/30' : 'bg-slate-300 text-slate-500 cursor-not-allowed shadow-none'}`}
+              disabled={!agreedToPolicy || isProcessingCheckout}
+              className={`w-full font-bold text-sm py-3 rounded-2xl shadow-lg transition-all flex items-center justify-center gap-2 ${(agreedToPolicy && !isProcessingCheckout) ? 'bg-emerald-600 hover:bg-emerald-700 text-white active:scale-95 shadow-emerald-600/30' : 'bg-slate-300 text-slate-500 cursor-not-allowed shadow-none'}`}
             >
-              <span>I Have Transferred • Submit via WhatsApp</span><ExternalLink className="w-4 h-4" />
+              {isProcessingCheckout ? (
+                  <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <span>Preparing Order...</span>
+                  </>
+              ) : (
+                  <>
+                      <span>I Have Transferred • Submit via WhatsApp</span>
+                      <ExternalLink className="w-4 h-4" />
+                  </>
+              )}
             </button>
           </div>
         </div>
@@ -1476,17 +1492,17 @@ export default function App() {
         <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-lg w-full p-6 relative border border-slate-200 shadow-2xl">
             <button onClick={() => setShowAboutModal(false)} className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white shadow-sm hover:bg-slate-100 text-slate-600 flex items-center justify-center transition-colors z-10"><X className="w-4 h-4" /></button>
-           
+            
             <div className="flex justify-center mb-6 bg-[#A044C3] p-6 rounded-2xl mt-2">
               <img src="/logo.png" alt="Swiftwave" className="h-16 w-auto object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
             </div>
-           
+            
             <div className="flex items-center gap-2 mb-3">
               <ShieldCheck className="w-5 h-5 text-[#A044C3]" />
               <h3 className="text-base font-bold text-slate-900">About Swiftwave Variety Mall</h3>
             </div>
             <p className="text-[13px] text-slate-600 leading-relaxed mb-6">Swiftwave is your modern everyday marketplace built for the way you actually live. Bringing together gadgets, home essentials, school supplies, phone accessories, beauty products, children's toys, and creator tools under one roof.</p>
-           
+            
             <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 mb-4">
               <h4 className="text-[10px] font-bold text-slate-900 uppercase tracking-wider mb-3">Connect With Us</h4>
               <div className="grid grid-cols-3 gap-2">
@@ -1506,7 +1522,7 @@ export default function App() {
                 <ShieldCheck className="w-4 h-4" /> View Certificate of Incorporation
               </button>
             </div>
-           
+            
             <button onClick={() => setShowAboutModal(false)} className="w-full bg-slate-900 text-white font-bold text-sm py-3 rounded-xl hover:bg-slate-800 transition-colors shadow-md">Back to Catalog</button>
           </div>
         </div>
@@ -1520,7 +1536,7 @@ export default function App() {
       )}
 
       {showPolicyModal && (
-        <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[60] bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-lg w-full p-6 relative border border-slate-200 shadow-2xl overflow-y-auto max-h-[90vh]">
             <button onClick={() => setShowPolicyModal(false)} className="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-colors"><X className="w-4 h-4" /></button>
             <div className="flex items-center gap-2 mb-4">
@@ -1533,7 +1549,7 @@ export default function App() {
                 <p>All sales are finalized upon the confirmation of payment receipt and physical or constructive delivery to the customer or their assigned rider. Nationwide deliveries require full payment prior to dispatch.</p>
               </div>
               <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
-                <h4 className="font-bold text-slate-900 uppercase tracking-wider mb-1.5 text-[11px]">2. Option of Defect (Khiyar al-Ayb)</h4>
+                <h4 className="font-bold text-slate-900 uppercase tracking-wider mb-1.5 text-[11px]">2. Option of Defect</h4>
                 <p>We stand by our verified inventory. To ensure absolute transparency and fairness, we offer a strict <strong>48-hour return window</strong> exclusively for items sold with factory defects or dead-on-arrival status. Physical damage caused post-delivery is not covered.</p>
               </div>
               <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
@@ -1545,13 +1561,13 @@ export default function App() {
           </div>
         </div>
       )}
-     
+      
       {isLightboxOpen && activeModalProduct && mediaViewMode === 'photos' && (
         <div className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-xl flex items-center justify-center p-4 sm:p-8" onClick={() => setIsLightboxOpen(false)}>
           <button onClick={() => setIsLightboxOpen(false)} className="absolute top-4 right-4 sm:top-8 sm:right-8 w-12 h-12 rounded-full bg-white/10 hover:bg-white/25 text-white flex items-center justify-center transition-colors border border-white/20 z-10">
             <X className="w-6 h-6" />
           </button>
-         
+          
           <img
             src={formatDriveUrl(activeModalProduct.images?.[activeImageIndex] || activeModalProduct.images?.[0] || '')}
             alt={activeModalProduct.name}
