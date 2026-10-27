@@ -660,13 +660,15 @@ export default function App() {
   }, [products]);
 
   const openProductModal = (product: Product) => {
-    if (searchQuery) saveSearchTerm(searchQuery); // Save search term when clicking a product!
+    if (searchQuery) saveSearchTerm(searchQuery); 
     
     sessionStorage.setItem('sw_scroll', window.scrollY.toString());
     setActiveModalProduct(product);
     setActiveImageIndex(0);
     setMediaViewMode('photos');
     setIsDescExpanded(false);
+    
+    // NEW DEEP LINKING LOGIC 
     try {
       window.history.replaceState(null, '', `${window.location.pathname}?product=${encodeURIComponent(product.id)}`);
       sessionStorage.setItem('swiftwave_active_modal', product.id);
@@ -679,6 +681,24 @@ export default function App() {
       window.history.replaceState(null, '', window.location.pathname);
       sessionStorage.removeItem('swiftwave_active_modal');
     } catch (e) { console.error(e); }
+  };
+
+  // NATIVE SHARE FUNCTION
+  const handleShareProduct = async (product: Product) => {
+    const shareUrl = `${window.location.origin}${window.location.pathname}?product=${encodeURIComponent(product.id)}`;
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `Check out ${product.name} on SwiftWave`,
+          text: product.description,
+          url: shareUrl
+        });
+      } catch (err) { console.log('Share dismissed'); }
+    } else {
+      navigator.clipboard.writeText(shareUrl);
+      setToastMessage("Product link copied to clipboard!");
+      setTimeout(() => setToastMessage(null), 3000);
+    }
   };
 
   useEffect(() => {
@@ -1155,15 +1175,23 @@ export default function App() {
       {activeModalProduct && (
         <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4" onClick={(e) => { if (e.target === e.currentTarget) closeProductModal(); }}>
           <div className="bg-white rounded-3xl max-w-2xl w-full overflow-hidden shadow-2xl relative border border-slate-200 flex flex-col max-h-[92vh]">
+            
+            {/* UPDATED MODAL HEADER WITH NATIVE SHARE BUTTON */}
             <div className="p-4 border-b border-slate-100 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="text-xs font-mono font-bold text-[#A044C3] bg-[#A044C3]/10 px-2 py-0.5 rounded-md">{activeModalProduct.id}</span>
                 <span className="text-xs text-slate-400">• {activeModalProduct.category}</span>
               </div>
-              <button onClick={closeProductModal} className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-colors">
-                <X className="w-4 h-4" />
-              </button>
+              <div className="flex items-center gap-2">
+                <button onClick={() => handleShareProduct(activeModalProduct)} className="w-8 h-8 rounded-full bg-slate-100 hover:bg-[#A044C3] hover:text-[#FFBB1C] text-slate-600 flex items-center justify-center transition-colors">
+                  <Share className="w-4 h-4" />
+                </button>
+                <button onClick={closeProductModal} className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-colors">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
             </div>
+
             <div className="p-6 overflow-y-auto flex-1">
               {activeModalProduct.video && (
                 <div className="flex items-center gap-2 mb-3">
