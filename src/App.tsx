@@ -105,36 +105,48 @@ function AdminPanel() {
   const [products, setProducts] = useState<{id: string, name: string}[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
 
-  // SECURITY FIX: Fallback applied. Ensure VITE_ADMIN_PIN is set in your .env file.
-  const expectedPin = import.meta.env.VITE_ADMIN_PIN || "0000";
-
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (pinCode === expectedPin) {
-      setIsAuthenticated(true);
-      try {
-        const res = await fetch("https://docs.google.com/spreadsheets/d/1XysYSGvgDR9t70VSrIwdXsN3GwzOjFmLUOfgB2s8Xbo/gviz/tq?tqx=out:csv");
-        const text = await res.text();
-        const lines = text.split('\n').filter(x => x.trim());
-        if (lines.length > 1) {
-          const headers = parseCSVLine(lines[0]).map(h => h.toLowerCase().replace(/[^a-z]/g, ''));
-          const idIdx = headers.findIndex(h => h.includes('id'));
-          const nameIdx = headers.findIndex(h => h.includes('name') || h.includes('product'));
-          
-          const parsed = [];
-          for(let i = 1; i < lines.length; i++) {
-             const row = parseCSVLine(lines[i]);
-             if(idIdx > -1 && nameIdx > -1 && row[nameIdx]) {
-                parsed.push({ id: row[idIdx], name: row[nameIdx] });
-             }
+    setLoading(true);
+    const API_URL = "https://script.google.com/macros/s/AKfycbzPx4RCKIubIJyKkHfdZuVjk_lNYyueQrRHJaDY7rDPWVTltpNlcGpLPq76ydXVjgwD7w/exec";
+    
+    try {
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({ action: "verify", pin: pinCode })
+      });
+      const data = await response.json();
+      
+      if (data.status === 'success') {
+        setIsAuthenticated(true);
+        try {
+          const res = await fetch("https://docs.google.com/spreadsheets/d/1XysYSGvgDR9t70VSrIwdXsN3GwzOjFmLUOfgB2s8Xbo/gviz/tq?tqx=out:csv");
+          const text = await res.text();
+          const lines = text.split('\n').filter(x => x.trim());
+          if (lines.length > 1) {
+            const headers = parseCSVLine(lines[0]).map(h => h.toLowerCase().replace(/[^a-z]/g, ''));
+            const idIdx = headers.findIndex(h => h.includes('id'));
+            const nameIdx = headers.findIndex(h => h.includes('name') || h.includes('product'));
+            
+            const parsed = [];
+            for(let i = 1; i < lines.length; i++) {
+               const row = parseCSVLine(lines[i]);
+               if(idIdx > -1 && nameIdx > -1 && row[nameIdx]) {
+                  parsed.push({ id: row[idIdx], name: row[nameIdx] });
+               }
+            }
+            setProducts(parsed);
           }
-          setProducts(parsed);
-        }
-      } catch(err) { console.error("Catalog sync failed", err); }
-    } else {
-      alert("Unauthorized Access");
-      setPinCode('');
+        } catch(err) { console.error("Catalog sync failed", err); }
+      } else {
+        alert("Unauthorized Access");
+        setPinCode('');
+      }
+    } catch (err) {
+      alert("Network error.");
     }
+    setLoading(false);
   };
 
   const handleLogSale = async (e: React.FormEvent) => {
@@ -159,7 +171,6 @@ function AdminPanel() {
       const response = await fetch(API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain' },
-        // SECURITY FIX: Transmitting the live user input pinCode directly to backend
         body: JSON.stringify({ productId: finalId.trim(), quantity: quantity, pin: pinCode })
       });
       const data = await response.json();
@@ -188,12 +199,13 @@ function AdminPanel() {
             type="password"
             value={pinCode}
             onChange={(e) => setPinCode(e.target.value)}
-            className="w-full text-center text-2xl tracking-[0.5em] font-black p-4 rounded-xl border border-slate-300 focus:border-[#A044C3] outline-none mb-4"
+            disabled={loading}
+            className="w-full text-center text-2xl tracking-[0.5em] font-black p-4 rounded-xl border border-slate-300 focus:border-[#A044C3] outline-none mb-4 disabled:opacity-50"
             placeholder="••••"
             maxLength={4}
           />
-          <button type="submit" className="w-full bg-[#A044C3] text-[#FFBB1C] font-bold py-3 rounded-xl shadow-lg hover:opacity-90 transition-all">
-            Unlock Desk
+          <button type="submit" disabled={loading} className="w-full bg-[#A044C3] text-[#FFBB1C] font-bold py-3 rounded-xl shadow-lg hover:opacity-90 transition-all disabled:opacity-70 flex items-center justify-center gap-2">
+            {loading ? <span className="animate-pulse">Verifying...</span> : 'Unlock Desk'}
           </button>
         </form>
       </div>
