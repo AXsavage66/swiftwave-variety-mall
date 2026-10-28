@@ -583,7 +583,8 @@ export default function App() {
 
   const fetchInventory = useCallback(async () => {
     try {
-      const res = await fetch(GOOGLE_SHEET_CSV_URL);
+      // CACHE BUSTER APPLIED: Forces Google to return live data, not cached
+      const res = await fetch(`${GOOGLE_SHEET_CSV_URL}&cb=${new Date().getTime()}`);
       const csvText = await res.text();
       const rawLines = csvText.split('\n').filter(line => line.trim().length > 0);
       if (rawLines.length < 2) return;
@@ -657,9 +658,10 @@ export default function App() {
     }
   }, []);
 
+  // REAL-TIME SILENT SYNC ENGINE (10 SECONDS)
   useEffect(() => {
     fetchInventory();
-    const interval = setInterval(fetchInventory, 60000);
+    const interval = setInterval(fetchInventory, 10000); 
     return () => clearInterval(interval);
   }, [fetchInventory]);
 
