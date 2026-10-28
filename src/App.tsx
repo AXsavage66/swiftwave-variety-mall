@@ -105,11 +105,13 @@ function AdminPanel() {
   const [products, setProducts] = useState<{id: string, name: string}[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
 
-  const ADMIN_PIN = "1275";
+  // SECURITY FIX: Never hardcode PINs in the bundle. 
+  // Use a cosmetic check via Vite env vars, but rely strictly on backend Apps Script validation.
+  const expectedPin = import.meta.env.VITE_ADMIN_PIN || "0000";
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (pinCode === ADMIN_PIN) {
+    if (pinCode === expectedPin) {
       setIsAuthenticated(true);
       try {
         const res = await fetch("https://docs.google.com/spreadsheets/d/1XysYSGvgDR9t70VSrIwdXsN3GwzOjFmLUOfgB2s8Xbo/gviz/tq?tqx=out:csv");
@@ -158,7 +160,8 @@ function AdminPanel() {
       const response = await fetch(API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify({ productId: finalId.trim(), quantity: quantity, pin: ADMIN_PIN })
+        // SECURITY FIX: Pass the live pinCode state, NOT a hardcoded variable.
+        body: JSON.stringify({ productId: finalId.trim(), quantity: quantity, pin: pinCode })
       });
       const data = await response.json();
       if (data.status === 'success') {
@@ -229,6 +232,8 @@ function AdminPanel() {
                  setShowDropdown(true);
               }}
               onFocus={() => setShowDropdown(true)}
+              // BUG FIX: Removed setTimeout. Handled properly by onMouseDown in dropdown.
+              onBlur={() => setShowDropdown(false)}
               className="w-full p-3 rounded-xl border border-slate-300 focus:border-[#A044C3] outline-none font-bold text-slate-900"
             />
             {showDropdown && displayValue && (
@@ -236,7 +241,9 @@ function AdminPanel() {
                   {products.filter(p => p.name.toLowerCase().includes(displayValue.toLowerCase()) || p.id.toLowerCase().includes(displayValue.toLowerCase())).slice(0, 10).map(p => (
                      <div
                         key={p.id}
-                        onClick={() => {
+                        // BUG FIX: Changed onClick to onMouseDown to fire before input onBlur
+                        onMouseDown={(e) => {
+                          e.preventDefault();
                           setProductId(p.id);
                           setDisplayValue(p.name);
                           setShowDropdown(false);
@@ -947,7 +954,7 @@ export default function App() {
                 value={searchQuery} 
                 onChange={(e) => setSearchQuery(e.target.value)} 
                 onFocus={() => setIsSearchFocused(true)}
-                onBlur={() => setTimeout(() => setIsSearchFocused(false), 200)}
+                onBlur={() => setIsSearchFocused(false)} // BUG FIX: Removed setTimeout
                 onKeyDown={handleSearchSubmit}
                 className="w-full bg-slate-100 hover:bg-slate-200/60 focus:bg-white text-sm rounded-full pl-10 pr-4 py-2 border border-transparent focus:border-[#A044C3] focus:ring-4 focus:ring-[#A044C3]/10 transition-all outline-none" 
               />
@@ -956,19 +963,25 @@ export default function App() {
                   <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-200 shadow-xl rounded-2xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
                       <div className="px-4 py-2.5 border-b border-slate-100 flex justify-between items-center bg-slate-50">
                           <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Recent Searches</span>
-                          <button onClick={() => setRecentSearches([])} className="text-[10px] font-bold text-[#A044C3] hover:underline">Clear</button>
+                          <button onMouseDown={(e) => { e.preventDefault(); setRecentSearches([]); }} className="text-[10px] font-bold text-[#A044C3] hover:underline">Clear</button>
                       </div>
                       {recentSearches.map((term, i) => (
                           <div 
                               key={i} 
                               className="flex justify-between items-center px-4 py-3 hover:bg-slate-50 cursor-pointer border-b border-slate-50 last:border-0" 
-                              onClick={() => { setSearchQuery(term); saveSearchTerm(term); setIsSearchFocused(false); }}
+                              // BUG FIX: Changed onClick to onMouseDown
+                              onMouseDown={(e) => { 
+                                e.preventDefault(); 
+                                setSearchQuery(term); 
+                                saveSearchTerm(term); 
+                                setIsSearchFocused(false); 
+                              }}
                           >
                               <div className="flex items-center gap-2.5 text-sm text-slate-700">
                                   <History className="w-4 h-4 text-slate-400" />
                                   <span className="font-semibold">{term}</span>
                               </div>
-                              <button onClick={(e) => removeSearchHistory(e, term)} className="text-slate-400 hover:text-rose-500 p-1 rounded-md transition-colors"><X className="w-3.5 h-3.5" /></button>
+                              <button onMouseDown={(e) => { e.preventDefault(); removeSearchHistory(e, term); }} className="text-slate-400 hover:text-rose-500 p-1 rounded-md transition-colors"><X className="w-3.5 h-3.5" /></button>
                           </div>
                       ))}
                   </div>
@@ -995,7 +1008,7 @@ export default function App() {
               value={searchQuery} 
               onChange={(e) => setSearchQuery(e.target.value)} 
               onFocus={() => setIsSearchFocused(true)}
-              onBlur={() => setTimeout(() => setIsSearchFocused(false), 200)}
+              onBlur={() => setIsSearchFocused(false)} // BUG FIX: Removed setTimeout
               onKeyDown={handleSearchSubmit}
               className="w-full bg-slate-100 text-sm rounded-xl pl-9 pr-3 py-2.5 border border-transparent focus:border-[#A044C3] focus:bg-white transition-all outline-none" 
             />
@@ -1004,19 +1017,25 @@ export default function App() {
                 <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-200 shadow-xl rounded-xl overflow-hidden z-50">
                     <div className="px-4 py-2 border-b border-slate-100 flex justify-between items-center bg-slate-50">
                         <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Recent Searches</span>
-                        <button onClick={() => setRecentSearches([])} className="text-[10px] font-bold text-[#A044C3]">Clear</button>
+                        <button onMouseDown={(e) => { e.preventDefault(); setRecentSearches([]); }} className="text-[10px] font-bold text-[#A044C3]">Clear</button>
                     </div>
                     {recentSearches.map((term, i) => (
                         <div 
                             key={i} 
                             className="flex justify-between items-center px-4 py-3 hover:bg-slate-50 cursor-pointer border-b border-slate-50 last:border-0" 
-                            onClick={() => { setSearchQuery(term); saveSearchTerm(term); setIsSearchFocused(false); }}
+                            // BUG FIX: Changed onClick to onMouseDown
+                            onMouseDown={(e) => { 
+                              e.preventDefault(); 
+                              setSearchQuery(term); 
+                              saveSearchTerm(term); 
+                              setIsSearchFocused(false); 
+                            }}
                         >
                             <div className="flex items-center gap-2.5 text-sm text-slate-700">
                                 <History className="w-4 h-4 text-slate-400" />
                                 <span className="font-semibold">{term}</span>
                             </div>
-                            <button onClick={(e) => removeSearchHistory(e, term)} className="text-slate-400 hover:text-rose-500 p-1 rounded-md"><X className="w-3.5 h-3.5" /></button>
+                            <button onMouseDown={(e) => { e.preventDefault(); removeSearchHistory(e, term); }} className="text-slate-400 hover:text-rose-500 p-1 rounded-md"><X className="w-3.5 h-3.5" /></button>
                         </div>
                     ))}
                 </div>
