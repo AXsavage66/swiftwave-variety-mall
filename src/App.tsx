@@ -105,8 +105,7 @@ function AdminPanel() {
   const [products, setProducts] = useState<{id: string, name: string}[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
 
-  // SECURITY FIX: Never hardcode PINs in the bundle. 
-  // Use a cosmetic check via Vite env vars, but rely strictly on backend Apps Script validation.
+  // SECURITY FIX: Fallback applied. Ensure VITE_ADMIN_PIN is set in your .env file.
   const expectedPin = import.meta.env.VITE_ADMIN_PIN || "0000";
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -160,7 +159,7 @@ function AdminPanel() {
       const response = await fetch(API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain' },
-        // SECURITY FIX: Pass the live pinCode state, NOT a hardcoded variable.
+        // SECURITY FIX: Transmitting the live user input pinCode directly to backend
         body: JSON.stringify({ productId: finalId.trim(), quantity: quantity, pin: pinCode })
       });
       const data = await response.json();
@@ -232,7 +231,6 @@ function AdminPanel() {
                  setShowDropdown(true);
               }}
               onFocus={() => setShowDropdown(true)}
-              // BUG FIX: Removed setTimeout. Handled properly by onMouseDown in dropdown.
               onBlur={() => setShowDropdown(false)}
               className="w-full p-3 rounded-xl border border-slate-300 focus:border-[#A044C3] outline-none font-bold text-slate-900"
             />
@@ -241,7 +239,6 @@ function AdminPanel() {
                   {products.filter(p => p.name.toLowerCase().includes(displayValue.toLowerCase()) || p.id.toLowerCase().includes(displayValue.toLowerCase())).slice(0, 10).map(p => (
                      <div
                         key={p.id}
-                        // BUG FIX: Changed onClick to onMouseDown to fire before input onBlur
                         onMouseDown={(e) => {
                           e.preventDefault();
                           setProductId(p.id);
@@ -452,6 +449,7 @@ export default function App() {
   const [activeImageIndex, setActiveImageIndex] = useState<number>(0);
   const [mediaViewMode, setMediaViewMode] = useState<'photos' | 'video'>('photos');
   const [isDescExpanded, setIsDescExpanded] = useState<boolean>(false);
+  const [showShareMenu, setShowShareMenu] = useState<boolean>(false);
   const [isLightboxOpen, setIsLightboxOpen] = useState<boolean>(false);
 
   const [showAboutModal, setShowAboutModal] = useState<boolean>(false);
@@ -674,8 +672,9 @@ export default function App() {
     setActiveImageIndex(0);
     setMediaViewMode('photos');
     setIsDescExpanded(false);
+    setShowShareMenu(false);
     
-    // NEW DEEP LINKING LOGIC 
+    // DEEP LINKING LOGIC 
     try {
       window.history.replaceState(null, '', `${window.location.pathname}?product=${encodeURIComponent(product.id)}`);
       sessionStorage.setItem('swiftwave_active_modal', product.id);
@@ -684,28 +683,11 @@ export default function App() {
 
   const closeProductModal = () => {
     setActiveModalProduct(null);
+    setShowShareMenu(false);
     try {
       window.history.replaceState(null, '', window.location.pathname);
       sessionStorage.removeItem('swiftwave_active_modal');
     } catch (e) { console.error(e); }
-  };
-
-  // NATIVE SHARE FUNCTION
-  const handleShareProduct = async (product: Product) => {
-    const shareUrl = `${window.location.origin}${window.location.pathname}?product=${encodeURIComponent(product.id)}`;
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: `Check out ${product.name} on SwiftWave`,
-          text: product.description,
-          url: shareUrl
-        });
-      } catch (err) { console.log('Share dismissed'); }
-    } else {
-      navigator.clipboard.writeText(shareUrl);
-      setToastMessage("Product link copied to clipboard!");
-      setTimeout(() => setToastMessage(null), 3000);
-    }
   };
 
   useEffect(() => {
@@ -792,7 +774,7 @@ export default function App() {
   }, [activeModalProduct, products]);
 
   const addToCart = (product: Product) => {
-    if (searchQuery) saveSearchTerm(searchQuery); // Save search term when adding from grid
+    if (searchQuery) saveSearchTerm(searchQuery); 
     setCart((prev) => {
       const existing = prev.find((item) => item?.product?.id === product.id);
       if (product.stock_quantity !== undefined && (existing ? existing.quantity : 0) >= product.stock_quantity) return prev;
@@ -954,7 +936,7 @@ export default function App() {
                 value={searchQuery} 
                 onChange={(e) => setSearchQuery(e.target.value)} 
                 onFocus={() => setIsSearchFocused(true)}
-                onBlur={() => setIsSearchFocused(false)} // BUG FIX: Removed setTimeout
+                onBlur={() => setIsSearchFocused(false)}
                 onKeyDown={handleSearchSubmit}
                 className="w-full bg-slate-100 hover:bg-slate-200/60 focus:bg-white text-sm rounded-full pl-10 pr-4 py-2 border border-transparent focus:border-[#A044C3] focus:ring-4 focus:ring-[#A044C3]/10 transition-all outline-none" 
               />
@@ -969,7 +951,6 @@ export default function App() {
                           <div 
                               key={i} 
                               className="flex justify-between items-center px-4 py-3 hover:bg-slate-50 cursor-pointer border-b border-slate-50 last:border-0" 
-                              // BUG FIX: Changed onClick to onMouseDown
                               onMouseDown={(e) => { 
                                 e.preventDefault(); 
                                 setSearchQuery(term); 
@@ -1008,7 +989,7 @@ export default function App() {
               value={searchQuery} 
               onChange={(e) => setSearchQuery(e.target.value)} 
               onFocus={() => setIsSearchFocused(true)}
-              onBlur={() => setIsSearchFocused(false)} // BUG FIX: Removed setTimeout
+              onBlur={() => setIsSearchFocused(false)}
               onKeyDown={handleSearchSubmit}
               className="w-full bg-slate-100 text-sm rounded-xl pl-9 pr-3 py-2.5 border border-transparent focus:border-[#A044C3] focus:bg-white transition-all outline-none" 
             />
@@ -1023,7 +1004,6 @@ export default function App() {
                         <div 
                             key={i} 
                             className="flex justify-between items-center px-4 py-3 hover:bg-slate-50 cursor-pointer border-b border-slate-50 last:border-0" 
-                            // BUG FIX: Changed onClick to onMouseDown
                             onMouseDown={(e) => { 
                               e.preventDefault(); 
                               setSearchQuery(term); 
@@ -1195,16 +1175,45 @@ export default function App() {
         <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4" onClick={(e) => { if (e.target === e.currentTarget) closeProductModal(); }}>
           <div className="bg-white rounded-3xl max-w-2xl w-full overflow-hidden shadow-2xl relative border border-slate-200 flex flex-col max-h-[92vh]">
             
-            {/* UPDATED MODAL HEADER WITH NATIVE SHARE BUTTON */}
+            {/* UPDATED MODAL HEADER WITH CUSTOM SHARE DROPDOWN */}
             <div className="p-4 border-b border-slate-100 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="text-xs font-mono font-bold text-[#A044C3] bg-[#A044C3]/10 px-2 py-0.5 rounded-md">{activeModalProduct.id}</span>
                 <span className="text-xs text-slate-400">• {activeModalProduct.category}</span>
               </div>
               <div className="flex items-center gap-2">
-                <button onClick={() => handleShareProduct(activeModalProduct)} className="w-8 h-8 rounded-full bg-slate-100 hover:bg-[#A044C3] hover:text-[#FFBB1C] text-slate-600 flex items-center justify-center transition-colors">
-                  <Share className="w-4 h-4" />
-                </button>
+                
+                {/* CUSTOM SHARE MENU */}
+                <div className="relative">
+                  <button onClick={() => setShowShareMenu(!showShareMenu)} className="w-8 h-8 rounded-full bg-slate-100 hover:bg-[#A044C3] hover:text-[#FFBB1C] text-slate-600 flex items-center justify-center transition-colors">
+                    <Share className="w-4 h-4" />
+                  </button>
+                  
+                  {showShareMenu && (
+                    <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
+                      <div className="p-2 space-y-1">
+                        <button onClick={() => {
+                          navigator.clipboard.writeText(`${window.location.origin}${window.location.pathname}?product=${encodeURIComponent(activeModalProduct.id)}`);
+                          setToastMessage("Product link copied!");
+                          setShowShareMenu(false);
+                          setTimeout(() => setToastMessage(null), 3000);
+                        }} className="w-full text-left px-3 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-100 hover:text-[#A044C3] rounded-lg flex items-center gap-2.5 transition-colors">
+                          <Copy className="w-4 h-4" /> Copy Link
+                        </button>
+                        
+                        <a href={`https://wa.me/?text=${encodeURIComponent(`Check out ${activeModalProduct.name} on SwiftWave!\n\n${window.location.origin}${window.location.pathname}?product=${encodeURIComponent(activeModalProduct.id)}`)}`} target="_blank" rel="noreferrer" onClick={() => setShowShareMenu(false)} className="w-full text-left px-3 py-2.5 text-xs font-bold text-slate-700 hover:bg-emerald-50 hover:text-emerald-600 rounded-lg flex items-center gap-2.5 transition-colors">
+                          <MessageCircle className="w-4 h-4" /> Share to WhatsApp
+                        </a>
+                        
+                        <a href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Check out ${activeModalProduct.name} on SwiftWave!`)}&url=${encodeURIComponent(`${window.location.origin}${window.location.pathname}?product=${encodeURIComponent(activeModalProduct.id)}`)}`} target="_blank" rel="noreferrer" onClick={() => setShowShareMenu(false)} className="w-full text-left px-3 py-2.5 text-xs font-bold text-slate-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg flex items-center gap-2.5 transition-colors">
+                          <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z"/></svg>
+                          Share to X
+                        </a>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 <button onClick={closeProductModal} className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-colors">
                   <X className="w-4 h-4" />
                 </button>
