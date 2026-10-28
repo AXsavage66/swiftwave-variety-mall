@@ -457,7 +457,8 @@ export default function App() {
   });
   const [isSearchFocused, setIsSearchFocused] = useState(false);
 
-  const [activeModalProduct, setActiveModalProduct] = useState<Product | null>(null);
+  const [activeProductId, setActiveProductId] = useState<string | null>(null);
+  const activeModalProduct = useMemo(() => products.find(p => p.id === activeProductId) || null, [products, activeProductId]);
   const [activeImageIndex, setActiveImageIndex] = useState<number>(0);
   const [mediaViewMode, setMediaViewMode] = useState<'photos' | 'video'>('photos');
   const [isDescExpanded, setIsDescExpanded] = useState<boolean>(false);
@@ -669,7 +670,7 @@ export default function App() {
     if (productIdFromUrl && !activeModalProduct) {
       const matched = products.find((p) => p.id === productIdFromUrl);
       if (matched) {
-        setActiveModalProduct(matched);
+        setActiveProductId(matched.id);
         setActiveImageIndex(0);
         setMediaViewMode('photos');
       }
@@ -680,7 +681,7 @@ export default function App() {
     if (searchQuery) saveSearchTerm(searchQuery); 
     
     sessionStorage.setItem('sw_scroll', window.scrollY.toString());
-    setActiveModalProduct(product);
+    setActiveProductId(product.id);
     setActiveImageIndex(0);
     setMediaViewMode('photos');
     setIsDescExpanded(false);
@@ -694,7 +695,7 @@ export default function App() {
   };
 
   const closeProductModal = () => {
-    setActiveModalProduct(null);
+    setActiveProductId(null);
     setShowShareMenu(false);
     try {
       window.history.replaceState(null, '', window.location.pathname);
