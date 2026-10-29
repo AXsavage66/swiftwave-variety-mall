@@ -661,7 +661,7 @@ export default function App() {
 
   useEffect(() => {
     fetchInventory();
-    const interval = setInterval(fetchInventory, 10000); 
+    const interval = setInterval(fetchInventory, 60000); 
     return () => clearInterval(interval);
   }, [fetchInventory]);
 
