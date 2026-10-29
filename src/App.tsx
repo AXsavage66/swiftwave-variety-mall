@@ -4,7 +4,8 @@ import {
   CheckCircle2, ChevronRight, ChevronLeft, Info, Plus, Minus,
   Trash2, Truck, Building2, Copy, Image as ImageIcon, Maximize2,
   PhoneCall, Check, Instagram, Facebook, MessageCircle, Headphones,
-  Share, Calculator, Shield, Scale, ArrowDownCircle, History, Loader2
+  Share, Calculator, Shield, Scale, ArrowDownCircle, History, Loader2,
+  Home, LayoutGrid
 } from 'lucide-react';
 
 // ==========================================
@@ -55,7 +56,7 @@ const PWAInstaller = () => {
   if (!isIOS && !installPrompt) return null;
 
   return (
-    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-sm z-50 bg-gradient-to-r from-[#A044C3] to-violet-900 p-4 rounded-2xl shadow-2xl border border-white/20 flex flex-col gap-3">
+    <div className="fixed bottom-20 sm:bottom-6 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-sm z-50 bg-gradient-to-r from-[#A044C3] to-violet-900 p-4 rounded-2xl shadow-2xl border border-white/20 flex flex-col gap-3">
       <div className="flex justify-between items-start gap-3">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shrink-0 shadow-inner">
@@ -447,6 +448,7 @@ export default function App() {
   const [selectedCategory, setSelectedCategory] = useState<string>(() => typeof window !== 'undefined' ? sessionStorage.getItem('sw_category') || 'All' : 'All');
   const [searchQuery, setSearchQuery] = useState<string>(() => typeof window !== 'undefined' ? sessionStorage.getItem('sw_search') || '' : '');
   const [displayLimit, setDisplayLimit] = useState<number>(48);
+  const [activeTab, setActiveTab] = useState<'home' | 'categories' | 'cart'>('home');
 
   // SEARCH HISTORY STATE
   const [recentSearches, setRecentSearches] = useState<string[]>(() => {
@@ -513,7 +515,7 @@ export default function App() {
     if (trimmed.length < 2) return;
     setRecentSearches(prev => {
       const filtered = prev.filter(s => s.toLowerCase() !== trimmed.toLowerCase());
-      return [trimmed, ...filtered].slice(0, 5); // Keep top 5 searches
+      return [trimmed, ...filtered].slice(0, 5);
     });
   };
 
@@ -583,7 +585,6 @@ export default function App() {
 
   const fetchInventory = useCallback(async () => {
     try {
-      // CACHE BUSTER APPLIED: Forces Google to return live data, not cached
       const res = await fetch(`${GOOGLE_SHEET_CSV_URL}&cb=${new Date().getTime()}`);
       const csvText = await res.text();
       const rawLines = csvText.split('\n').filter(line => line.trim().length > 0);
@@ -658,7 +659,6 @@ export default function App() {
     }
   }, []);
 
-  // REAL-TIME SILENT SYNC ENGINE (10 SECONDS)
   useEffect(() => {
     fetchInventory();
     const interval = setInterval(fetchInventory, 10000); 
@@ -689,7 +689,6 @@ export default function App() {
     setIsDescExpanded(false);
     setShowShareMenu(false);
     
-    // DEEP LINKING LOGIC 
     try {
       window.history.replaceState(null, '', `${window.location.pathname}?product=${encodeURIComponent(product.id)}`);
       sessionStorage.setItem('swiftwave_active_modal', product.id);
@@ -896,7 +895,7 @@ export default function App() {
       )}
 
       {toastMessage && (
-        <aside className="fixed bottom-20 sm:bottom-6 left-1/2 -translate-x-1/2 z-50 bg-slate-900/95 text-white backdrop-blur-md px-4 py-2.5 rounded-full shadow-2xl flex items-center gap-3 border border-[#A044C3]/30 animate-bounce">
+        <aside className="fixed bottom-24 sm:bottom-6 left-1/2 -translate-x-1/2 z-50 bg-slate-900/95 text-white backdrop-blur-md px-4 py-2.5 rounded-full shadow-2xl flex items-center gap-3 border border-[#A044C3]/30 animate-bounce">
           <div className="w-5 h-5 rounded-full bg-emerald-500 text-slate-950 flex items-center justify-center">
             <Check className="w-3 h-3 stroke-[3]" />
           </div>
@@ -955,7 +954,6 @@ export default function App() {
                 onKeyDown={handleSearchSubmit}
                 className="w-full bg-slate-100 hover:bg-slate-200/60 focus:bg-white text-sm rounded-full pl-10 pr-4 py-2 border border-transparent focus:border-[#A044C3] focus:ring-4 focus:ring-[#A044C3]/10 transition-all outline-none" 
               />
-              {/* Dropdown Menu */}
               {isSearchFocused && recentSearches.length > 0 && !searchQuery && (
                   <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-200 shadow-xl rounded-2xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
                       <div className="px-4 py-2.5 border-b border-slate-100 flex justify-between items-center bg-slate-50">
@@ -1008,7 +1006,6 @@ export default function App() {
               onKeyDown={handleSearchSubmit}
               className="w-full bg-slate-100 text-sm rounded-xl pl-9 pr-3 py-2.5 border border-transparent focus:border-[#A044C3] focus:bg-white transition-all outline-none" 
             />
-            {/* Mobile Dropdown */}
             {isSearchFocused && recentSearches.length > 0 && !searchQuery && (
                 <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-200 shadow-xl rounded-xl overflow-hidden z-50">
                     <div className="px-4 py-2 border-b border-slate-100 flex justify-between items-center bg-slate-50">
@@ -1037,7 +1034,7 @@ export default function App() {
             )}
           </div>
 
-          <nav className="flex items-center gap-2 overflow-x-auto no-scrollbar pt-3 pb-1">
+          <nav id="category-nav" className="flex items-center gap-2 overflow-x-auto no-scrollbar pt-3 pb-1">
             {CATEGORIES.map((cat) => {
               const active = selectedCategory === cat;
               return (
@@ -1190,15 +1187,12 @@ export default function App() {
         <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4" onClick={(e) => { if (e.target === e.currentTarget) closeProductModal(); }}>
           <div className="bg-white rounded-3xl max-w-2xl w-full overflow-hidden shadow-2xl relative border border-slate-200 flex flex-col max-h-[92vh]">
             
-            {/* UPDATED MODAL HEADER WITH CUSTOM SHARE DROPDOWN */}
             <div className="p-4 border-b border-slate-100 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="text-xs font-mono font-bold text-[#A044C3] bg-[#A044C3]/10 px-2 py-0.5 rounded-md">{activeModalProduct.id}</span>
                 <span className="text-xs text-slate-400">• {activeModalProduct.category}</span>
               </div>
               <div className="flex items-center gap-2">
-                
-                {/* CUSTOM SHARE MENU */}
                 <div className="relative">
                   <button onClick={() => setShowShareMenu(!showShareMenu)} className="w-8 h-8 rounded-full bg-slate-100 hover:bg-[#A044C3] hover:text-[#FFBB1C] text-slate-600 flex items-center justify-center transition-colors">
                     <Share className="w-4 h-4" />
@@ -1394,6 +1388,12 @@ export default function App() {
             </div>
             <h3 className="text-lg font-bold text-slate-900 mb-0.5">Checkout & Payment</h3>
             <p className="text-xs text-slate-500 mb-4 leading-relaxed">Copy the bank details below, transfer via your app, and return here to submit receipt via WhatsApp.</p>
+
+            <div className="mb-5 bg-amber-50 border-l-4 border-amber-500 p-3 rounded-r-xl shadow-sm">
+              <p className="text-[11px] sm:text-xs font-bold text-amber-950 leading-relaxed">
+                ⚠️ IMPORTANT: You MUST use your Order ID <span className="font-black text-amber-700 bg-amber-200/50 px-1.5 py-0.5 rounded ml-0.5 text-xs tracking-wider">#{orderId}</span> as your transfer narration/remark so we can confirm your payment.
+              </p>
+            </div>
 
             <div className="space-y-3 mb-5">
               <div>
@@ -1659,7 +1659,7 @@ export default function App() {
         </div>
       )}
 
-      <footer className="bg-[#A044C3] text-white/90 text-xs pt-10 pb-8 mt-auto border-t-4 border-[#FFBB1C]">
+      <footer className="bg-[#A044C3] text-white/90 text-xs pt-10 pb-24 sm:pb-8 mt-auto border-t-4 border-[#FFBB1C]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 pb-8 border-b border-white/20">
             <div className="md:col-span-1">
@@ -1704,6 +1704,52 @@ export default function App() {
           </div>
         </div>
       </footer>
+
+      {/* MOBILE BOTTOM NAVIGATION (Sleek Brand-Matched Active States) */}
+      <div className="sm:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200 z-[45] pb-safe shadow-[0_-4px_16px_rgba(0,0,0,0.06)]">
+        <div className="flex justify-around items-center h-16 px-2">
+          <button 
+            onClick={() => {
+              setActiveTab('home');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }} 
+            className={`flex flex-col items-center justify-center w-full h-full transition-all ${activeTab === 'home' ? 'text-[#A044C3] font-black' : 'text-slate-400 hover:text-slate-600'}`}
+          >
+            <Home className={`w-5 h-5 mb-1 ${activeTab === 'home' ? 'stroke-[2.5]' : 'stroke-[1.75]'}`} />
+            <span className="text-[10px]">Home</span>
+            {activeTab === 'home' && <span className="w-1 h-1 rounded-full bg-[#A044C3] mt-0.5 animate-pulse" />}
+          </button>
+
+          <button 
+            onClick={() => {
+              setActiveTab('categories');
+              document.getElementById('category-nav')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }} 
+            className={`flex flex-col items-center justify-center w-full h-full transition-all ${activeTab === 'categories' ? 'text-[#A044C3] font-black' : 'text-slate-400 hover:text-slate-600'}`}
+          >
+            <LayoutGrid className={`w-5 h-5 mb-1 ${activeTab === 'categories' ? 'stroke-[2.5]' : 'stroke-[1.75]'}`} />
+            <span className="text-[10px]">Categories</span>
+            {activeTab === 'categories' && <span className="w-1 h-1 rounded-full bg-[#A044C3] mt-0.5 animate-pulse" />}
+          </button>
+
+          <button 
+            onClick={() => {
+              setActiveTab('cart');
+              setIsCartOpen(true);
+            }} 
+            className={`flex flex-col items-center justify-center w-full h-full relative transition-all ${activeTab === 'cart' || isCartOpen ? 'text-[#A044C3] font-black' : 'text-slate-400 hover:text-slate-600'}`}
+          >
+            <ShoppingBag className={`w-5 h-5 mb-1 ${activeTab === 'cart' || isCartOpen ? 'stroke-[2.5]' : 'stroke-[1.75]'}`} />
+            <span className="text-[10px]">Cart</span>
+            {totalCartCount > 0 && (
+              <span className="absolute top-1.5 right-[22%] bg-[#FFBB1C] text-violet-950 text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center border border-white shadow-sm">
+                {totalCartCount}
+              </span>
+            )}
+            {(activeTab === 'cart' || isCartOpen) && <span className="w-1 h-1 rounded-full bg-[#A044C3] mt-0.5 animate-pulse" />}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
