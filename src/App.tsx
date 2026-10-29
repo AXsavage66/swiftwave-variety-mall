@@ -448,7 +448,7 @@ export default function App() {
   const [selectedCategory, setSelectedCategory] = useState<string>(() => typeof window !== 'undefined' ? sessionStorage.getItem('sw_category') || 'All' : 'All');
   const [searchQuery, setSearchQuery] = useState<string>(() => typeof window !== 'undefined' ? sessionStorage.getItem('sw_search') || '' : '');
   const [displayLimit, setDisplayLimit] = useState<number>(48);
-  const [activeTab, setActiveTab] = useState<'home' | 'categories' | 'cart'>('home');
+  const [isCategoryDrawerOpen, setIsCategoryDrawerOpen] = useState<boolean>(false);
 
   // SEARCH HISTORY STATE
   const [recentSearches, setRecentSearches] = useState<string[]>(() => {
@@ -664,6 +664,25 @@ export default function App() {
     const interval = setInterval(fetchInventory, 10000); 
     return () => clearInterval(interval);
   }, [fetchInventory]);
+
+  // CATEGORY COUNT LOGIC FOR MOBILE DRAWER BADGES
+  const categoryCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    CATEGORIES.forEach(c => counts[c] = 0);
+    
+    // Only count products that are actually in stock
+    const availableProducts = products.filter(p => p.in_stock && (p.stock_quantity === undefined || p.stock_quantity > 0));
+    
+    counts['All'] = availableProducts.length;
+    counts['New In'] = Math.min(20, availableProducts.length);
+    
+    availableProducts.forEach(p => {
+      if (counts[p.category] !== undefined) {
+        counts[p.category]++;
+      }
+    });
+    return counts;
+  }, [products]);
 
   useEffect(() => {
     if (products.length === 0) return;
@@ -1318,8 +1337,8 @@ export default function App() {
       )}
 
       {isCartOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex justify-end">
-          <div className="bg-white w-full max-w-md h-full shadow-2xl flex flex-col justify-between">
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex justify-end" onClick={() => setIsCartOpen(false)}>
+          <div className="bg-white w-full max-w-md h-full shadow-2xl flex flex-col justify-between" onClick={(e) => e.stopPropagation()}>
             <div className="p-4 border-b border-violet-200 bg-violet-50 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <ShoppingBag className="w-5 h-5 text-[#A044C3]" />
@@ -1372,6 +1391,51 @@ export default function App() {
                 <button onClick={openCheckout} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm py-3 rounded-2xl shadow-lg shadow-emerald-600/30 transition-all flex items-center justify-center gap-2 active:scale-95"><span>Proceed to Payment</span><ChevronRight className="w-4 h-4" /></button>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* MOBILE CATEGORY SELECTION SHEET - UPGRADED */}
+      {isCategoryDrawerOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-end sm:hidden" onClick={() => setIsCategoryDrawerOpen(false)}>
+          <div className="bg-white w-full rounded-t-3xl p-5 shadow-2xl max-h-[80vh] flex flex-col animate-in slide-in-from-bottom-full duration-200" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4 shrink-0">
+              <div className="flex items-center gap-2">
+                <LayoutGrid className="w-5 h-5 text-[#A044C3]" />
+                <h3 className="font-extrabold text-slate-900 text-base">Select Category</h3>
+              </div>
+              <button onClick={() => setIsCategoryDrawerOpen(false)} className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-colors">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            
+            <div className="overflow-y-auto space-y-2 pr-1 flex-1 pb-safe">
+              {CATEGORIES.map((cat) => {
+                const active = selectedCategory === cat;
+                const count = categoryCounts[cat] || 0;
+                
+                return (
+                  <button
+                    key={cat}
+                    onClick={() => {
+                      setSelectedCategory(cat);
+                      setDisplayLimit(48);
+                      setIsCategoryDrawerOpen(false);
+                      window.scrollTo({ top: 300, behavior: 'smooth' });
+                    }}
+                    className={`w-full text-left px-4 py-3.5 rounded-2xl text-sm font-bold transition-all flex items-center justify-between ${active ? 'bg-[#A044C3] text-[#FFBB1C] shadow-md' : 'bg-slate-50 text-slate-700 hover:bg-slate-100 border border-transparent hover:border-slate-200 active:scale-[0.98]'}`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <span>{cat}</span>
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-black ${active ? 'bg-[#FFBB1C]/20 text-[#FFBB1C]' : 'bg-slate-200 text-slate-500'}`}>
+                        {count}
+                      </span>
+                    </div>
+                    {active && <Check className="w-4 h-4 stroke-[3]" />}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
       )}
@@ -1705,48 +1769,49 @@ export default function App() {
         </div>
       </footer>
 
-      {/* MOBILE BOTTOM NAVIGATION (Sleek Brand-Matched Active States) */}
+      {/* MOBILE BOTTOM NAVIGATION */}
       <div className="sm:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200 z-[45] pb-safe shadow-[0_-4px_16px_rgba(0,0,0,0.06)]">
         <div className="flex justify-around items-center h-16 px-2">
           <button 
             onClick={() => {
-              setActiveTab('home');
+              setIsCategoryDrawerOpen(false);
+              setIsCartOpen(false);
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }} 
-            className={`flex flex-col items-center justify-center w-full h-full transition-all ${activeTab === 'home' ? 'text-[#A044C3] font-black' : 'text-slate-400 hover:text-slate-600'}`}
+            className={`flex flex-col items-center justify-center w-full h-full transition-all ${!isCartOpen && !isCategoryDrawerOpen ? 'text-[#A044C3] font-black' : 'text-slate-400 hover:text-slate-600'}`}
           >
-            <Home className={`w-5 h-5 mb-1 ${activeTab === 'home' ? 'stroke-[2.5]' : 'stroke-[1.75]'}`} />
+            <Home className={`w-5 h-5 mb-1 ${!isCartOpen && !isCategoryDrawerOpen ? 'stroke-[2.5]' : 'stroke-[1.75]'}`} />
             <span className="text-[10px]">Home</span>
-            {activeTab === 'home' && <span className="w-1 h-1 rounded-full bg-[#A044C3] mt-0.5 animate-pulse" />}
+            {!isCartOpen && !isCategoryDrawerOpen && <span className="w-1 h-1 rounded-full bg-[#A044C3] mt-0.5 animate-pulse" />}
           </button>
 
           <button 
             onClick={() => {
-              setActiveTab('categories');
-              document.getElementById('category-nav')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              setIsCartOpen(false);
+              setIsCategoryDrawerOpen(true);
             }} 
-            className={`flex flex-col items-center justify-center w-full h-full transition-all ${activeTab === 'categories' ? 'text-[#A044C3] font-black' : 'text-slate-400 hover:text-slate-600'}`}
+            className={`flex flex-col items-center justify-center w-full h-full transition-all ${isCategoryDrawerOpen ? 'text-[#A044C3] font-black' : 'text-slate-400 hover:text-slate-600'}`}
           >
-            <LayoutGrid className={`w-5 h-5 mb-1 ${activeTab === 'categories' ? 'stroke-[2.5]' : 'stroke-[1.75]'}`} />
+            <LayoutGrid className={`w-5 h-5 mb-1 ${isCategoryDrawerOpen ? 'stroke-[2.5]' : 'stroke-[1.75]'}`} />
             <span className="text-[10px]">Categories</span>
-            {activeTab === 'categories' && <span className="w-1 h-1 rounded-full bg-[#A044C3] mt-0.5 animate-pulse" />}
+            {isCategoryDrawerOpen && <span className="w-1 h-1 rounded-full bg-[#A044C3] mt-0.5 animate-pulse" />}
           </button>
 
           <button 
             onClick={() => {
-              setActiveTab('cart');
+              setIsCategoryDrawerOpen(false);
               setIsCartOpen(true);
             }} 
-            className={`flex flex-col items-center justify-center w-full h-full relative transition-all ${activeTab === 'cart' || isCartOpen ? 'text-[#A044C3] font-black' : 'text-slate-400 hover:text-slate-600'}`}
+            className={`flex flex-col items-center justify-center w-full h-full relative transition-all ${isCartOpen ? 'text-[#A044C3] font-black' : 'text-slate-400 hover:text-slate-600'}`}
           >
-            <ShoppingBag className={`w-5 h-5 mb-1 ${activeTab === 'cart' || isCartOpen ? 'stroke-[2.5]' : 'stroke-[1.75]'}`} />
+            <ShoppingBag className={`w-5 h-5 mb-1 ${isCartOpen ? 'stroke-[2.5]' : 'stroke-[1.75]'}`} />
             <span className="text-[10px]">Cart</span>
             {totalCartCount > 0 && (
               <span className="absolute top-1.5 right-[22%] bg-[#FFBB1C] text-violet-950 text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center border border-white shadow-sm">
                 {totalCartCount}
               </span>
             )}
-            {(activeTab === 'cart' || isCartOpen) && <span className="w-1 h-1 rounded-full bg-[#A044C3] mt-0.5 animate-pulse" />}
+            {isCartOpen && <span className="w-1 h-1 rounded-full bg-[#A044C3] mt-0.5 animate-pulse" />}
           </button>
         </div>
       </div>
